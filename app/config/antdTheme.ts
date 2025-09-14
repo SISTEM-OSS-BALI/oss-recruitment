@@ -1,48 +1,64 @@
 import type { ThemeConfig } from "antd";
 
+const sehatiRed = "#4d4ae0"; // Merah utama (dari gambar/logo)
+const sehatiRedLight = "#F7D7D7"; // Merah sangat muda, untuk hover
+
 const antdTheme: ThemeConfig = {
   cssVar: true,
   token: {
-    // Ukuran huruf sedikit lebih besar supaya nyaman dibaca
     fontSize: 16,
-    colorPrimary: "#1890ff", // Biru soft, khas dashboard modern
-    colorLink: "#1677ff", // Warna link
-    colorLinkHover: "#69b1ff", // Warna link saat hover
-    colorText: "#1f1f1f", // Hitam soft, tidak terlalu keras
-    colorTextSecondary: "#8c8c8c", // Abu untuk teks sekunder
-    colorBgLayout: "#f5f5f5", // Latar belakang halaman
-    colorBgContainer: "#ffffff", // Warna container (misal card)
-    borderRadius: 8, // Semua border sedikit membulat
-    padding: 16, // Padding standar di elemen
+    colorPrimary: sehatiRed,
+    colorLink: sehatiRed,
+    colorLinkHover: "#ba2424",
+    colorText: "#222", // Hitam lebih soft
+    colorTextSecondary: "#777", // Abu-abu lembut
+    colorBgLayout: "#fff", // Background sidebar dan layout
+    colorBgContainer: "#fff", // Container tetap putih
+    borderRadius: 10, // Lebih membulat seperti card di gambar
+    padding: 16,
   },
   components: {
     Layout: {
       headerHeight: 64,
-      bodyBg: "#f5f5f5",
-      siderBg: "#001529", // Dark blue khas Ant Design sidebar
+      bodyBg: "#fff",
+      siderBg: "#fff",
+      footerBg: "#fff",
     },
     Menu: {
-      itemBorderRadius: 6,
-      itemSelectedColor: "#ffffff", // Teks menu saat dipilih
-      itemSelectedBg: "#1677ff", // Background menu saat aktif
-      itemHoverBg: "#e6f7ff", // Background saat hover
+      itemBorderRadius: 12,
+      itemSelectedBg: sehatiRed, // Aktif = merah
+      itemSelectedColor: "#fff", // Teks menu aktif = putih
+      itemColor: sehatiRed, // Teks menu biasa = merah
+      itemHoverBg: sehatiRedLight, // Hover = merah muda
+      itemHoverColor: sehatiRed, // Hover text = merah utama
+      itemActiveBg: sehatiRed, // Aktif = merah
+      // itemActiveColor: "#fff",
+      iconSize: 28,
+      // Custom shadow pada selected (bisa pakai CSS langsung untuk efek shadow)
     },
+    // Sider: {
+    //   footerBg: sehatiRed,
+    //   backgroundColor: "#fff", // Sider background putih
+    // },
     Button: {
-      borderRadius: 6,
-      colorPrimaryHover: "#40a9ff", // Button hover lebih terang
+      borderRadius: 8,
+      colorPrimary: sehatiRed,
+      colorPrimaryHover: "#ba2424",
     },
     Table: {
-      headerBg: "#fafafa",
-      headerColor: "#1f1f1f",
-      rowHoverBg: "#f0f5ff",
-      borderColor: "#f0f0f0",
+      headerBg: "#fff",
+      headerColor: "black",
+      rowHoverBg: "#fbe9e7", // soft red hover
+      borderColor: "#eee",
     },
     Input: {
-      borderRadius: 6,
+      borderRadius: 8,
+      colorPrimary: sehatiRed,
     },
     Card: {
-      borderRadius: 10,
+      borderRadius: 14,
       padding: 24,
+      colorBgContainer: "#fff",
     },
   },
 };

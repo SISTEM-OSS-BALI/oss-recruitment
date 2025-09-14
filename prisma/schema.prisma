@@ -13,11 +13,253 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum RecruitmentStage {
+  NEW_APLICANT
+  SCREENING
+  INTERVIEW
+  HIRED
+  REJECTED
+  WAITING
+}
+
+model Candidate {
+  id                  String                @id @default(cuid())
+  name                String
+  email               String                @unique
+  phone               String
+  curiculum_vitae_url String
+  address             String?
+  no_identity         String?
+  gender              String?
+  date_of_birth       DateTime
+  photo_url           String
+  portfolio_url       String?
+  stage               RecruitmentStage      @default(SCREENING)
+  job_id              String
+  job                 Job                   @relation(fields: [job_id], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  createdAt           DateTime              @default(now())
+  updatedAt           DateTime              @updatedAt
+  scheduleInterview   ScheduleInterview[]
+  scheduleHired       ScheduleHired[]
+  HistoryCandidate    HistoryCandidate[]
+  FormEvaluation      FormEvaluation[]
+  EvaluatorAssignment EvaluatorAssignment[]
+
+  @@map("candidate")
+}
+
+model Job {
+  id           String   @id @default(cuid())
+  name         String
+  until_at     DateTime
+  description  String   @db.LongText
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  is_published Boolean  @default(false)
+
+  location_id String
+  location    Location @relation(fields: [location_id], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  candidate Candidate[]
+
+  @@map("job")
+}
+
+model Location {
+  id                String              @id @default(cuid())
+  name              String
+  maps_url          String
+  address           String
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+  job               Job[]
+  scheduleInterview ScheduleInterview[]
+  scheduleHired     ScheduleHired[]
+
+  @@map("location")
+}
+
 model User {
   id        String   @id @default(cuid())
   email     String   @unique
-  name      String?
+  name      String
   password  String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  @@map("user")
+}
+
+model HistoryCandidate {
+  id           String           @id @default(cuid())
+  candidate_id String
+  candidate    Candidate        @relation(fields: [candidate_id], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  createdAt    DateTime         @default(now())
+  stage        RecruitmentStage
+
+  @@map("history_candidate")
+}
+
+model ScheduleInterview {
+  id String @id @default(cuid())
+
+  candidateId String @map("candidate_id")
+  locationId  String @map("location_id")
+
+  candidate Candidate @relation(fields: [candidateId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  location  Location  @relation(fields: [locationId], references: [id])
+
+  date         DateTime
+  meeting_link String?
+  start_time   DateTime
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@map("schedule_interview")
+}
+
+model ScheduleHired {
+  id           String    @id @default(cuid())
+  candidate_id String
+  candidate    Candidate @relation(fields: [candidate_id], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  date         DateTime
+  start_time   DateTime
+  location     Location  @relation(fields: [location_id], references: [id])
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  location_id  String
+
+  @@map("schedule_hired")
+}
+
+model ContractTemplate {
+  id        String     @id @default(cuid())
+  name      String
+  filePath  String
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+  contracts Contract[]
+
+  @@map("contract_template")
+}
+
+model Contract {
+  id         String           @id @default(cuid())
+  templateId String
+  template   ContractTemplate @relation(fields: [templateId], references: [id])
+  values     Json
+  outputPath String
+  status     String           @default("CREATED")
+  createdAt  DateTime         @default(now())
+
+  @@map("contract")
+}
+
+model FormEvaluation {
+  id           String    @id @default(cuid())
+  candidate_id String
+  candidate    Candidate @relation(fields: [candidate_id], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  name_evaluation String
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  assignments EvaluationAssignment[]
+  questions   FormQuestion[]
+}
+
+model Evaluator {
+  id    String @id @default(cuid())
+  name  String
+  email String @unique
+
+  is_active Boolean
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  assignments         EvaluationAssignment[]
+  EvaluatorAssignment EvaluatorAssignment[]
+
+  @@map("evaluator")
+}
+
+model EvaluatorAssignment {
+  id           String @id @default(cuid())
+  assignmentId String
+  evaluatorId  String
+  candidate_id String
+
+  candidate Candidate @relation(fields: [candidate_id], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  evaluator Evaluator @relation(fields: [evaluatorId], references: [id], onDelete: Cascade)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+}
+
+model EvaluationAssignment {
+  id               String           @id @default(cuid())
+  formEvaluationId String
+  evaluatorId      String
+  status           EvaluationStatus @default(PENDING) // tracking
+  assignedAt       DateTime         @default(now())
+  submittedAt      DateTime?
+
+  formEvaluation FormEvaluation @relation(fields: [formEvaluationId], references: [id], onDelete: Cascade)
+  evaluator      Evaluator      @relation(fields: [evaluatorId], references: [id], onDelete: Cascade)
+
+  summary EvaluationSummary?
+  answers EvaluationAnswer[]
+
+  @@unique([formEvaluationId, evaluatorId]) // satu evaluator satu assignment per form
+}
+
+enum EvaluationStatus {
+  PENDING
+  SUBMITTED
+}
+
+model FormQuestion {
+  id               String       @id @default(cuid())
+  formEvaluationId String
+  order            Int
+  text             String
+  type             QuestionType
+  options          Json?
+
+  formEvaluation FormEvaluation     @relation(fields: [formEvaluationId], references: [id], onDelete: Cascade)
+  answers        EvaluationAnswer[]
+}
+
+enum QuestionType {
+  TEXT
+  NUMBER
+  RATING
+  BOOLEAN
+  SINGLE_SELECT
+  MULTI_SELECT
+}
+
+model EvaluationAnswer {
+  id           String   @id @default(cuid())
+  assignmentId String
+  questionId   String
+  value        Json
+  createdAt    DateTime @default(now())
+
+  assignment EvaluationAssignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+  question   FormQuestion         @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  @@unique([assignmentId, questionId]) // satu jawaban per pertanyaan
+}
+
+model EvaluationSummary {
+  id           String  @id @default(cuid())
+  assignmentId String  @unique
+  overallScore Float?
+  notes        String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  assignment EvaluationAssignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
 }

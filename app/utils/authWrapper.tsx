@@ -11,7 +11,7 @@ export default function AuthWrapper({
   const router = useRouter();
   const pathname = usePathname();
 
-  const authRoutes = ["/", "/register"];
+  const authRoutes = ["/admin/login"];
   const shouldProtect = !authRoutes.some((route) => {
     const regex = new RegExp(`^${route}(/.*)?$`);
     return regex.test(pathname);
@@ -21,7 +21,7 @@ export default function AuthWrapper({
     if (status === "loading") return;
 
     if (shouldProtect && !session) {
-      router.push("/");
+      router.push("/admin/login");
     }
   }, [session, status, router, shouldProtect]);
 

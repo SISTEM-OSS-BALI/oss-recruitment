@@ -1,9 +1,31 @@
-:root {
-  --font-poppins: "Poppins", sans-serif;
-}
+/* @import url('https://fonts.bunny.net/css?family=manrope:200,400|sora:400,600');
 
 body {
-  font-family: var(--font-poppins);
+  font-family: 'Manrope', 'Sora', sans-serif;
+} */
+
+html, body, * {
+  font-family: "Poppins", sans-serif !important;
+}
+
+html, body {
+  font-family: "Poppins", sans-serif;
+}
+
+.ant-typography,
+.ant-typography h1,
+.ant-typography h2,
+.ant-typography h3,
+.ant-typography h4,
+.ant-typography h5,
+.ant-typography h6,
+.ant-table,
+.ant-table-thead > tr > th,
+.ant-table-tbody > tr > td,
+.ant-btn,
+.ant-input,
+.ant-menu {
+  font-family: "Poppins", sans-serif !important;
 }
 
 * {
