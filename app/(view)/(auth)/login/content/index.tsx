@@ -8,7 +8,7 @@ import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import React, { useState } from "react";
 
-const { Title} = Typography;
+const { Title } = Typography;
 
 export default function LoginContent() {
   const router = useRouter();
@@ -25,8 +25,14 @@ export default function LoginContent() {
 
     if (res?.ok) {
       notification.success({ message: "Login berhasil!" });
+      const sessionRes = await fetch("/api/auth/session");
+      const session = await sessionRes.json();
 
-      router.push("/admin/dashboard/home");
+      if (session.user.role === "ADMIN") {
+        router.push("/admin/dashboard/home");
+      } else {
+        router.push("/");
+      }
     } else {
       notification.error({ message: "Login gagal!" });
     }

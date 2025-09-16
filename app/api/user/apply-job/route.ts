@@ -1,5 +1,6 @@
 import { CandidatePayloadCreateModel } from "@/app/models/apply-job";
-import { CREATE_CANDIDATE } from "@/app/providers/apply-job";
+import { CREATE_APPLY_JOB} from "@/app/providers/apply-job";
+import { GET_CANDIDATE } from "@/app/providers/candidate";
 import { GET_JOB } from "@/app/providers/job";
 import { GeneralError } from "@/app/utils/general-error";
 import { sendRecruitmentEmail } from "@/app/utils/send-email";
@@ -10,14 +11,19 @@ export const POST = async (req: NextRequest) => {
   try {
     const payload: CandidatePayloadCreateModel = await req.json();
 
-    const data = await CREATE_CANDIDATE(payload);
+    const data = await CREATE_APPLY_JOB(payload);
 
     const getDetailJob = await GET_JOB(payload.job_id);
-    await sendRecruitmentEmail(payload.email, payload.name, {
-      type: "applied",
-      jobTitle: getDetailJob?.name,
-      idApply: getDetailJob?.id,
-    });
+    const getDetailCandidate = await GET_CANDIDATE(payload.user_id);
+    await sendRecruitmentEmail(
+      getDetailCandidate!.email,
+      getDetailCandidate!.name,
+      {
+        type: "applied",
+        jobTitle: getDetailJob?.name,
+        idApply: getDetailJob?.id,
+      }
+    );
 
     return NextResponse.json(
       {

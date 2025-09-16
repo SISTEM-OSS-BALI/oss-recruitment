@@ -1,8 +1,8 @@
 import { Avatar, Button, Dropdown, Layout, Menu, Typography } from "antd";
 import { MainBreadcrumb } from "@/app/components/common/breadcrumb";
-import { SiderAdmin } from "../sider";
 import { LogoutOutlined, NotificationFilled } from "@ant-design/icons";
 import getInitials from "@/app/utils/initials-username";
+import { SiderAdmin } from "../sider/admin";
 
 const { Header, Content, Footer } = Layout;
 
@@ -35,8 +35,6 @@ const menu = (
       key="logout"
       icon={<LogoutOutlined />}
       onClick={() => {
-        // TODO: Implement your logout logic here!
-        // For example: signOut() or router.push('/login')
         alert("Logout clicked! (Ganti dengan logic logout aslimu)");
       }}
     >

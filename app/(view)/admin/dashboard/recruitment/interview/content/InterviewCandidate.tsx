@@ -127,6 +127,7 @@ export default function InterviewSchedulePage({
           <ScheduleTimeline
             schedules={schedules}
             onReschedule={openReschedule}
+            candidate_id={candidate.id!}
           />
         ) : (
           <Card style={{ borderRadius: 14 }}>

@@ -14,3 +14,13 @@ export const CREATE_USER = async (payload: UserPayloadCreateModel) => {
 
   return result;
 };
+
+export const UPDATE_USER = async (id: string, payload: UserPayloadCreateModel) => {
+  const result = await db.user.update({
+    where: {
+      id,
+    },
+    data: payload,
+  });
+  return result;
+};

@@ -22,31 +22,36 @@ enum RecruitmentStage {
   WAITING
 }
 
-model Candidate {
-  id                  String                @id @default(cuid())
-  name                String
-  email               String                @unique
-  phone               String
-  curiculum_vitae_url String
-  address             String?
-  no_identity         String?
-  gender              String?
-  date_of_birth       DateTime
-  photo_url           String
-  portfolio_url       String?
-  stage               RecruitmentStage      @default(SCREENING)
-  job_id              String
-  job                 Job                   @relation(fields: [job_id], references: [id], onDelete: Cascade, onUpdate: Cascade)
-  createdAt           DateTime              @default(now())
-  updatedAt           DateTime              @updatedAt
-  scheduleInterview   ScheduleInterview[]
-  scheduleHired       ScheduleHired[]
-  HistoryCandidate    HistoryCandidate[]
-  FormEvaluation      FormEvaluation[]
-  EvaluatorAssignment EvaluatorAssignment[]
-
-  @@map("candidate")
+enum Role {
+  ADMIN
+  CANDIDATE
 }
+
+// model Candidate {
+//   id                  String                @id @default(cuid())
+//   name                String
+//   email               String                @unique
+//   phone               String
+//   curiculum_vitae_url String
+//   address             String?
+//   no_identity         String?
+//   gender              String?
+//   date_of_birth       DateTime
+//   photo_url           String
+//   portfolio_url       String?
+//   stage               RecruitmentStage      @default(SCREENING)
+//   job_id              String
+//   job                 Job                   @relation(fields: [job_id], references: [id], onDelete: Cascade, onUpdate: Cascade)
+//   createdAt           DateTime              @default(now())
+//   updatedAt           DateTime              @updatedAt
+//   scheduleInterview   ScheduleInterview[]
+//   scheduleHired       ScheduleHired[]
+//   HistoryCandidate    HistoryCandidate[]
+//   FormEvaluation      FormEvaluation[]
+//   EvaluatorAssignment EvaluatorAssignment[]
+
+//   @@map("candidate")
+// }
 
 model Job {
   id           String   @id @default(cuid())
@@ -60,7 +65,8 @@ model Job {
   location_id String
   location    Location @relation(fields: [location_id], references: [id], onDelete: Cascade, onUpdate: Cascade)
 
-  candidate Candidate[]
+  candidate User[]
+  Applicant Applicant[]
 
   @@map("job")
 }
@@ -80,20 +86,53 @@ model Location {
 }
 
 model User {
-  id        String   @id @default(cuid())
-  email     String   @unique
-  name      String
-  password  String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id       String @id @default(cuid())
+  email    String @unique
+  name     String
+  password String
+  role     Role   @default(CANDIDATE)
+
+  // --- fields yang tadinya ada di Candidate (opsional agar fleksibel) ---
+  phone               String?
+  curiculum_vitae_url String?
+  address             String?
+  no_identity         String?
+  gender              String?
+  date_of_birth       DateTime?
+  photo_url           String?
+  portfolio_url       String?
+  stage               RecruitmentStage? @default(SCREENING)
+  job_id              String?
+  job                 Job?              @relation(fields: [job_id], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  // --- relasi yang tadinya ke Candidate pindah ke User ---
+  scheduleInterview   ScheduleInterview[]
+  scheduleHired       ScheduleHired[]
+  HistoryCandidate    HistoryCandidate[]
+  FormEvaluation      FormEvaluation[]
+  EvaluatorAssignment EvaluatorAssignment[]
+
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+  Applicant Applicant[]
 
   @@map("user")
+}
+
+model Applicant {
+  id        String   @id @default(cuid())
+  user_id   String
+  user      User     @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  job_id    String
+  job       Job      @relation(fields: [job_id], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model HistoryCandidate {
   id           String           @id @default(cuid())
   candidate_id String
-  candidate    Candidate        @relation(fields: [candidate_id], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  candidate    User             @relation(fields: [candidate_id], references: [id], onDelete: Cascade, onUpdate: Cascade)
   createdAt    DateTime         @default(now())
   stage        RecruitmentStage
 
@@ -106,8 +145,8 @@ model ScheduleInterview {
   candidateId String @map("candidate_id")
   locationId  String @map("location_id")
 
-  candidate Candidate @relation(fields: [candidateId], references: [id], onDelete: Cascade, onUpdate: Cascade)
-  location  Location  @relation(fields: [locationId], references: [id])
+  candidate User     @relation(fields: [candidateId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  location  Location @relation(fields: [locationId], references: [id])
 
   date         DateTime
   meeting_link String?
@@ -119,14 +158,14 @@ model ScheduleInterview {
 }
 
 model ScheduleHired {
-  id           String    @id @default(cuid())
+  id           String   @id @default(cuid())
   candidate_id String
-  candidate    Candidate @relation(fields: [candidate_id], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  candidate    User     @relation(fields: [candidate_id], references: [id], onDelete: Cascade, onUpdate: Cascade)
   date         DateTime
   start_time   DateTime
-  location     Location  @relation(fields: [location_id], references: [id])
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
+  location     Location @relation(fields: [location_id], references: [id])
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
   location_id  String
 
   @@map("schedule_hired")
@@ -156,9 +195,9 @@ model Contract {
 }
 
 model FormEvaluation {
-  id           String    @id @default(cuid())
+  id           String @id @default(cuid())
   candidate_id String
-  candidate    Candidate @relation(fields: [candidate_id], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  candidate    User   @relation(fields: [candidate_id], references: [id], onDelete: Cascade, onUpdate: Cascade)
 
   name_evaluation String
   createdAt       DateTime @default(now())
@@ -186,14 +225,15 @@ model Evaluator {
 
 model EvaluatorAssignment {
   id           String @id @default(cuid())
-  assignmentId String
   evaluatorId  String
   candidate_id String
 
-  candidate Candidate @relation(fields: [candidate_id], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  candidate User      @relation(fields: [candidate_id], references: [id], onDelete: Cascade, onUpdate: Cascade)
   evaluator Evaluator @relation(fields: [evaluatorId], references: [id], onDelete: Cascade)
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
+
+  @@map("evaluator_assignment")
 }
 
 model EvaluationAssignment {

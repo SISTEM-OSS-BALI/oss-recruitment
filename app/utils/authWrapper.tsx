@@ -11,7 +11,7 @@ export default function AuthWrapper({
   const router = useRouter();
   const pathname = usePathname();
 
-  const authRoutes = ["/admin/login"];
+  const authRoutes = ["/login", "/"];
   const shouldProtect = !authRoutes.some((route) => {
     const regex = new RegExp(`^${route}(/.*)?$`);
     return regex.test(pathname);

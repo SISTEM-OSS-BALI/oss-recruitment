@@ -3,6 +3,7 @@ import CredentialsProvider from "next-auth/providers/credentials";
 import prisma from "@/lib/prisma";
 import bcrypt from "bcrypt";
 import { AdapterUser } from "next-auth/adapters";
+import { Role } from "@prisma/client";
 
 export const authOptions: NextAuthOptions = {
   providers: [
@@ -46,6 +47,7 @@ export const authOptions: NextAuthOptions = {
           id: user.id,
           name: user.name,
           email: user.email,
+          role: user.role,
         } as AdapterUser;
       },
     }),
@@ -61,6 +63,7 @@ export const authOptions: NextAuthOptions = {
         token.id = user.id;
         token.name = user.name;
         token.email = user.email;
+        token.role = user.role;
       }
       return token;
     },
@@ -70,6 +73,7 @@ export const authOptions: NextAuthOptions = {
         id: token.id as string,
         name: token.name as string,
         email: token.email as string,
+        role: token.role as Role,
       };
       return session;
     },

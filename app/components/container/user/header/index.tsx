@@ -1,19 +1,27 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import {
   Layout,
   Menu,
   Typography,
   Grid,
   Button,
+  Avatar,
+  Dropdown,
+  Space,
 } from "antd";
 import {
   LoginOutlined,
   ArrowLeftOutlined,
+  UserOutlined,
+  LogoutOutlined,
+  DashboardOutlined,
 } from "@ant-design/icons";
+import { signOut } from "next-auth/react";
+import { useAuth } from "@/app/utils/useAuth";
 
 const { Header } = Layout;
 const { useBreakpoint } = Grid;
@@ -26,18 +34,20 @@ const BASE_NAV = [
 ];
 
 export default function MainHeader({
-  // opsional: override label & href ketika mode back
   backLabel = "Back to Jobs",
-  backHref, // contoh: "/job-seeker" atau "/jobs"
+  backHref,
 }: {
   user?: { name: string } | null;
   backLabel?: string;
   backHref?: string;
 }) {
   const pathname = usePathname();
+  const router = useRouter();
   const screens = useBreakpoint();
-  const [open, setOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+
+  // ---- Auth state dari hook kamu ----
+  const { isAuthenticated, user_name, loading } = useAuth();
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 6);
@@ -61,17 +71,86 @@ export default function MainHeader({
     transition: "all .2s ease",
   };
 
-  // Tentukan link back default bila tidak dioper melalui props
   const getBackLink = () => {
     if (backHref) return backHref;
-    // heuristik: kalau lagi di halaman job detail / lamaran, arahkan ke job listing
     if (pathname.startsWith("/job-seeker")) return "/job-seeker";
     if (pathname.startsWith("/jobs")) return "/jobs";
-    // fallback
     return "/";
   };
 
-  // --- NAV normal (hanya di "/") ---
+  // ------ Right area: Login button atau Avatar dropdown ------
+  const RightAuthArea = () => {
+    if (loading) {
+      // skeleton sederhana saat loading session
+      return (
+        <div
+          style={{
+            width: 96,
+            height: 32,
+            borderRadius: 6,
+            background: "#f0f2f5",
+          }}
+        />
+      );
+    }
+
+    if (!isAuthenticated) {
+      return (
+        <Link href="/login">
+          <Button icon={<LoginOutlined />} type="primary">
+            Login
+          </Button>
+        </Link>
+      );
+    }
+
+    const menuItems = [
+      {
+        key: "profile",
+        icon: <UserOutlined />,
+        label: "Profile",
+        onClick: () => router.push("/user/profile"),
+      },
+      {
+        key: "dashboard",
+        icon: <DashboardOutlined />,
+        label: "Dashboard",
+        onClick: () => router.push("/user/home"), // ganti ke admin dashboard jika kamu cek role di sini
+      },
+      {
+        type: "divider" as const,
+      },
+      {
+        key: "logout",
+        icon: <LogoutOutlined />,
+        danger: true,
+        label: "Logout",
+        onClick: () => signOut({ callbackUrl: "/login" }),
+      },
+    ];
+
+    const initials = (user_name ?? "?")
+      .split(" ")
+      .map((p) => p[0])
+      .join("")
+      .slice(0, 2)
+      .toUpperCase();
+
+    return (
+      <Dropdown menu={{ items: menuItems }} trigger={["click"]}>
+        <Space style={{ cursor: "pointer" }}>
+          <Avatar style={{ backgroundColor: "#2467e7" }}>
+            {initials || <UserOutlined />}
+          </Avatar>
+          <span style={{ fontWeight: 500, color: "#222" }}>
+            {user_name ?? "User"}
+          </span>
+        </Space>
+      </Dropdown>
+    );
+  };
+
+  // --- NAV normal di halaman "/" ---
   const nav = (
     <>
       {screens.md && (
@@ -98,18 +177,21 @@ export default function MainHeader({
         />
       )}
       <div style={{ flex: 1, display: "flex", justifyContent: "flex-end" }}>
-        <Link href="/login">
-          <Button icon={<LoginOutlined />} type="primary">
-            Login
-          </Button>
-        </Link>
+        <RightAuthArea />
       </div>
     </>
   );
 
-  // --- BACK LINK seperti screenshot ---
+  // --- BACK LINK untuk halaman selain "/" ---
   const back = (
-    <div style={{ flex: 1, display: "flex", alignItems: "center" }}>
+    <div
+      style={{
+        flex: 1,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "space-between",
+      }}
+    >
       <Link
         href={getBackLink()}
         style={{
@@ -126,6 +208,7 @@ export default function MainHeader({
         <ArrowLeftOutlined style={{ fontSize: 18 }} />
         <span>{backLabel}</span>
       </Link>
+      <RightAuthArea />
     </div>
   );
 

@@ -1,16 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import {
-  Card,
-  Timeline,
-  Typography,
-  Space,
-  Button,
-  Tag,
-  Modal,
-  Form,
-} from "antd";
+import { Card, Timeline, Typography, Space, Button, Tag, Form } from "antd";
 import {
   CalendarOutlined,
   EnvironmentOutlined,
@@ -20,6 +11,12 @@ import {
   CheckOutlined,
 } from "@ant-design/icons";
 import { formatDate, formatTime } from "@/app/utils/date-helper";
+import EvaluationAssignmentModal from "@/app/components/common/modal/admin/evaluation-assignment";
+import {
+  useEvaluatorAssignment,
+  useEvaluatorAssignments,
+} from "@/app/hooks/evaluatorAssignment";
+import { EvaluatorAssignmentPayloadCreateModel } from "@/app/models/evaluator-assignment";
 
 const { Title, Text, Link } = Typography;
 
@@ -39,20 +36,65 @@ type Schedule = {
 export default function ScheduleTimeline({
   schedules,
   onReschedule,
+  candidate_id
 }: {
   schedules: Schedule[];
   onReschedule: (item: Schedule) => void;
+  candidate_id: string
 }) {
   // warna aksen sesuai contoh (indigo-ish)
   const accent = "#5b5ce2";
   const [modalOpen, setModalOpen] = useState(false);
+  const [form] = Form.useForm<EvaluatorAssignmentPayloadCreateModel>();
+  const [selectedEvaluatorAssignment, setSelectedEvaluatorAssignment] =
+    useState<EvaluatorAssignmentPayloadCreateModel | null>(null);
+  const [modalType, setModalType] = useState<"create" | "update">("create");
+  const {
+    data: evaluatorsData,
+    onCreate: createEvaluatorAssignment,
+    onCreateLoading: loadingCreate,
+  } = useEvaluatorAssignments({});
+  const {
+    onUpdate: updateEvaluatorAssignment,
+    onUpdateLoading: loadingUpdate,
+  } = useEvaluatorAssignment({
+    id: selectedEvaluatorAssignment?.id || "",
+  });
 
-  const openModal = () => {
-    setModalOpen(true);
+  const handleEdit = (id: string) => {
+    const evaluatorEdit = evaluatorsData?.find(
+      (evaluator) => evaluator.id === id
+    );
+    if (evaluatorEdit) {
+      setSelectedEvaluatorAssignment(evaluatorEdit);
+      setModalType("update");
+      setModalOpen(true);
+    }
   };
 
   const handleCancel = () => {
     setModalOpen(false);
+  };
+
+  const handleFinish = async (
+    values: EvaluatorAssignmentPayloadCreateModel
+  ) => {
+    const payload = {
+      ...values,
+      candidate_id
+    }
+    if (modalType === "create") {
+      await createEvaluatorAssignment(payload);
+    } else if (selectedEvaluatorAssignment?.id) {
+      await updateEvaluatorAssignment({
+        id: selectedEvaluatorAssignment.id,
+        payload: payload,
+      });
+    }
+    form.resetFields();
+    setSelectedEvaluatorAssignment(null);
+    setModalOpen(false);
+    setModalType("create");
   };
 
   return (
@@ -227,7 +269,12 @@ export default function ScheduleTimeline({
                       <Button
                         size="large"
                         icon={<CheckOutlined />}
-                        onClick={() => openModal()}
+                        onClick={() => {
+                          form.resetFields();
+                          setSelectedEvaluatorAssignment(null);
+                          setModalType("create");
+                          setModalOpen(true);
+                        }}
                       >
                         Evaluation
                       </Button>
@@ -243,11 +290,15 @@ export default function ScheduleTimeline({
         })}
       />
 
-      <Modal open={modalOpen} onCancel={handleCancel}>
-        <Form>
-          
-        </Form>
-      </Modal>
+      <EvaluationAssignmentModal
+        open={modalOpen}
+        onClose={() => handleCancel()}
+        handleFinish={handleFinish}
+        loadingCreate={loadingCreate}
+        loadingUpdate={loadingUpdate}
+        type={modalType}
+        // initialValues={initialValues}
+      />
     </div>
   );
 }

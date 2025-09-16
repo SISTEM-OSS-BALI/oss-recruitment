@@ -1,4 +1,4 @@
-import { CandidateDataModel } from "@/app/models/apply-job";
+import { ApplicantDataModel } from "@/app/models/apply-job";
 import { formatDate } from "@/app/utils/date-helper";
 import { HistoryOutlined, UserOutlined } from "@ant-design/icons";
 import { Button } from "antd";
@@ -16,7 +16,7 @@ export default function Columns({
       dataIndex: "no",
       width: 60,
       align: "center" as const,
-      render: (_: string, __: CandidateDataModel, idx: number) => idx + 1,
+      render: (_: string, __: ApplicantDataModel, idx: number) => idx + 1,
     },
     { title: "Candidate Name", dataIndex: "name" },
     { title: "Email", dataIndex: "email" },
@@ -25,14 +25,14 @@ export default function Columns({
       title: "Status",
       key: "stage",
       dataIndex: "stage",
-      render: (value: string, record: CandidateDataModel) => (
-        <StatusTag stage={record.stage} />
+      render: (value: string, record: ApplicantDataModel) => (
+        <StatusTag stage={record.user?.stage} />
       ),
     },
     {
       title: "Apply For",
       dataIndex: "job",
-      render: (value: string, record: CandidateDataModel) => (
+      render: (value: string, record: ApplicantDataModel) => (
         <span>{record.job?.name ?? "-"}</span>
       ),
     },

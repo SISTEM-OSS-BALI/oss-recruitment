@@ -30,11 +30,11 @@ export const SidebarMenuSettingAdmin = (): MenuProps["items"] => {
       },
     },
     {
-      key: "/admin/dashboard/evalutor",
+      key: "/admin/dashboard/evaluator",
       label: "Evaluator",
       icon: <DatabaseFilled />,
       onClick: () => {
-        router.push("/admin/dashboard/evalutor");
+        router.push("/admin/dashboard/evaluator");
       },
     },
   ];

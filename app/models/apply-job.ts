@@ -1,17 +1,18 @@
 /* eslint-disable @typescript-eslint/no-empty-object-type */
 
-import { Prisma, Candidate, Job } from "@prisma/client";
+import { Prisma, Job, Applicant, User } from "@prisma/client";
 import { GeneralOmitModel } from "./general-omit";
 
-export interface CandidateDataModel extends Candidate {
+export interface ApplicantDataModel extends Applicant {
   job: Job;
+  applicant: User;
 }
 
-export interface CandidatePayloadCreateModel
-  extends Prisma.CandidateUncheckedCreateInput {}
+export interface ApplicantPayloadCreateModel
+  extends Prisma.ApplicantUncheckedCreateInput {}
 
-export interface CandidatePayloadUpdateModel
-  extends Omit<Prisma.CandidateUncheckedUpdateInput, GeneralOmitModel> {}
+export interface ApplicantPayloadUpdateModel
+  extends Omit<Prisma.ApplicantUncheckedUpdateInput, GeneralOmitModel> {}
 
-export interface CandidateFormModel
-  extends Omit<CandidateDataModel, GeneralOmitModel> {}
+export interface ApplicantFormModel
+  extends Omit<ApplicantDataModel, GeneralOmitModel> {}

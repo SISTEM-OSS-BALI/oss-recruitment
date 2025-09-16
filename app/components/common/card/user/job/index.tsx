@@ -4,11 +4,13 @@ import dayjs from "dayjs";
 import stripHtml from "@/app/utils/strip-html";
 import { JobDataModel } from "@/app/models/job";
 import { useRouter } from "next/navigation";
+import { useState } from "react";
 
 const { Text } = Typography;
 
 export default function JobCard({ job }: { job: JobDataModel }) {
   const hoursLeft = dayjs(job.until_at).diff(dayjs(), "hour");
+  const [openModal, isOpenModal] = useState(false);
   const deadlineStr =
     hoursLeft < 0
       ? "Closed"

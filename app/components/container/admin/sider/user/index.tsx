@@ -5,12 +5,12 @@ import { usePathname, useRouter } from "next/navigation";
 import Sider from "antd/es/layout/Sider";
 import { Divider, Image, Menu, Typography, theme } from "antd";
 import type { MenuProps } from "antd";
-import { SidebarMenuMainAdmin } from "@/app/data/main/sidebar-data";
-import { SidebarMenuSettingAdmin } from "@/app/data/setting/sidebar-data";
+import { SidebarMainUser } from "@/app/data/admin/user/main/sidebar-data";
+import { SidebarSettingUser } from "@/app/data/admin/user/setting/sidebar-data";
 
 const { Text } = Typography;
 
-export const SiderAdmin = () => {
+export const SiderUser = () => {
   const router = useRouter();
   const pathname = usePathname();
   const { token } = theme.useToken();
@@ -19,11 +19,9 @@ export const SiderAdmin = () => {
   const [activeKey, setActiveKey] = useState("/");
   const [openKeys, setOpenKeys] = useState<string[]>([]);
 
-  // Memoize menu items (avoid re-renders)
-  const mainItems = useMemo(() => SidebarMenuMainAdmin(), []);
-  const settingItems = useMemo(() => SidebarMenuSettingAdmin(), []);
+  const sidebarMainItems = useMemo(() => SidebarMainUser(), []);
+  const sidebarSettingItems = useMemo(() => SidebarSettingUser(), []);
 
-  // Normalize active key (first 4 segments like your original logic)
   useEffect(() => {
     const key = (pathname ?? "")
       .split("/")
@@ -41,7 +39,6 @@ export const SiderAdmin = () => {
     if (key && key !== activeKey) router.push(String(key));
   };
 
-  // Section label (hide when collapsed)
   const SectionLabel = ({ children }: { children: string }) =>
     collapsed ? null : (
       <Text
@@ -103,7 +100,7 @@ export const SiderAdmin = () => {
               OSS Recruitment
             </Text>
             <div style={{ fontSize: 12, color: token.colorTextTertiary }}>
-              Admin Console
+              Candidate Console
             </div>
           </div>
         )}
@@ -122,7 +119,7 @@ export const SiderAdmin = () => {
         <SectionLabel>MAIN MENU</SectionLabel>
         <Menu
           mode="inline"
-          items={mainItems}
+          items={sidebarMainItems}
           onClick={onClick}
           selectedKeys={[activeKey]}
           openKeys={collapsed ? [] : openKeys}
@@ -134,9 +131,10 @@ export const SiderAdmin = () => {
         <Divider style={{ margin: 12 }} />
 
         <SectionLabel>SETTINGS</SectionLabel>
+
         <Menu
           mode="inline"
-          items={settingItems}
+          items={sidebarSettingItems}
           onClick={onClick}
           selectedKeys={[activeKey]}
           openKeys={collapsed ? [] : openKeys}
