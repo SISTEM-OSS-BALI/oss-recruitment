@@ -22,13 +22,19 @@ enum RecruitmentStage {
   WAITING
 }
 
-enum QuestionType {
+enum QuestionEvaluastionType {
   TEXT
   NUMBER
   RATING
   BOOLEAN
   SINGLE_SELECT
   MULTI_SELECT
+}
+
+enum QuestionScreeningType {
+  SINGLE_CHOICE
+  MULTIPLE_CHOICE
+  TEXT
 }
 
 enum Role {
@@ -103,6 +109,12 @@ model Applicant {
   stage     RecruitmentStage? @default(SCREENING)
   createdAt DateTime          @default(now())
   updatedAt DateTime          @updatedAt
+
+  screeningBaseId String?
+  screeningBase   QuestionBaseScreening?    @relation(fields: [screeningBaseId], references: [id], onDelete: SetNull)
+  answers         AnswerQuestionScreening[]
+
+  screeningSubmittedAt DateTime?
 
   mbti_test_id      String?             @unique
   mbti_test         MbtiTest?           @relation("ApplicantMbti", fields: [mbti_test_id], references: [id], onDelete: SetNull, onUpdate: Cascade)
@@ -326,11 +338,11 @@ enum EvaluationStatus {
 }
 
 model FormQuestion {
-  id               String       @id @default(cuid())
+  id               String                  @id @default(cuid())
   formEvaluationId String
   order            Int
   text             String
-  type             QuestionType
+  type             QuestionEvaluastionType
   options          Json?
 
   formEvaluation FormEvaluation     @relation(fields: [formEvaluationId], references: [id], onDelete: Cascade)
@@ -360,4 +372,88 @@ model EvaluationSummary {
   updatedAt DateTime @updatedAt
 
   assignment EvaluationAssignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+}
+
+model QuestionBaseScreening {
+  id   String  @id @default(cuid())
+  name String
+  desc String?
+
+  questions QuestionScreening[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  active    Boolean     @default(true)
+  version   Int         @default(1)
+  applicant Applicant[]
+}
+
+model QuestionScreening {
+  id          String                @id @default(cuid())
+  baseId      String
+  text        String 
+  inputType   QuestionScreeningType
+  required    Boolean               @default(true)
+  order       Int                   @default(0)
+  helpText    String?
+  placeholder String?
+
+  minLength Int?
+  maxLength Int?
+
+  base    QuestionBaseScreening     @relation(fields: [baseId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  options QuestionOption[]
+  answers AnswerQuestionScreening[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  active Boolean @default(true)
+}
+
+model QuestionOption {
+  id         String @id @default(cuid())
+  questionId String
+  label      String
+  value      String
+  order      Int    @default(0)
+
+  question   QuestionScreening      @relation(fields: [questionId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  selectedBy AnswerSelectedOption[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  active Boolean @default(true)
+
+  @@unique([questionId, value]) 
+  @@index([questionId, order])
+}
+
+model AnswerQuestionScreening {
+  id         String @id @default(cuid())
+  sessionId  String
+  questionId String
+
+  answerText      String?
+  question        QuestionScreening      @relation(fields: [questionId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  selectedOptions AnswerSelectedOption[]
+
+  createdAt   DateTime   @default(now())
+  applicant   Applicant? @relation(fields: [applicantId], references: [id])
+  applicantId String?
+
+  @@unique([sessionId, questionId])
+  @@index([questionId])
+}
+
+model AnswerSelectedOption {
+  answerId String
+  optionId String
+
+  answer AnswerQuestionScreening @relation(fields: [answerId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  option QuestionOption          @relation(fields: [optionId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+
+  @@id([answerId, optionId])
 }

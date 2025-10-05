@@ -73,6 +73,16 @@ export const SidebarMenuSettingAdmin = (): MenuProps["items"] => {
           onClick: () =>
             router.push("/admin/dashboard/assignment-setting/task"),
         },
+        {
+          key: "/admin/dashboard/assignment-setting/screening-question",
+          label: "Screening Question",
+          icon: <QuestionCircleOutlined />,
+          onClick: () => {
+            router.push(
+              "/admin/dashboard/assignment-setting/screening-question"
+            );
+          },
+        },
       ],
     },
   ];
