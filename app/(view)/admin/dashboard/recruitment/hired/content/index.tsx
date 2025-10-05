@@ -17,8 +17,8 @@ import { SearchOutlined } from "@ant-design/icons";
 
 import { reorderImmutable } from "@/app/utils/reoder";
 import DraggableCandidateItem from "@/app/utils/dnd-helper";
-import { CandidateDataModel } from "@/app/models/apply-job";
-import { useCandidate, useCandidates } from "@/app/hooks/candidate";
+import { CandidateDataModel } from "@/app/models/applicant";
+import { useCandidate, useCandidates } from "@/app/hooks/applicant";
 import { useRecruitment } from "../../context";
 import { Location, RecruitmentStage } from "@prisma/client";
 import HiredSchedulePage from "./HiredCandidate";
@@ -46,7 +46,7 @@ export default function CandidatesPage() {
 
   // hanya tampilkan kandidat di stage NEW_APLICANT (halaman Screening)
   const screening = useMemo(
-    () => candidatesData.filter((c) => c.stage === RecruitmentStage.HIRED),
+    () => candidatesData.filter((c) => c.user.stage === RecruitmentStage.HIRED),
     [candidatesData]
   );
 

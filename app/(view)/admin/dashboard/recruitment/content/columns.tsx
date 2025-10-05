@@ -1,4 +1,5 @@
-import { ApplicantDataModel } from "@/app/models/apply-job";
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import { ApplicantDataModel } from "@/app/models/applicant";
 import { formatDate } from "@/app/utils/date-helper";
 import { HistoryOutlined, UserOutlined } from "@ant-design/icons";
 import { Button } from "antd";
@@ -13,40 +14,54 @@ export default function Columns({
   const columnDefinitions = [
     {
       title: "No",
-      dataIndex: "no",
       width: 60,
       align: "center" as const,
-      render: (_: string, __: ApplicantDataModel, idx: number) => idx + 1,
+      render: (_: unknown, __: ApplicantDataModel, idx: number) => idx + 1,
     },
-    { title: "Candidate Name", dataIndex: "name" },
-    { title: "Email", dataIndex: "email" },
-    { title: "Phone Number", dataIndex: "phone" },
+    {
+      title: "Candidate Name",
+      render: (_: unknown, record: ApplicantDataModel) => {
+        return <span>{record.user?.name ?? "-"}</span>;
+      },
+    },
+    {
+      title: "Email",
+      render: (_: unknown, record: ApplicantDataModel) => {
+        return <span>{record.user?.email ?? "-"}</span>;
+      },
+    },
+    {
+      title: "Phone Number",
+      render: (_: unknown, record: ApplicantDataModel) => {
+        return <span>{record.user?.phone ?? "-"}</span>;
+      },
+    },
     {
       title: "Status",
-      key: "stage",
-      dataIndex: "stage",
-      render: (value: string, record: ApplicantDataModel) => (
-        <StatusTag stage={record.user?.stage} />
-      ),
+      render: (_: unknown, record: ApplicantDataModel) => {
+        return <StatusTag stage={record.stage} />;
+      },
     },
     {
       title: "Apply For",
-      dataIndex: "job",
-      render: (value: string, record: ApplicantDataModel) => (
+      render: (_: unknown, record: ApplicantDataModel) => (
         <span>{record.job?.name ?? "-"}</span>
       ),
     },
     {
       title: "Last Updated At",
       dataIndex: "updatedAt",
-      render: (value: string) => formatDate(value),
+      render: (value: string) => (value ? formatDate(value) : "-"),
     },
     {
       title: "Action",
-      key: "action",
       width: 120,
-      render: (_: string, record: CandidateDataModel) => (
-        <ActionButtons id={record.id} openDetail={onDetail} onHistory={onHistory} />
+      render: (_: unknown, record: ApplicantDataModel) => (
+        <ActionButtons
+          id={record.id}
+          openDetail={onDetail}
+          onHistory={onHistory}
+        />
       ),
     },
   ];
@@ -54,21 +69,21 @@ export default function Columns({
   return columnDefinitions;
 }
 
-const StatusTag = ({ stage }: { stage: string | undefined }) => {
-  const trimmedStage = stage?.trim() || "Waiting";
+const StatusTag = ({ stage }: { stage?: string }) => {
+  const text = (stage || "Waiting").trim();
   return (
     <span
       style={{
         backgroundColor: "#1E1E1E",
         color: "#fff",
         padding: "4px 12px",
-        borderRadius: "20px",
-        fontSize: "12px",
+        borderRadius: 20,
+        fontSize: 12,
         display: "inline-block",
         fontWeight: 500,
       }}
     >
-      {trimmedStage}
+      {text}
     </span>
   );
 };
@@ -81,21 +96,19 @@ const ActionButtons = ({
   id: string;
   openDetail: (id: string) => void;
   onHistory: (id: string) => void;
-}) => {
-  return (
-    <div style={{ display: "flex", gap: 8 }}>
-      <Button
-        type="primary"
-        shape="circle"
-        icon={<UserOutlined />}
-        onClick={() => openDetail(id)}
-      />
-      <Button
-        type="default"
-        shape="circle"
-        icon={<HistoryOutlined />}
-        onClick={() => onHistory(id)}
-      />
-    </div>
-  );
-};
+}) => (
+  <div style={{ display: "flex", gap: 8 }}>
+    <Button
+      type="primary"
+      shape="circle"
+      icon={<UserOutlined />}
+      onClick={() => openDetail(id)}
+    />
+    <Button
+      type="default"
+      shape="circle"
+      icon={<HistoryOutlined />}
+      onClick={() => onHistory(id)}
+    />
+  </div>
+);

@@ -19,7 +19,7 @@ export default function GlobalProvider({
       <AntdRegistry>
         <ConfigProvider theme={antdTheme}>
           <QueryClientProvider client={queryClient}>
-            <AuthWrapper>{children}</AuthWrapper>
+            {children}
           </QueryClientProvider>
         </ConfigProvider>
       </AntdRegistry>

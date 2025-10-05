@@ -19,9 +19,9 @@ import {
   CloseOutlined,
   HistoryOutlined,
 } from "@ant-design/icons";
-import { useCandidates } from "@/app/hooks/candidate";
+import { useCandidates } from "@/app/hooks/applicant";
 import { useHistoryCandidates } from "@/app/hooks/history-candidate";
-import { CandidateDataModel } from "@/app/models/apply-job";
+import { ApplicantDataModel } from "@/app/models/applicant";
 import { HistoryCandidateDataModel } from "@/app/models/history-candidate";
 import { useRecruitment } from "../context";
 import Columns from "./columns";
@@ -69,7 +69,7 @@ export default function Content() {
   const statusOptions = useMemo(() => {
     const s = Array.from(
       new Set(
-        (candidatesData as CandidateDataModel[])
+        (candidatesData as ApplicantDataModel[])
           .map((c) => c.stage?.trim())
           .filter(Boolean) as string[]
       )
@@ -81,14 +81,14 @@ export default function Content() {
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
-    return (candidatesData as CandidateDataModel[]).filter((c) => {
+    return (candidatesData as ApplicantDataModel[]).filter((c) => {
       const m1 =
         !status || (c.stage ?? "").toLowerCase() === status.toLowerCase();
       const m3 =
         !q ||
-        c.name?.toLowerCase().includes(q) ||
-        c.email?.toLowerCase().includes(q) ||
-        c.phone?.toLowerCase().includes(q);
+        c.user.name?.toLowerCase().includes(q) ||
+        c.user.email?.toLowerCase().includes(q) ||
+        c.user.phone?.toLowerCase().includes(q);
       return m1 && m3;
     });
   }, [candidatesData, status, search]);
@@ -97,8 +97,9 @@ export default function Content() {
   const counts = useMemo(() => {
     const total = candidatesData.length;
     const by = (st: string) =>
-      candidatesData.filter((c) => c.stage?.toLowerCase() === st.toLowerCase())
-        .length;
+      candidatesData.filter(
+        (c) => c.stage?.toLowerCase() === st.toLowerCase()
+      ).length;
     const screeningCount = total - by("Interview");
     return {
       all: total,
@@ -136,7 +137,7 @@ export default function Content() {
   });
 
   // derive selected candidate & history items for modal
-  const selectedCandidate: CandidateDataModel | undefined = useMemo(
+  const selectedCandidate: ApplicantDataModel | undefined = useMemo(
     () => candidatesData.find((c) => c.id === historyForCandidateId),
     [candidatesData, historyForCandidateId]
   );
@@ -144,7 +145,7 @@ export default function Content() {
   const candidateHistory: HistoryCandidateDataModel[] = useMemo(() => {
     if (!historyForCandidateId) return [];
     return [...historyCandidates]
-      .filter((h) => h.candidate_id === historyForCandidateId)
+      .filter((h) => h.applicant_id === historyForCandidateId)
       .sort(
         (a, b) =>
           new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
@@ -211,7 +212,7 @@ export default function Content() {
             overflow: "hidden",
           }}
         >
-          <Table<CandidateDataModel>
+          <Table<ApplicantDataModel>
             columns={columns}
             dataSource={filtered}
             rowKey="id"
@@ -249,7 +250,8 @@ export default function Content() {
           <Space>
             <HistoryOutlined />
             <span>
-              Stage History — {selectedCandidate?.name ?? "(Unknown Candidate)"}
+              Stage History —{" "}
+              {selectedCandidate?.user.name ?? "(Unknown Candidate)"}
             </span>
           </Space>
         }

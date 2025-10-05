@@ -19,9 +19,9 @@ import {
   PhoneOutlined,
   IdcardOutlined,
 } from "@ant-design/icons";
-import { CandidatePayloadCreateModel } from "@/app/models/apply-job";
 import SupaImageUploader from "@/app/utils/image-uploader";
 import SupaPdfUploader from "@/app/utils/pdf-uploader";
+import { ApplicantPayloadCreateModel } from "@/app/models/applicant";
 
 const { Title, Text, Paragraph } = Typography;
 
@@ -76,7 +76,7 @@ function SectionHeader({
 
 /* -------------------------------- Component ------------------------------- */
 type ApplyFormProps = {
-  onSubmit?: (values: CandidatePayloadCreateModel) => void;
+  onSubmit?: (values: ApplicantPayloadCreateModel) => void;
   loading?: boolean;
 };
 

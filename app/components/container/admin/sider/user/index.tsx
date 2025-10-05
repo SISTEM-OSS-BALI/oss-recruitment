@@ -5,8 +5,8 @@ import { usePathname, useRouter } from "next/navigation";
 import Sider from "antd/es/layout/Sider";
 import { Divider, Image, Menu, Typography, theme } from "antd";
 import type { MenuProps } from "antd";
-import { SidebarMainUser } from "@/app/data/admin/user/main/sidebar-data";
-import { SidebarSettingUser } from "@/app/data/admin/user/setting/sidebar-data";
+import { SidebarMainUser } from "@/app/data/user/main/sidebar-data";
+import { SidebarSettingUser } from "@/app/data/user/setting/sidebar-data";
 
 const { Text } = Typography;
 

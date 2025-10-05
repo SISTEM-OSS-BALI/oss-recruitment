@@ -1,12 +1,13 @@
 "use client";
 
 import { List, Avatar, Space, Tag, Dropdown, Button, Image } from "antd";
-import { MoreOutlined, DragOutlined } from "@ant-design/icons";
+import type { MenuProps } from "antd";
+import { MoreOutlined, DragOutlined, MessageOutlined } from "@ant-design/icons";
 import { CSSProperties, useRef } from "react";
 import { useDrag, useDrop } from "react-dnd";
 import { DND_ITEM, DragItem } from "./types";
 import getInitials from "./username-helper";
-
+import { useRouter } from "next/navigation";
 
 type Props = {
   id: string;
@@ -14,6 +15,7 @@ type Props = {
   email: string;
   status: string;
   active: boolean;
+  stage: string | null;
   image_url?: string | null;
   onClick: () => void;
   visibleIndex: number;
@@ -32,6 +34,7 @@ export default function DraggableCandidateItem({
   onHoverMove,
 }: Props) {
   const ref = useRef<HTMLDivElement | null>(null);
+  const router = useRouter();
 
   const [{ isDragging }, drag] = useDrag({
     type: DND_ITEM.CANDIDATE,
@@ -86,6 +89,20 @@ export default function DraggableCandidateItem({
     opacity: isDragging ? 0.6 : 1,
   };
 
+  const menuItems: MenuProps["items"] = [
+    {
+      key: "chat",
+      label: "Chat",
+      icon: <MessageOutlined />,
+    },
+  ];
+
+  const onMenuClick: MenuProps["onClick"] = ({ key }) => {
+    if (key === "chat") {
+      router.push(`/admin/dashboard/chat?applicant_id=${id}`);
+    }
+  };
+
   return (
     <div ref={ref} style={style}>
       <List.Item
@@ -93,13 +110,7 @@ export default function DraggableCandidateItem({
         actions={[
           <Dropdown
             key="more"
-            menu={{
-              items: [
-                { key: "view", label: "View Profile" },
-                { key: "timeline", label: "View Timeline" },
-                { key: "message", label: "Send Message" },
-              ],
-            }}
+            menu={{ items: menuItems, onClick: onMenuClick }}
             trigger={["click"]}
           >
             <Button type="text" icon={<MoreOutlined />} />
@@ -117,7 +128,11 @@ export default function DraggableCandidateItem({
               size={40}
               style={{ background: "#e6f0ff", color: "#2458e6" }}
             >
-              {image_url ? <Image src={image_url} /> : getInitials(name)}
+              {image_url ? (
+                <Image src={image_url} alt="avatar" />
+              ) : (
+                getInitials(name)
+              )}
             </Avatar>
           }
           title={<span style={{ fontWeight: 600 }}>{name}</span>}

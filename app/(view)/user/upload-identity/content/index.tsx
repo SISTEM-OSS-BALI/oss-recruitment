@@ -21,7 +21,6 @@ export default function OCRConverter() {
   const [status, setStatus] = useState<string>(""); // human-readable progress text
   const inputRef = useRef<HTMLInputElement | null>(null);
 
-  // Create/revoke preview URL
   useEffect(() => {
     if (!file) {
       if (previewUrl) URL.revokeObjectURL(previewUrl);

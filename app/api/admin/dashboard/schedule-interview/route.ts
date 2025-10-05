@@ -1,6 +1,7 @@
 // app/api/admin/dashboard/schedule-interview/route.ts
 import { NextRequest, NextResponse } from "next/server";
-import { CREATE_SCHEDULE_INTERVIEW } from "@/app/providers/interview";
+import { CREATE_SCHEDULE_INTERVIEW, GET_SCHEDULE_INTERVIEWS } from "@/app/providers/schedule-interview";
+import { GeneralError } from "@/app/utils/general-error";
 
 const emptyToNull = <T extends string | null | undefined>(v: T) =>
   typeof v === "string" && v.trim() === "" ? (null as T) : v;
@@ -40,13 +41,14 @@ export const POST = async (req: NextRequest) => {
     }
 
     // normalisasi nama field: terima camelCase ataupun snake_case
-    const candidateId = raw.candidateId ?? raw.candidate_id;
-    const locationId = raw.locationId ?? raw.location_id;
+    const applicant_id = raw.applicant_id ?? raw.applicant_id;
+    const rawOnline = raw.isOnline ?? raw.is_online ?? raw.online;
     const startTime = raw.startTime ?? raw.start_time;
+    const schedule_id = raw.schedule_id ?? raw.schedule_id;
     const meetingLink = raw.meetingLink ?? raw.meeting_link ?? raw.link;
     const note = raw.note ?? null;
 
-    if (!isProvided(candidateId)) {
+    if (!isProvided(applicant_id)) {
       return NextResponse.json(
         { success: false, message: "candidate_id is required" },
         { status: 400 }
@@ -64,14 +66,8 @@ export const POST = async (req: NextRequest) => {
         { status: 400 }
       );
     }
-    if (!isProvided(locationId)) {
-      return NextResponse.json(
-        { success: false, message: "location_id is required" },
-        { status: 400 }
-      );
-    }
 
-    const online = coerceBool(raw.online, false);
+    const is_online = coerceBool(rawOnline, false);
 
     let date: string | Date;
     let start_time: string | Date;
@@ -87,11 +83,11 @@ export const POST = async (req: NextRequest) => {
     }
 
     const normalizedPayload = {
-      candidate_id: String(candidateId),
-      location_id: String(locationId),
+      applicant_id,
       date,
+      schedule_id,
       start_time,
-      online,
+      is_online,
       note: emptyToNull(note),
       meeting_link: emptyToNull(meetingLink),
       // link tidak perlu jika sudah ada meeting_link
@@ -119,5 +115,32 @@ export const POST = async (req: NextRequest) => {
       { success: false, message: "Failed to create schedule", error: msg },
       { status: 500 }
     );
+  }
+};
+
+export const GET = async () => {
+  try {
+    const data = await GET_SCHEDULE_INTERVIEWS();
+    return NextResponse.json(
+      {
+        success: true,
+        message: "Successfully get data!",
+        result: data,
+      },
+      { status: 200 }
+    );
+  } catch (error: unknown) {
+    if (error instanceof GeneralError) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: error.error,
+          error_code: error.error_code,
+          details: error.details,
+        },
+        { status: error.code }
+      );
+    }
+
   }
 };

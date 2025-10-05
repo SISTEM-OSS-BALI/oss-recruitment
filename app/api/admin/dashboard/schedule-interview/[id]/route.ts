@@ -1,6 +1,6 @@
 // app/api/admin/dashboard/schedule-interview/[id]/route.ts
 import { NextRequest, NextResponse } from "next/server";
-import { UPDATE_SCHEDULE_INTERVIEW } from "@/app/providers/interview";
+import { UPDATE_SCHEDULE_INTERVIEW } from "@/app/providers/schedule-interview";
 import db from "@/lib/prisma";
 
 const emptyToNull = <T extends string | null | undefined>(v: T) =>
@@ -92,7 +92,9 @@ export const PUT = async (
       ? emptyToNull(meetingLinkRaw)
       : current.meeting_link ?? null;
     const onlineFinal =
-      online !== undefined ? online : Boolean(meeting_link ?? current.meeting_link);
+      online !== undefined
+        ? online
+        : Boolean(meeting_link ?? current.meeting_link);
 
     // Validasi link saat online
     if (onlineFinal && !meeting_link) {
@@ -184,7 +186,9 @@ export const DELETE = async (
   { params }: { params: { id: string } }
 ) => {
   try {
-    const result = await db.scheduleInterview.delete({ where: { id: params.id } });
+    const result = await db.scheduleInterview.delete({
+      where: { id: params.id },
+    });
     return NextResponse.json(
       { success: true, message: "Successfully deleted!", result },
       { status: 200 }

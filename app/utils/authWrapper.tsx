@@ -21,7 +21,7 @@ export default function AuthWrapper({
     if (status === "loading") return;
 
     if (shouldProtect && !session) {
-      router.push("/admin/login");
+      router.push("/login");
     }
   }, [session, status, router, shouldProtect]);
 

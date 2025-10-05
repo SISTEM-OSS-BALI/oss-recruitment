@@ -14,6 +14,7 @@ interface ImageItem {
 interface SupaImageUploaderProps {
   bucket?: string;
   folder?: string;
+  label?: string;
   onUpload?: (path: string, url: string) => void;
   onDelete?: (path: string) => void;
   value?: string | null;
@@ -28,6 +29,7 @@ export default function SupaImageUploader({
   folder = "",
   onUpload,
   onDelete,
+  label,
   value,
   onChange,
   variant = "thumbnail",

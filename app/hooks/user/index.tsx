@@ -2,17 +2,13 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import axios from "axios";
 
 import MainNotification from "../../components/common/notifications";
-import {
-  JobDataModel,
-  JobPayloadCreateModel,
-  JobPayloadUpdateModel,
-} from "@/app/models/job";
+import { UserDataModel, UserPayloadCreateModel, UserPayloadUpdateModel } from "@/app/models/user";
 
-const baseUrl = "/api/admin/dashboard/job";
-const entity = "job";
-const queryKey = "jobs";
+const baseUrl = "/api/user";
+const entity = "user";
+const queryKey = "users";
 
-export const useJobs = ({ queryString }: { queryString?: string }) => {
+export const useUsers = ({ queryString }: { queryString?: string }) => {
   const queryClient = useQueryClient();
 
   const { data, isLoading: fetchLoading } = useQuery({
@@ -20,12 +16,12 @@ export const useJobs = ({ queryString }: { queryString?: string }) => {
     queryFn: async () => {
       const url = queryString ? `${baseUrl}?${queryString}` : baseUrl;
       const result = await axios.get(url);
-      return result.data.result as JobDataModel[];
+      return result.data.result as UserDataModel[];
     },
   });
 
   const { mutateAsync: onCreate, isPending: onCreateLoading } = useMutation({
-    mutationFn: async (payload: JobPayloadCreateModel) =>
+    mutationFn: async (payload: UserPayloadCreateModel) =>
       axios.post(baseUrl, payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [queryKey] });
@@ -57,27 +53,25 @@ export const useJobs = ({ queryString }: { queryString?: string }) => {
   };
 };
 
-export const useJob = ({ id }: { id: string }) => {
+export const useUser = ({ id }: { id: string }) => {
   const queryClient = useQueryClient();
 
-  // Query data berdasarkan ID
   const { data, isLoading: fetchLoading } = useQuery({
     queryKey: [entity, id],
     queryFn: async () => {
       const result = await axios.get(`${baseUrl}/${id}`);
-      return result.data.result as JobDataModel;
+      return result.data.result as UserDataModel;
     },
     enabled: Boolean(id),
   });
 
-  // Mutasi untuk update
   const { mutateAsync: onUpdate, isPending: onUpdateLoading } = useMutation({
     mutationFn: async ({
       id,
       payload,
     }: {
       id: string;
-      payload: JobPayloadUpdateModel;
+      payload: UserPayloadUpdateModel;
     }) => axios.put(`${baseUrl}/${id}`, payload),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: [queryKey] });

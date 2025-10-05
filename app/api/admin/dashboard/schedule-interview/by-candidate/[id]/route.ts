@@ -1,4 +1,4 @@
-import { GET_SCHEDULES_BY_CANDIDATE } from "@/app/providers/interview";
+import { GET_SCHEDULES_BY_APPLICANT } from "@/app/providers/schedule-interview";
 import { GeneralError } from "@/app/utils/general-error";
 import { NextRequest, NextResponse } from "next/server";
 
@@ -7,7 +7,7 @@ export const GET = async (
   { params }: { params: { id: string } }
 ) => {
   try {
-    const data = await GET_SCHEDULES_BY_CANDIDATE(params.id);
+    const data = await GET_SCHEDULES_BY_APPLICANT(params.id);
     return NextResponse.json(
       {
         success: true,

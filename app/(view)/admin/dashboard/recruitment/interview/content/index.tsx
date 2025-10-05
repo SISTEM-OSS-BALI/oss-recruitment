@@ -17,16 +17,14 @@ import { SearchOutlined } from "@ant-design/icons";
 
 import { reorderImmutable } from "@/app/utils/reoder";
 import DraggableCandidateItem from "@/app/utils/dnd-helper";
-import { CandidateDataModel } from "@/app/models/apply-job";
-import { useCandidate, useCandidates } from "@/app/hooks/candidate";
+import { useCandidate, useCandidates } from "@/app/hooks/applicant";
 import { useRecruitment } from "../../context";
 import { RecruitmentStage } from "@prisma/client";
 import InterviewCandidate from "./InterviewCandidate";
 import {
   useScheduleInterview,
-  useScheduleInterviews,
 } from "@/app/hooks/interview";
-import { ScheduleInterviewPayloadCreateModel } from "@/app/models/interview";
+import { ApplicantDataModel } from "@/app/models/applicant";
 
 const { Title, Text } = Typography;
 
@@ -51,9 +49,9 @@ export default function CandidatesPage() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
   const { data: candidatesData = [] } = useCandidates({});
-  const { onUpdateStatus: updateStatus } = useCandidate();
+  const { onUpdateStatus: updateStatus } = useCandidate({id: selectedId!});
 
-  const { onCreate: createInterview } = useScheduleInterviews();
+  // const { onCreate: createInterview } = useScheduleInterviews();
 
   // hanya tampilkan kandidat di stage NEW_APLICANT (halaman Screening)
   const screening = useMemo(
@@ -62,7 +60,7 @@ export default function CandidatesPage() {
   );
 
   // sumber kebenaran untuk DnD list (lokal)
-  const [list, setList] = useState<CandidateDataModel[]>([]);
+  const [list, setList] = useState<ApplicantDataModel[]>([]);
   useEffect(() => {
     // inisialisasi / merge aman saat data berubah
     setList((prev) => {
@@ -111,9 +109,9 @@ export default function CandidatesPage() {
     const q = query.trim().toLowerCase();
     if (!q) return list;
     return list.filter((c) => {
-      const n = c.name?.toLowerCase() ?? "";
-      const e = c.email?.toLowerCase() ?? "";
-      const p = c.phone?.toLowerCase() ?? "";
+      const n = c.user.name?.toLowerCase() ?? "";
+      const e = c.user.email?.toLowerCase() ?? "";
+      const p = c.user.phone?.toLowerCase() ?? "";
       return n.includes(q) || e.includes(q) || p.includes(q);
     });
   }, [list, query]);
@@ -167,50 +165,51 @@ export default function CandidatesPage() {
   const {
     listData = [],
     listLoading,
-    onUpdate: onUpdateInterview,
-    refetchList,
+    // onUpdate: onUpdateInterview,
+    // refetchList,
   } = useScheduleInterview({
     id: selectedScheduleId ?? "",
-    candidate_id: selected?.id,
+    applicant_id: selected?.id,
   });
+  console.log("listData", listData);
 
-  const handleCreateInterview = async (
-    values: ScheduleInterviewPayloadCreateModel
-  ) => {
-    // must have a selected candidate
-    if (!selected?.id) {
-      message.error("Please select a candidate first.");
-      return;
-    }
+  // const handleCreateInterview = async (
+  //   values: ScheduleInterviewPayloadCreateModel
+  // ) => {
+  //   // must have a selected candidate
+  //   if (!selected?.id) {
+  //     message.error("Please select a candidate first.");
+  //     return;
+  //   }
 
-    // support either job.location_id or job.locationId depending on your model
-    const locationId =
-      selected.job?.location_id ?? selected.job?.location_id ?? null;
+  //   // support either job.location_id or job.locationId depending on your model
+  //   const locationId =
+  //     selected.job?.location_id ?? selected.job?.location_id ?? null;
 
-    if (!locationId) {
-      message.error("This candidate's job is missing a location.");
-      return;
-    }
+  //   if (!locationId) {
+  //     message.error("This candidate's job is missing a location.");
+  //     return;
+  //   }
 
-    // build a strongly-typed payload
-    const payload: ScheduleInterviewPayloadCreateModel = {
-      ...values,
-      candidateId: selected.id, // definitely a string now
-      locationId: locationId, // guaranteed string due to guard
-    };
+  //   // build a strongly-typed payload
+  //   const payload: ScheduleInterviewPayloadCreateModel = {
+  //     ...values,
+  //     applicant_id: selected.id, // definitely a string now
+  //     locationId: locationId, // guaranteed string due to guard
+  //   };
 
-    try {
-      const result = await createInterview(payload);
-      await refetchList();
-      // keep selected schedule for the right-side panel if API returns id
-      setSelectedScheduleId(result.data?.result?.id ?? null);
-      message.success("Interview scheduled successfully.");
-    } catch (e) {
-      message.error(
-        e instanceof Error ? e.message : "Failed to create interview"
-      );
-    }
-  };
+  //   try {
+  //     const result = await createInterview(payload);
+  //     await refetchList();
+  //     // keep selected schedule for the right-side panel if API returns id
+  //     setSelectedScheduleId(result.data?.result?.id ?? null);
+  //     message.success("Interview scheduled successfully.");
+  //   } catch (e) {
+  //     message.error(
+  //       e instanceof Error ? e.message : "Failed to create interview"
+  //     );
+  //   }
+  // };
 
   return (
     <Row gutter={[16, 16]}>
@@ -252,10 +251,11 @@ export default function CandidatesPage() {
               <DraggableCandidateItem
                 key={item.id}
                 id={item.id}
-                name={item.name}
-                email={item.email}
-                image_url={item.photo_url}
-                status={item.stage} // tampilkan stage sekarang
+                stage={item.stage || ""}
+                name={item.user.name || "No Name"}
+                image_url={item.user.photo_url || undefined}
+                email={item.user.email || ""}
+                status={item.stage || ""}
                 active={item.id === selectedId}
                 onClick={() => setSelectedId(item.id)}
                 visibleIndex={(page - 1) * pageSize + idx}
@@ -289,9 +289,7 @@ export default function CandidatesPage() {
           <InterviewCandidate
             candidate={selected}
             selectedScheduleId={selectedScheduleId}
-            onCreateSchedule={handleCreateInterview}
             listData={listData}
-            onReschedule={onUpdateInterview}
             listLoading={listLoading}
           />
         </Card>

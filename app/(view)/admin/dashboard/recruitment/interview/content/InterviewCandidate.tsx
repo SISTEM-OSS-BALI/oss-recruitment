@@ -1,88 +1,67 @@
 "use client";
 
-import React, { useMemo, useState } from "react";
-import {
-  Card,
-  Col,
-  Row,
-  Empty,
-  Skeleton,
-  Modal,
-} from "antd";
-import dayjs from "dayjs";
+import React, { useMemo } from "react";
+import { Card, Col, Row, Empty, Skeleton } from "antd";
 
-import type { CandidateDataModel } from "@/app/models/apply-job";
-import ScheduleInterviewForm from "@/app/components/common/form/interview";
 import {
   ScheduleInterviewDataModel,
-  ScheduleInterviewPayloadCreateModel,
 } from "@/app/models/interview";
 import ScheduleTimeline from "./InterviewTimeline";
 import CandidateInfoPanel from "@/app/components/common/information-panel";
-
+import { ApplicantDataModel } from "@/app/models/applicant";
 
 /* ---------- helpers ---------- */
-
 
 /* ================== Page ================== */
 export default function InterviewSchedulePage({
   listData = [],
   listLoading = false,
   candidate,
-  submitting = false,
-  onCreateSchedule,
-  onReschedule,
+  // submitting = false,
+  // onCreateSchedule
 }: {
   selectedScheduleId?: string | null;
-  candidate: CandidateDataModel | null;
+  candidate: ApplicantDataModel | null;
   interviewers?: { value: string; label: string }[];
   listData?: ScheduleInterviewDataModel[];
   listLoading?: boolean;
-  submitting?: boolean;
-  onReschedule?: (args: {
-    id: string;
-    payload: ScheduleInterviewPayloadCreateModel;
-  }) => Promise<void>;
   title?: string;
-  onCreateSchedule: (
-    payload: ScheduleInterviewPayloadCreateModel
-  ) => Promise<void>;
 }) {
-  const [rescheduleOpen, setRescheduleOpen] = useState(false);
-  const [editing, setEditing] = useState<ScheduleInterviewDataModel | null>(
-    null
-  );
+  // const [rescheduleOpen, setRescheduleOpen] = useState(false);
+  // const [editing, setEditing] = useState<ScheduleInterviewDataModel | null>(
+  //   null
+  // );
 
   const schedules = useMemo(
-    () => listData.filter((s) => s.candidateId === candidate?.id),
+    () => listData.filter((s) => s.applicant_id === candidate?.id),
     [listData, candidate?.id]
   );
 
-  const openReschedule = (item: ScheduleInterviewDataModel) => {
-    setEditing(item);
-    setRescheduleOpen(true);
-  };
-  const closeReschedule = () => {
-    setRescheduleOpen(false);
-    setEditing(null);
-  };
+  // const openReschedule = (item: ScheduleInterviewDataModel) => {
+  //   setEditing(item);
+  //   setRescheduleOpen(true);
+  // };
+  // const closeReschedule = () => {
+  //   setRescheduleOpen(false);
+  //   setEditing(null);
+  // };
 
-  const initialValues = editing && {
-    candidateId: editing.candidateId,
-    locationId: editing.locationId ?? editing.location?.id,
-    online: !!editing.meeting_link,
-    meeting_link: editing.meeting_link ?? "",
-    date: dayjs(editing.date),
-    start_time: dayjs(editing.start_time),
-  };
+  // const initialValues = editing && {
+  //   candidateId: editing.candidateId,
+  //   locationId: editing.locationId ?? editing.location?.id,
+  //   online: !!editing.meeting_link,
+  //   meeting_link: editing.meeting_link ?? "",
+  //   date: dayjs(editing.date),
+  //   start_time: dayjs(editing.start_time),
+  // };
 
-  const handleRescheduleSubmit = async (
-    values: ScheduleInterviewPayloadCreateModel
-  ) => {
-    if (!editing || !onReschedule) return;
-    await onReschedule({ id: editing.id, payload: values });
-    closeReschedule();
-  };
+  // const handleRescheduleSubmit = async (
+  //   values: ScheduleInterviewPayloadCreateModel
+  // ) => {
+  //   if (!editing || !onReschedule) return;
+  //   await onReschedule({ id: editing.id, payload: values });
+  //   closeReschedule();
+  // };
 
   if (!candidate) {
     return (
@@ -106,14 +85,15 @@ export default function InterviewSchedulePage({
       {/* LEFT PANEL (Profile) */}
       <Col xs={24} md={8}>
         <CandidateInfoPanel
-          email={candidate.email}
-          phone={candidate.phone}
-          dateOfBirth={candidate.date_of_birth}
-          jobName={candidate.job?.name}
+          email={candidate.user.email}
+          phone={candidate.user.phone}
+          dateOfBirth={candidate.user.date_of_birth}
+          jobName={candidate.job.name}
           appliedAt={candidate.createdAt}
           updatedAt={candidate.updatedAt}
-          cvUrl={candidate.curiculum_vitae_url}
-          portfolioUrl={candidate.portfolio_url}
+          cvUrl={candidate.user.curiculum_vitae_url}
+          portfolioUrl={candidate.user.portfolio_url}
+          stage={candidate.stage}
         />
       </Col>
 
@@ -126,22 +106,22 @@ export default function InterviewSchedulePage({
         ) : hasSchedules ? (
           <ScheduleTimeline
             schedules={schedules}
-            onReschedule={openReschedule}
-            candidate_id={candidate.id!}
+            // onReschedule={openReschedule}
+            applicant_id={candidate.id!}
           />
         ) : (
-          <Card style={{ borderRadius: 14 }}>
-            <ScheduleInterviewForm
-              candidateId={candidate.id!}
-              loading={submitting}
-              onSubmit={onCreateSchedule}
-            />
-          </Card>
+          // <Card style={{ borderRadius: 14 }}>
+          //   <ScheduleInterviewForm
+          //     candidateId={candidate.id!}
+          //     loading={submitting}
+          //     onSubmit={onCreateSchedule}
+          //   />
+          // </Card>
+          <Empty description="No Schedule Found" />
         )}
       </Col>
 
-
-      <Modal
+      {/* <Modal
         title="Reschedule Interview"
         open={rescheduleOpen}
         onCancel={closeReschedule}
@@ -158,7 +138,7 @@ export default function InterviewSchedulePage({
             mode="update"
           />
         )}
-      </Modal>
+      </Modal> */}
     </Row>
   );
 }

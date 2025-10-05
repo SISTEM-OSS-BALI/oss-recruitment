@@ -1,15 +1,15 @@
 "use client";
 
-import React, { useMemo, useState } from "react";
 import { useParams } from "next/navigation";
-import { Card, Typography, Skeleton, Space, Modal } from "antd";
+import { Card, Typography, Skeleton, Space, Modal, Button, Flex } from "antd";
 import { FileTextOutlined } from "@ant-design/icons";
 import { useJob } from "@/app/hooks/job";
 import { sanitizeHtml } from "@/app/utils/sanitize-html";
 import { toCapitalized } from "@/app/utils/capitalized";
-import ApplyForm from "@/app/components/common/form/user/apply-job";
-import { useApplyJobs } from "@/app/hooks/apply-job";
-import { CandidatePayloadCreateModel } from "@/app/models/apply-job";
+import PreviewComponent from "../../../home/profile/content/PreviewComponent";
+import { useAuth } from "@/app/utils/useAuth";
+import { useMemo } from "react";
+import { useCandidates } from "@/app/hooks/applicant";
 
 const { Title, Text } = Typography;
 
@@ -85,42 +85,33 @@ function SectionHeader({
 export default function ApplyJobContent() {
   const { id } = useParams() as { id: string };
   const { data, fetchLoading: isLoading } = useJob({ id });
-  const { onCreate: createApply, onCreateLoading } = useApplyJobs();
-
-  // kunci untuk remount form (reset)
-  const [formKey, setFormKey] = useState(0);
+  const { onCreate: createApply, onCreateLoading } = useCandidates({});
+  const { user_id } = useAuth();
 
   const overviewHTML = useMemo(
     () => sanitizeHtml(data?.description ?? ""),
     [data?.description]
   );
 
-  const handleFinish = async (values: CandidatePayloadCreateModel) => {
-    const payload = { ...values, job_id: id };
+  const handleFinish = async () => {
+    const payload = { job_id: id, user_id: user_id };
 
     try {
       await createApply(payload);
 
       // Popup sukses
       Modal.success({
-        title: "Terima kasih! 🎉",
+        title: "Thank you!",
         content: (
           <div>
-            <p>
-              Aplikasi Anda untuk <strong>{data?.name ?? "posisi ini"}</strong>{" "}
-              telah kami terima.
-            </p>
-            <p>
-              Kami akan segera meninjau dan menghubungi Anda jika lolos tahap
-              berikutnya.
-            </p>
+            <p>Your application has been submitted successfully.</p>
+            <p>We will review your application and get back to you soon.</p>
           </div>
         ),
         centered: true,
       });
 
       // Reset form dengan remount
-      setFormKey((k) => k + 1);
     } catch (err) {
       // biarkan error handling ditangani hook atau tambahkan Modal.error di sini bila perlu
       // Modal.error({ title: "Gagal mengirim", content: (err as Error)?.message || "Terjadi kesalahan." });
@@ -136,9 +127,7 @@ export default function ApplyJobContent() {
       <Space size={8} wrap style={{ marginBottom: 10 }}>
         <Pill>Apply For</Pill>
         {!!data?.location && <Pill>{toCapitalized(data.location.name)}</Pill>}
-        {!!data?.location && (
-          <Pill>{data.location.maps_url}</Pill>
-        )}
+        {!!data?.location && <Pill>{data.location.maps_url}</Pill>}
       </Space>
 
       {/* Title */}
@@ -176,12 +165,23 @@ export default function ApplyJobContent() {
         )}
       </Card>
 
-      {/* Application Form */}
-      <ApplyForm
-        key={formKey} // <— remount agar reset
-        onSubmit={handleFinish}
-        loading={onCreateLoading}
-      />
+      <PreviewComponent />
+      <Flex justify="end">
+        <Button
+          type="primary"
+          loading={onCreateLoading}
+          onClick={() => handleFinish()}
+          style={{
+            marginTop: 20,
+            borderRadius: 14,
+            padding: "0 24px",
+            height: 44,
+            fontSize: 16,
+          }}
+        >
+          Submit Application
+        </Button>
+      </Flex>
     </div>
   );
 }

@@ -25,6 +25,7 @@ type Props = {
   onEdit: (id: string) => void;
   onDelete: (id: string) => void;
   onTogglePublish: (id: string, next: boolean) => void;
+  goToPage: () => void;
 };
 
 export default function JobCard({
@@ -32,6 +33,7 @@ export default function JobCard({
   onEdit,
   onDelete,
   onTogglePublish,
+  goToPage,
 }: Props) {
   const published = Boolean(job.is_published);
 
@@ -110,7 +112,9 @@ export default function JobCard({
         <Button icon={<ThunderboltOutlined />} type="default">
           Boost Job
         </Button>
-        <Button type="primary">Manage Candidates</Button>
+        <Button type="primary" onClick={() => goToPage()}>
+          Manage Candidates
+        </Button>
         <Button>Recommended Talents</Button>
       </Flex>
     </Card>

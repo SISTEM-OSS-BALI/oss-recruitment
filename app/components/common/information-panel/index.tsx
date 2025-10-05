@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { Card, Typography, Space, Divider } from "antd";
+import { Card, Typography, Space, Divider, Button, Tag } from "antd";
 import {
   MailOutlined,
   PhoneOutlined,
@@ -18,16 +18,18 @@ import { formatDate } from "@/app/utils/date-helper";
 const { Title, Text, Link } = Typography;
 
 type LeftPanelProps = {
+  stage: string | null;
   email?: string | null;
   phone?: string | null;
   dateOfBirth?: string | Date | null;
   jobName?: string | null;
   appliedAt?: string | Date | null;
+  link_test_mbti?: string | null;
   updatedAt?: string | Date | null;
   cvUrl?: string | null;
   portfolioUrl?: string | null;
+  onCreateMbtiTest?: () => void;
 };
-
 
 function RowItem({
   icon,
@@ -79,6 +81,9 @@ export default function CandidateInfoPanel({
   updatedAt,
   cvUrl,
   portfolioUrl,
+  onCreateMbtiTest,
+  link_test_mbti,
+  stage,
 }: LeftPanelProps) {
   return (
     <Card
@@ -143,53 +148,62 @@ export default function CandidateInfoPanel({
             primary={<span>{formatDate(updatedAt)}</span>}
             secondary="Updated"
           />
-          <div style={{ display: "flex", gap: 14 }}>
-            <div style={{ fontSize: 20, color: "#2f66f5" }}>
-              <FileTextOutlined />
-            </div>
-            <div>
-              {cvUrl ? (
-                <Link href={cvUrl} target="_blank" rel="noreferrer">
-                  <Space>
-                    <LinkOutlined />
-                    <span style={{ color: "#2f66f5", fontWeight: 600 }}>
-                      View CV
-                    </span>
-                  </Space>
-                </Link>
-              ) : (
-                <Text type="secondary">No CV</Text>
-              )}
-              <div>
-                <Text type="secondary">Resume</Text>
+          {stage !== "SCREENING" && (
+            <>
+              <div style={{ display: "flex", gap: 14 }}>
+                <div style={{ fontSize: 20, color: "#2f66f5" }}>
+                  <FileTextOutlined />
+                </div>
+                <div>
+                  <Link href={cvUrl!} target="_blank" rel="noreferrer">
+                    <Space>
+                      <LinkOutlined />
+                      <span style={{ color: "#2f66f5", fontWeight: 600 }}>
+                        View CV
+                      </span>
+                    </Space>
+                  </Link>
+                  <div>
+                    <Text type="secondary">Resume</Text>
+                  </div>
+                </div>
               </div>
-            </div>
-          </div>
 
-          <div style={{ display: "flex", gap: 14 }}>
-            <div style={{ fontSize: 20, color: "#2f66f5" }}>
-              <FolderOutlined />
-            </div>
-            <div>
-              {portfolioUrl ? (
-                <Link href={portfolioUrl} target="_blank" rel="noreferrer">
-                  <Space>
-                    <LinkOutlined />
-                    <span style={{ color: "#2f66f5", fontWeight: 600 }}>
-                      View Portfolio
-                    </span>
-                  </Space>
-                </Link>
-              ) : (
-                <Text type="secondary">No Portfolio</Text>
-              )}
-              <div>
-                <Text type="secondary">Portfolio</Text>
+              <div style={{ display: "flex", gap: 14 }}>
+                <div style={{ fontSize: 20, color: "#2f66f5" }}>
+                  <FolderOutlined />
+                </div>
+                <div>
+                  <Link href={portfolioUrl!} target="_blank" rel="noreferrer">
+                    <Space>
+                      <LinkOutlined />
+                      <span style={{ color: "#2f66f5", fontWeight: 600 }}>
+                        View Portfolio
+                      </span>
+                    </Space>
+                  </Link>
+                  <div>
+                    <Text type="secondary">Portfolio</Text>
+                  </div>
+                </div>
               </div>
-            </div>
-          </div>
+            </>
+          )}
         </Space>
       </div>
+      {stage === "SCREENING" && (
+        <>
+          {link_test_mbti ? (
+            <div style={{ padding: "16px 20px 20px" }}>
+              <Tag color="green">Done Create Test MBTI</Tag>
+            </div>
+          ) : (
+            <div style={{ padding: "16px 20px 20px" }}>
+              <Button onClick={onCreateMbtiTest}>Create MBTI Test</Button>
+            </div>
+          )}
+        </>
+      )}
     </Card>
   );
 }

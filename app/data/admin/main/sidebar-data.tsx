@@ -1,4 +1,4 @@
-import { DatabaseFilled } from "@ant-design/icons";
+import { CalendarOutlined, DatabaseFilled } from "@ant-design/icons";
 import { MenuProps } from "antd";
 import { useRouter } from "next/navigation";
 
@@ -19,6 +19,22 @@ export const SidebarMenuMainAdmin = (): MenuProps["items"] => {
       icon: <DatabaseFilled />,
       onClick: () => {
         router.push("/admin/dashboard/setting-job");
+      },
+    },
+    {
+      key: "/admin/dashboard/appressal",
+      label: "Appressal",
+      icon: <DatabaseFilled />,
+      onClick: () => {
+        router.push("/admin/dashboard/appressal");
+      },
+    },
+    {
+      key: "/admin/dashboard/schedule-interview",
+      label: "Schedule Interview",
+      icon: <CalendarOutlined />,
+      onClick: () => {
+        router.push("/admin/dashboard/schedule-interview");
       },
     },
   ];

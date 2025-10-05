@@ -10,6 +10,7 @@ import { JobDataModel } from "@/app/models/job";
 import CustomButton from "@/app/components/common/custom-buttom";
 import JobModal from "@/app/components/common/modal/admin/job";
 import JobCard from "./JobCards";
+import { useRouter } from "next/navigation";
 
 const { Text } = Typography;
 
@@ -22,6 +23,16 @@ export default function SettingJobContent() {
   const [tab, setTab] = useState<"all" | "active" | "inactive" | "draft">(
     "all"
   );
+
+  const router = useRouter();
+
+  const goToManageCandidate = (jobId: string) => {
+    router.push(
+      `/admin/dashboard/setting-job/manage-candidates?job_id=${encodeURIComponent(
+        jobId
+      )}`
+    )
+  };
 
   const {
     data: jobsData = [],
@@ -41,7 +52,7 @@ export default function SettingJobContent() {
     const byTab = (j: JobDataModel) => {
       if (tab === "active") return j.is_published === true;
       if (tab === "inactive") return j.is_published === false;
-      if (tab === "draft") return j.is_published === false; // adjust if you separate "draft"
+      if (tab === "draft") return j.is_published === false;
       return true;
     };
 
@@ -62,10 +73,10 @@ export default function SettingJobContent() {
   };
 
   const handleFinish = async (values: JobDataModel) => {
-   const payload = {
-     ...values,
-     until_at: dayjs(values.until_at).toDate(),
-   } as JobDataModel;
+    const payload = {
+      ...values,
+      until_at: dayjs(values.until_at).toDate(),
+    } as JobDataModel;
 
     if (modalType === "create") {
       await jobCreate(payload);
@@ -179,6 +190,7 @@ export default function SettingJobContent() {
               onEdit={handleEdit}
               onDelete={onDeleteJob}
               onTogglePublish={handleTogglePublish}
+              goToPage={() => goToManageCandidate(job.id)}
             />
           ))}
         </div>

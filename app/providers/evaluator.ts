@@ -36,3 +36,4 @@ export const DELETE_EVALUATOR = async (id: string) => {
   });
   return result;
 };
+

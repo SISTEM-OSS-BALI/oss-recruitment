@@ -1,71 +1,24 @@
 "use client";
 import React, { useMemo } from "react";
-import {
-  Row,
-  Col,
-  Space,
-  Tabs,
-  Empty,
-} from "antd";
-import {
-  FilePdfOutlined,
-} from "@ant-design/icons";
-import type { CandidateDataModel } from "@/app/models/apply-job";
+import { Row, Col, Space, Tabs, Empty } from "antd";
+import { FilePdfOutlined } from "@ant-design/icons";
+import type { ApplicantDataModel } from "@/app/models/applicant";
 import dayjs from "dayjs";
 
 import utc from "dayjs/plugin/utc";
 import timezone from "dayjs/plugin/timezone";
 import CandidateInfoPanel from "@/app/components/common/information-panel";
+import { PDFViewer } from "@/app/utils/pdf-viewer";
 dayjs.extend(utc);
 dayjs.extend(timezone);
 
-
-
-
-function PDFViewer({ src }: { src?: string | null }) {
-  if (!src) {
-    return (
-      <div
-        style={{
-          height: 560,
-          display: "grid",
-          placeItems: "center",
-          border: "1px solid #f0f0f0",
-          borderRadius: 12,
-          background: "#fafafa",
-        }}
-      >
-        <Empty
-          description={
-            <Space>
-              <FilePdfOutlined />
-              <span>No file</span>
-            </Space>
-          }
-        />
-      </div>
-    );
-  }
-  // pakai <iframe> untuk preview cepat
-  return (
-    <iframe
-      src={src}
-      style={{
-        width: "100%",
-        height: 650,
-        border: "1px solid #f0f0f0",
-        borderRadius: 12,
-      }}
-    />
-  );
-}
-
 export default function CandidateOverview({
   candidate,
+  onCreateMbtiTest,
 }: {
-  candidate: CandidateDataModel | null;
+  candidate: ApplicantDataModel | null;
+  onCreateMbtiTest: () => void;
 }) {
-
   const tabs = useMemo(
     () => [
       {
@@ -76,7 +29,7 @@ export default function CandidateOverview({
             Curriculum Vitae
           </Space>
         ),
-        children: <PDFViewer src={candidate?.curiculum_vitae_url} />,
+        children: <PDFViewer src={candidate?.user.curiculum_vitae_url} />,
       },
       {
         key: "cert",
@@ -86,10 +39,10 @@ export default function CandidateOverview({
             Portofolio
           </Space>
         ),
-        children: <PDFViewer src={candidate?.portfolio_url} />,
+        children: <PDFViewer src={candidate?.user.portfolio_url} />,
       },
     ],
-    [candidate?.curiculum_vitae_url, candidate?.portfolio_url]
+    [candidate?.user?.curiculum_vitae_url, candidate?.user?.portfolio_url]
   );
 
   if (!candidate) {
@@ -115,14 +68,15 @@ export default function CandidateOverview({
 
         {/* Contact info */}
         <CandidateInfoPanel
-          email={candidate.email}
-          phone={candidate.phone}
-          dateOfBirth={candidate.date_of_birth}
+          email={candidate.user?.email}
+          phone={candidate.user?.phone}
+          dateOfBirth={candidate.user?.date_of_birth}
           jobName={candidate.job?.name}
-          appliedAt={candidate.createdAt}
-          updatedAt={candidate.updatedAt}
-          cvUrl={candidate.curiculum_vitae_url}
-          portfolioUrl={candidate.portfolio_url}
+          appliedAt={candidate?.createdAt}
+          updatedAt={candidate?.updatedAt}
+          link_test_mbti={candidate.mbti_test?.link_url}
+          onCreateMbtiTest={onCreateMbtiTest}
+          stage={candidate.stage}
         />
       </Col>
 

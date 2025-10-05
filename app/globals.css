@@ -5,12 +5,13 @@ body {
 } */
 
 html, body, * {
-  font-family: "Poppins", sans-serif !important;
+  /* font-family: "Poppins", sans-serif !important; */
+  font-family: 'Manrope';
 }
 
-html, body {
+/* html, body {
   font-family: "Poppins", sans-serif;
-}
+} */
 
 .ant-typography,
 .ant-typography h1,
@@ -25,7 +26,7 @@ html, body {
 .ant-btn,
 .ant-input,
 .ant-menu {
-  font-family: "Poppins", sans-serif !important;
+  font-family: "Manrope" !important;
 }
 
 * {

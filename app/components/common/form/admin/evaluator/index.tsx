@@ -1,11 +1,5 @@
 import { EvaluatorDataModel } from "@/app/models/evaluator";
-import {
-  Button,
-  Form,
-  Input,
-  FormInstance,
-  Checkbox,
-} from "antd";
+import { Button, Form, Input, FormInstance, Checkbox } from "antd";
 import { useEffect } from "react";
 
 export default function EvaluatorForm({
@@ -56,6 +50,13 @@ export default function EvaluatorForm({
       >
         <Input placeholder="Add Email" size="large" />
       </Form.Item>
+      <Form.Item
+        name="position"
+        label="Position"
+        rules={[{ required: true, message: "Position is required" }]}
+      >
+        <Input placeholder="Add Position" size="large" />
+      </Form.Item>
       <Form.Item name="is_active" valuePropName="checked">
         <Checkbox>
           Active{" "}
@@ -66,6 +67,21 @@ export default function EvaluatorForm({
             }}
           >
             * Default is active.
+          </span>
+        </Checkbox>
+      </Form.Item>
+
+      <Form.Item name="is_default" valuePropName="checked">
+        <Checkbox>
+          Default{" "}
+          <span
+            style={{
+              fontStyle: "italic",
+              color: "#888",
+            }}
+          >
+            * Default indicates that the schedule will appear first in the
+            candidate.
           </span>
         </Checkbox>
       </Form.Item>

@@ -17,13 +17,20 @@ import { SearchOutlined } from "@ant-design/icons";
 
 import { reorderImmutable } from "@/app/utils/reoder";
 import DraggableCandidateItem from "@/app/utils/dnd-helper";
-import { CandidateDataModel } from "@/app/models/apply-job";
-import { useCandidate, useCandidates } from "@/app/hooks/candidate";
+import { ApplicantDataModel } from "@/app/models/applicant";
+import { useCandidate, useCandidates } from "@/app/hooks/applicant";
 import CandidateOverview from "./CandidateOverview";
 import { useRecruitment } from "../../context";
 import { RecruitmentStage } from "@prisma/client";
+import { useMbtiTests } from "@/app/hooks/mbti-test";
+
 
 const { Title, Text } = Typography;
+
+interface Payload {
+  user_id: string,
+  applicant_id: string
+}
 
 // Summary key -> Enum stage backend
 const STAGE_MAP: Record<string, RecruitmentStage | undefined> = {
@@ -38,9 +45,12 @@ const STAGE_MAP: Record<string, RecruitmentStage | undefined> = {
 export default function CandidatesPage() {
   const { setSummary, setSectionTitle, setSectionSubtitle, setOnUpdateStatus } =
     useRecruitment();
+    const [selectedId, setSelectedId] = useState<string | null>(null);
+
+  const { onCreate: onCreateTestMbti } = useMbtiTests({});
 
   const { data: candidatesData = [] } = useCandidates({});
-  const { onUpdateStatus: updateStatus } = useCandidate();
+  const { onUpdateStatus: updateStatus } = useCandidate({id: selectedId!});
 
   const screening = useMemo(
     () => candidatesData.filter((c) => c.stage === RecruitmentStage.SCREENING),
@@ -48,7 +58,7 @@ export default function CandidatesPage() {
   );
 
   // sumber kebenaran untuk DnD list (lokal)
-  const [list, setList] = useState<CandidateDataModel[]>([]);
+  const [list, setList] = useState<ApplicantDataModel[]>([]);
   useEffect(() => {
     // inisialisasi / merge aman saat data berubah
     setList((prev) => {
@@ -92,15 +102,23 @@ export default function CandidatesPage() {
 
   // Search, selection, pagination (berbasis list lokal)
   const [query, setQuery] = useState("");
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+
+  const handleCreateTestMbti = async () => {
+    const payload : Payload = {
+      user_id: selected?.user_id ?? "",
+      applicant_id : selectedId ?? ""
+    };
+    await onCreateTestMbti(payload);
+
+  };
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     if (!q) return list;
     return list.filter((c) => {
-      const n = c.name?.toLowerCase() ?? "";
-      const e = c.email?.toLowerCase() ?? "";
-      const p = c.phone?.toLowerCase() ?? "";
+      const n = c.user.name?.toLowerCase() ?? "";
+      const e = c.user.email?.toLowerCase() ?? "";
+      const p = c.user.phone?.toLowerCase() ?? "";
       return n.includes(q) || e.includes(q) || p.includes(q);
     });
   }, [list, query]);
@@ -194,10 +212,11 @@ export default function CandidatesPage() {
               <DraggableCandidateItem
                 key={item.id}
                 id={item.id}
-                name={item.name}
-                image_url={item.photo_url}
-                email={item.email}
-                status={item.stage} 
+                stage={item.stage || ""}
+                name={item.user.name || "No Name"}
+                image_url={item.user.photo_url || undefined}
+                email={item.user.email || ""}
+                status={item.stage || ""}
                 active={item.id === selectedId}
                 onClick={() => setSelectedId(item.id)}
                 visibleIndex={(page - 1) * pageSize + idx}
@@ -228,7 +247,10 @@ export default function CandidatesPage() {
       {/* RIGHT */}
       <Col xs={24} md={16}>
         <Card style={{ height: "100%" }}>
-          <CandidateOverview candidate={selected} />
+          <CandidateOverview
+            candidate={selected}
+            onCreateMbtiTest={handleCreateTestMbti}
+          />
         </Card>
       </Col>
     </Row>

@@ -3,14 +3,18 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev --turbo",
+    "dev": "tsx watch lib/server.ts",
     "build": "next build",
-    "start": "next start",
-    "lint": "next lint"
+    "start": "NODE_ENV=production node dist/server.js",
+    "postbuild": "tsc -p tsconfig.server.json"
   },
   "dependencies": {
-    "@ant-design/icons": "^5.6.1",
     "@ant-design/nextjs-registry": "^1.0.2",
+    "@fullcalendar/daygrid": "^6.1.15",
+    "@fullcalendar/interaction": "^6.1.15",
+    "@fullcalendar/react": "^6.1.15",
+    "@fullcalendar/timegrid": "^6.1.15",
+    "@ant-design/icons": "^5.6.1",
     "@prisma/client": "^6.10.1",
     "@supabase/supabase-js": "^2.51.0",
     "@tanstack/react-query": "^5.81.2",
@@ -30,6 +34,8 @@
     "react-dnd-html5-backend": "^16.0.1",
     "react-dom": "18.2.0",
     "react-quill": "^2.0.0",
+    "socket.io": "^4.8.1",
+    "socket.io-client": "^4.8.1",
     "supabase": "^2.31.4",
     "tesseract.js": "^6.0.1",
     "tesseract.js-core": "^5.1.1"
@@ -37,7 +43,7 @@
   "devDependencies": {
     "@eslint/eslintrc": "^3",
     "@types/bcrypt": "^5.0.2",
-    "@types/node": "^20",
+    "@types/node": "^20.19.17",
     "@types/node-cron": "^3.0.11",
     "@types/nodemailer": "^7.0.0",
     "@types/react": "^18.3.23",
@@ -45,6 +51,7 @@
     "eslint": "^8.57.1",
     "eslint-config-next": "^14.2.3",
     "prisma": "^6.10.1",
-    "typescript": "^5"
+    "tsx": "^4.20.5",
+    "typescript": "^5.9.2"
   }
 }

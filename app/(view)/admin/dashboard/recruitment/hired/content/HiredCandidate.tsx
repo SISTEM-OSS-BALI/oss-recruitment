@@ -3,7 +3,7 @@
 import React, { useMemo } from "react";
 import { Card, Col, Row, Space, Empty, List, Skeleton, Button } from "antd";
 import { ClockCircleOutlined } from "@ant-design/icons";
-import type { CandidateDataModel } from "@/app/models/apply-job";
+import type { ApplicantDataModel } from "@/app/models/applicant";
 import {
   ScheduleHiredDataModel,
   ScheduleHiredPayloadCreateModel,
@@ -23,7 +23,7 @@ export default function HiredSchedulePage({
   onLoadingCreate,
 }: {
   selectedScheduleId?: string | null;
-  candidate: CandidateDataModel | null;
+  candidate: ApplicantDataModel | null;
   listData?: ScheduleHiredDataModel[];
   listLoading?: boolean;
   onCreateSchedule: (payload: ScheduleHiredPayloadCreateModel) => Promise<void>;
@@ -56,14 +56,14 @@ export default function HiredSchedulePage({
       {/* LEFT PANEL (Profile) */}
       <Col xs={24} md={8}>
         <CandidateInfoPanel
-          email={candidate.email}
-          phone={candidate.phone}
-          dateOfBirth={candidate.date_of_birth}
+          email={candidate.applicant.email}
+          phone={candidate.applicant.phone}
+          dateOfBirth={candidate.applicant.date_of_birth}
           jobName={candidate.job?.name}
           appliedAt={candidate.createdAt}
           updatedAt={candidate.updatedAt}
-          cvUrl={candidate.curiculum_vitae_url}
-          portfolioUrl={candidate.portfolio_url}
+          cvUrl={candidate.applicant.curiculum_vitae_url}
+          portfolioUrl={candidate.applicant.portfolio_url}
         />
       </Col>
 

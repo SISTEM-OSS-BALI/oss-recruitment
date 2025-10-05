@@ -14,11 +14,20 @@ const queryKey = "schedule-interviews";
 export const useScheduleInterviews = () => {
   const queryClient = useQueryClient();
 
+  const { data, isLoading: fetchLoading } = useQuery({
+    queryKey: [queryKey],
+    queryFn: async () => {
+      const result = await axios.get(baseUrl);
+      return result.data.result as ScheduleInterviewDataModel[];
+    },
+  });
+
   const { mutateAsync: onCreate, isPending: onCreateLoading } = useMutation({
     mutationFn: async (payload: ScheduleInterviewPayloadCreateModel) =>
       axios.post(baseUrl, payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [queryKey] });
+      queryClient.invalidateQueries({ queryKey: ["schedule-evaluators"] });
       MainNotification({ type: "success", entity, action: "created" });
     },
     onError: () => {
@@ -38,6 +47,8 @@ export const useScheduleInterviews = () => {
   });
 
   return {
+    data,
+    fetchLoading,
     onCreate,
     onCreateLoading,
     onDelete,
@@ -47,14 +58,13 @@ export const useScheduleInterviews = () => {
 
 export const useScheduleInterview = ({
   id,
-  candidate_id,
+  applicant_id,
 }: {
   id: string;
-  candidate_id?: string;
+  applicant_id?: string;
 }) => {
   const queryClient = useQueryClient();
 
-  // Query data berdasarkan ID
   const { data, isLoading: fetchLoading } = useQuery({
     queryKey: [entity, id],
     queryFn: async () => {
@@ -88,14 +98,14 @@ export const useScheduleInterview = ({
     isLoading: listLoading,
     refetch: refetchList,
   } = useQuery({
-    queryKey: [queryKey, candidate_id],
+    queryKey: [queryKey, applicant_id],
     queryFn: async () => {
       const result = await axios.get(
-        `${baseUrl}/by-candidate/${candidate_id || ""}`
+        `${baseUrl}/by-candidate/${applicant_id || ""}`
       );
       return result.data.result as ScheduleInterviewDataModel[];
     },
-    enabled: Boolean(candidate_id),
+    enabled: Boolean(applicant_id),
   });
 
   return {
