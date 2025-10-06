@@ -5,7 +5,15 @@ import {
 } from "../models/base-question-screening";
 
 export const GET_BASE_QUESTIONS_SCREENING = async () => {
-  const result = await db.questionBaseScreening.findMany({});
+  const result = await db.questionBaseScreening.findMany({
+    include: {
+      questions: {
+        include: {
+          options: true,
+        },
+      },
+    },
+  });
   return result;
 };
 

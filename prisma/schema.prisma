@@ -42,6 +42,11 @@ enum Role {
   CANDIDATE
 }
 
+enum QuestionMatriksType {
+  SINGLE_CHOICE
+  TEXT
+}
+
 model Job {
   id           String   @id @default(cuid())
   name         String
@@ -379,7 +384,8 @@ model QuestionBaseScreening {
   name String
   desc String?
 
-  questions QuestionScreening[]
+  questions                QuestionScreening[]
+  allowMultipleSubmissions Boolean             @default(false)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -387,12 +393,14 @@ model QuestionBaseScreening {
   active    Boolean     @default(true)
   version   Int         @default(1)
   applicant Applicant[]
+
+  @@map("question_base_screening")
 }
 
 model QuestionScreening {
   id          String                @id @default(cuid())
   baseId      String
-  text        String 
+  text        String
   inputType   QuestionScreeningType
   required    Boolean               @default(true)
   order       Int                   @default(0)
@@ -410,6 +418,8 @@ model QuestionScreening {
   updatedAt DateTime @updatedAt
 
   active Boolean @default(true)
+
+  @@map("question_screening")
 }
 
 model QuestionOption {
@@ -427,13 +437,13 @@ model QuestionOption {
 
   active Boolean @default(true)
 
-  @@unique([questionId, value]) 
+  @@unique([questionId, value])
   @@index([questionId, order])
+  @@map("question_option")
 }
 
 model AnswerQuestionScreening {
   id         String @id @default(cuid())
-  sessionId  String
   questionId String
 
   answerText      String?
@@ -444,7 +454,6 @@ model AnswerQuestionScreening {
   applicant   Applicant? @relation(fields: [applicantId], references: [id])
   applicantId String?
 
-  @@unique([sessionId, questionId])
   @@index([questionId])
 }
 
@@ -456,4 +465,57 @@ model AnswerSelectedOption {
   option QuestionOption          @relation(fields: [optionId], references: [id], onDelete: Restrict, onUpdate: Cascade)
 
   @@id([answerId, optionId])
+  @@map("answer_selected_option")
 }
+
+model MatriksBaseQuestion {
+  id      String          @id @default(cuid())
+  name    String
+  desc    String?
+  columns MatriksColumn[]
+
+  // baris/pertanyaan
+  rows MatriksQuestion[] @relation("BaseRows")
+
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  @@map("matriks_base_question")
+}
+
+model MatriksColumn {
+  id     String  @id @default(cuid())
+  baseId String
+  label  String
+  value  String
+  order  Int     @default(0)
+  active Boolean @default(true)
+
+  base MatriksBaseQuestion @relation(fields: [baseId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([baseId, value])
+  @@index([baseId, order])
+  @@map("matriks_column")
+}
+
+model MatriksQuestion {
+  id          String              @id @default(cuid())
+  baseId      String
+  text        String
+  inputType   QuestionMatriksType // pastikan enum ini mengandung SINGLE_CHOICE
+  required    Boolean             @default(true)
+  order       Int                 @default(0)
+  helpText    String?
+  placeholder String?
+
+  base MatriksBaseQuestion @relation("BaseRows", fields: [baseId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("question_matriks")
+}
+

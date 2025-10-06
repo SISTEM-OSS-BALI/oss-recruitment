@@ -2,7 +2,6 @@
 
 import { useMemo, useState } from "react";
 import {
-  App as AntdApp,
   Button,
   Divider,
   Empty,
@@ -19,6 +18,8 @@ import {
   Skeleton,
   InputNumber,
   Tooltip,
+  notification,
+  message,
 } from "antd";
 import {
   PlusOutlined,
@@ -38,7 +39,7 @@ import {
 } from "@/app/hooks/question-screening";
 
 import type { QuestionScreeningDataModel } from "@/app/models/question-screening";
-import type { QuestionScreeningType, Prisma } from "@prisma/client";
+import type { QuestionScreeningType, QuestionOption } from "@prisma/client";
 
 // === DTOs dari models (pastikan path sama dengan project Anda) ===
 import type {
@@ -50,7 +51,7 @@ const BRAND = "#003A6F";
 const { Title, Text } = Typography;
 const { useBreakpoint } = Grid;
 
-type QuestionOptionDataModel = Prisma.QuestionOption;
+type QuestionOptionDataModel = QuestionOption;
 
 /** Form option untuk edit (bawa id jika existing) */
 type OptionEditForm = {
@@ -101,7 +102,6 @@ function isChoice(t?: QuestionScreeningType) {
 /* ------------------------------------------------------- */
 
 export default function Content(): JSX.Element {
-  const { notification, message } = AntdApp.useApp();
   const screens = useBreakpoint();
 
   // -------------------------- Base (from route) --------------------------

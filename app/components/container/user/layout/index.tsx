@@ -21,7 +21,7 @@ export default function UserLayout({
 }) {
   const pathname = usePathname();
 
- const showHeader = !pathname.startsWith("/user/home");
+  const showHeader = !pathname.startsWith("/user/home");
   const showSider = pathname.startsWith("/user/home");
   const showHeaderDashboard = pathname.startsWith("/user/home");
 

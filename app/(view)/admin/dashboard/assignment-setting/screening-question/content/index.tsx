@@ -19,6 +19,7 @@ import {
   Typography,
   Skeleton,
   Switch,
+  Tooltip,
 } from "antd";
 import {
   PlusOutlined,
@@ -26,6 +27,7 @@ import {
   EditOutlined,
   // ReloadOutlined,
   SearchOutlined,
+  QuestionCircleOutlined,
 } from "@ant-design/icons";
 import dayjs from "dayjs";
 import "dayjs/locale/en";
@@ -399,6 +401,21 @@ export default function BaseScreeningCards(): JSX.Element {
               rows={4}
               placeholder="Short description about what this base is for…"
             />
+          </Form.Item>
+
+          <Form.Item
+            label={
+              <span>
+                Allow Multiple Submissions{" "}
+                <Tooltip title="If ON, the same user can submit this screening more than once. If OFF, each user can only submit once.">
+                  <QuestionCircleOutlined style={{ color: "#909399" }} />
+                </Tooltip>
+              </span>
+            }
+            name="allowMultipleSubmissions"
+            valuePropName="checked"
+          >
+            <Switch checkedChildren="Allowed" unCheckedChildren="One-time" />
           </Form.Item>
 
           <Text type="secondary" style={{ fontSize: 12, marginBottom: 20 }}>

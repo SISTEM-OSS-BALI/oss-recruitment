@@ -4,7 +4,15 @@ import { Prisma } from "@prisma/client";
 import { GeneralOmitModel } from "./general-omit";
 
 export type QuestionBaseScreeningDataModel =
-  Prisma.QuestionBaseScreeningGetPayload<{}>;
+  Prisma.QuestionBaseScreeningGetPayload<{
+    include: {
+      questions: {
+        include: {
+          options: true;
+        };
+      };
+    };
+  }>;
 
 export interface QuestionBaseScreeningPayloadCreateModel
   extends Prisma.QuestionBaseScreeningUncheckedCreateInput {}

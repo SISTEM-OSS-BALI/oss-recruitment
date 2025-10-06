@@ -1,6 +1,6 @@
 "use client";
 
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { Card, Typography, Skeleton, Space, Modal, Button, Flex } from "antd";
 import { FileTextOutlined } from "@ant-design/icons";
 import { useJob } from "@/app/hooks/job";
@@ -8,7 +8,7 @@ import { sanitizeHtml } from "@/app/utils/sanitize-html";
 import { toCapitalized } from "@/app/utils/capitalized";
 import PreviewComponent from "../../../home/profile/content/PreviewComponent";
 import { useAuth } from "@/app/utils/useAuth";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useCandidates } from "@/app/hooks/applicant";
 
 const { Title, Text } = Typography;
@@ -84,39 +84,16 @@ function SectionHeader({
 /* ------------------------------- Page ----------------------------------- */
 export default function ApplyJobContent() {
   const { id } = useParams() as { id: string };
+  const router = useRouter();
   const { data, fetchLoading: isLoading } = useJob({ id });
-  const { onCreate: createApply, onCreateLoading } = useCandidates({});
-  const { user_id } = useAuth();
 
   const overviewHTML = useMemo(
     () => sanitizeHtml(data?.description ?? ""),
     [data?.description]
   );
 
-  const handleFinish = async () => {
-    const payload = { job_id: id, user_id: user_id };
-
-    try {
-      await createApply(payload);
-
-      // Popup sukses
-      Modal.success({
-        title: "Thank you!",
-        content: (
-          <div>
-            <p>Your application has been submitted successfully.</p>
-            <p>We will review your application and get back to you soon.</p>
-          </div>
-        ),
-        centered: true,
-      });
-
-      // Reset form dengan remount
-    } catch (err) {
-      // biarkan error handling ditangani hook atau tambahkan Modal.error di sini bila perlu
-      // Modal.error({ title: "Gagal mengirim", content: (err as Error)?.message || "Terjadi kesalahan." });
-      throw err;
-    }
+  const goToQuestinScreening = (id: string) => {
+    router.push(`/user/apply-job/${id}/question-screening`);
   };
 
   return (
@@ -169,8 +146,8 @@ export default function ApplyJobContent() {
       <Flex justify="end">
         <Button
           type="primary"
-          loading={onCreateLoading}
-          onClick={() => handleFinish()}
+          // loading={onCreateLoading}
+          onClick={() => goToQuestinScreening(id)}
           style={{
             marginTop: 20,
             borderRadius: 14,

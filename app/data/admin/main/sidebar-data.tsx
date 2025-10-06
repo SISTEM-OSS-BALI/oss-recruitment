@@ -1,41 +1,33 @@
-import { CalendarOutlined, DatabaseFilled } from "@ant-design/icons";
 import { MenuProps } from "antd";
 import { useRouter } from "next/navigation";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import {
+  faUserTie, 
+  faChartLine, 
+  faCalendarCheck, 
+} from "@fortawesome/free-solid-svg-icons";
 
 export const SidebarMenuMainAdmin = (): MenuProps["items"] => {
   const router = useRouter();
+
   const sidebarMenu: MenuProps["items"] = [
     {
       key: "/admin/dashboard/recruitment",
       label: "Recruitment",
-      icon: <DatabaseFilled />,
-      onClick: () => {
-        router.push("/admin/dashboard/recruitment");
-      },
-    },
-    {
-      key: "/admin/dashboard/setting-job",
-      label: "Setting Job",
-      icon: <DatabaseFilled />,
-      onClick: () => {
-        router.push("/admin/dashboard/setting-job");
-      },
+      icon: <FontAwesomeIcon icon={faUserTie} />,
+      onClick: () => router.push("/admin/dashboard/recruitment"),
     },
     {
       key: "/admin/dashboard/appressal",
-      label: "Appressal",
-      icon: <DatabaseFilled />,
-      onClick: () => {
-        router.push("/admin/dashboard/appressal");
-      },
+      label: "Appraisal",
+      icon: <FontAwesomeIcon icon={faChartLine} />,
+      onClick: () => router.push("/admin/dashboard/appressal"),
     },
     {
       key: "/admin/dashboard/schedule-interview",
       label: "Schedule Interview",
-      icon: <CalendarOutlined />,
-      onClick: () => {
-        router.push("/admin/dashboard/schedule-interview");
-      },
+      icon: <FontAwesomeIcon icon={faCalendarCheck} />,
+      onClick: () => router.push("/admin/dashboard/schedule-interview"),
     },
   ];
 
