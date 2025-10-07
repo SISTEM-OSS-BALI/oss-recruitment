@@ -3,89 +3,118 @@
 import type { Prisma, QuestionMatriksType } from "@prisma/client";
 
 /* =========================================================
- * READ MODELS (DataModel) – untuk response dari Prisma
+ * READ MODELS (DataModel) – langsung match schema Prisma
  * ========================================================= */
 export type MatriksBaseQuestionDataModel =
   Prisma.MatriksBaseQuestionGetPayload<{
-    include: { columns: true; rows: true };
+    include: {
+      columns: true;
+      rows: true;
+    };
   }>;
 
 export type MatriksColumnDataModel = Prisma.MatriksColumnGetPayload<{}>;
 export type MatriksQuestionDataModel = Prisma.MatriksQuestionGetPayload<{}>;
 
 /* =========================================================
- * DTOs: client-side payloads (tanpa Zod)
+ * DTOs: payload dari client (tanpa Zod)
  * ========================================================= */
-/** Kolom di header matriks (opsi yang bisa dipilih per baris) */
+// Kolom (header) matriks
 export type MatriksColumnCreateDTO = {
   label: string;
-  value: string; // unik per base
+  value: string; // unik per baseId
   order?: number | null;
   active?: boolean | null;
 };
 
 export type MatriksColumnUpsertDTO = {
-  id?: string; // ada → update, tdk ada → create
+  id?: string; // ada → update, tidak ada → create
   label: string;
   value: string;
   order?: number | null;
   active?: boolean | null;
 };
 
-/** Baris/pertanyaan matriks (tipe input SINGLE_CHOICE) */
-export type QuestionMatriksCreateDTO = {
+// Baris/pertanyaan matriks (tipe input SINGLE_CHOICE)
+export type MatriksQuestionCreateDTO = {
   text: string;
   inputType: QuestionMatriksType; // sebaiknya SINGLE_CHOICE
   required?: boolean;
   order?: number;
   helpText?: string | null;
   placeholder?: string | null;
+  options?: MatriksColumnCreateDTO[]; // optional helper untuk UI; kosong = undefined
 };
 
-export type QuestionMatriksUpsertDTO = {
-  id?: string; // ada → update, tdk ada → create
-  text: string;
-  inputType: QuestionMatriksType; // sebaiknya SINGLE_CHOICE
+export type MatriksQuestionUpdateDTO = {
+  text?: string;
+  inputType?: QuestionMatriksType;
   required?: boolean;
   order?: number;
   helpText?: string | null;
   placeholder?: string | null;
 };
 
-/** CREATE base + optional nested columns/rows */
+// ===== Optional: mapper kecil untuk single-row update =====
+export function toPrismaMatriksQuestionUpdate(
+  dto: MatriksQuestionUpdateDTO
+): Prisma.MatriksQuestionUncheckedUpdateInput {
+  const data: Prisma.MatriksQuestionUncheckedUpdateInput = {};
+  if (dto.text !== undefined) data.text = dto.text.trim();
+  if (dto.inputType !== undefined) data.inputType = dto.inputType;
+  if (dto.required !== undefined) data.required = dto.required;
+  if (dto.order !== undefined) data.order = dto.order;
+  if (dto.helpText !== undefined) data.helpText = dto.helpText;
+  if (dto.placeholder !== undefined) data.placeholder = dto.placeholder;
+  return data;
+}
+
+export type MatriksQuestionUpsertDTO = {
+  id?: string; // ada → update, tidak ada → create
+  text: string;
+  inputType: QuestionMatriksType;
+  required?: boolean;
+  order?: number;
+  helpText?: string | null;
+  placeholder?: string | null;
+};
+
+// CREATE base + (opsional) nested columns/rows
 export type MatriksBaseCreateDTO = {
   name: string;
   desc?: string | null;
-
   columns?: MatriksColumnCreateDTO[];
-  rows?: QuestionMatriksCreateDTO[];
+  rows?: MatriksQuestionCreateDTO[];
 };
 
-/** UPDATE base + nested strategi (upsert & delete) */
+// UPDATE base + strategi nested (upsert & delete)
 export type MatriksBaseUpdateDTO = {
   name?: string;
   desc?: string | null;
-
   columns?: {
     upsert?: MatriksColumnUpsertDTO[];
     deleteIds?: string[];
   };
   rows?: {
-    upsert?: QuestionMatriksUpsertDTO[];
+    upsert?: MatriksQuestionUpsertDTO[];
     deleteIds?: string[];
   };
 };
 
 /* =========================================================
- * Helpers ringan (tanpa Zod)
+ * Helpers ringan
  * ========================================================= */
 function isNonEmptyArray<T>(x: T[] | undefined | null): x is T[] {
   return Array.isArray(x) && x.length > 0;
 }
 
 /* =========================================================
- * Mapper: DTO -> Prisma (CREATE)
- * ========================================================= */
+ * Mapper: DTO -> Prisma (CREATE Base)
+ * =========================================================
+ * Catatan tipe nested:
+ *  - columns: Prisma.MatriksColumnUncheckedCreateNestedManyWithoutBaseInput
+ *  - rows   : Prisma.MatriksQuestionUncheckedCreateNestedManyWithoutBaseInput
+ */
 export function toPrismaMatriksBaseCreate(
   dto: MatriksBaseCreateDTO
 ): Prisma.MatriksBaseQuestionUncheckedCreateInput & {
@@ -100,7 +129,7 @@ export function toPrismaMatriksBaseCreate(
     desc: dto.desc ?? null,
   };
 
-  // Penting: jangan kirim array kosong — Prisma akan menolak tipe nested dengan []
+  // penting: jangan kirim array kosong
   if (isNonEmptyArray(dto.columns)) {
     data.columns = {
       create: dto.columns.map((c, i) => ({
@@ -129,8 +158,12 @@ export function toPrismaMatriksBaseCreate(
 }
 
 /* =========================================================
- * Mapper: DTO -> Prisma (UPDATE)
- * ========================================================= */
+ * Mapper: DTO -> Prisma (UPDATE Base)
+ * =========================================================
+ * Catatan tipe nested:
+ *  - columns: Prisma.MatriksColumnUncheckedUpdateManyWithoutBaseNestedInput
+ *  - rows   : Prisma.MatriksQuestionUncheckedUpdateManyWithoutBaseNestedInput
+ */
 export function toPrismaMatriksBaseUpdate(
   dto: MatriksBaseUpdateDTO
 ): Prisma.MatriksBaseQuestionUncheckedUpdateInput & {
