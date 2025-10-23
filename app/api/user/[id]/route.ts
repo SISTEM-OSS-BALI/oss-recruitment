@@ -1,6 +1,6 @@
 import { UserPayloadCreateModel } from "@/app/models/user";
 import { DELETE_JOB } from "@/app/providers/job";
-import { GET_USER, UPDATE_USER } from "@/app/providers/user";
+import { GET_USER, UPDATE_USER, UPDATE_USER_DOCUMENT } from "@/app/providers/user";
 import { GeneralError } from "@/app/utils/general-error";
 import { NextRequest, NextResponse } from "next/server";
 
@@ -100,3 +100,36 @@ export const DELETE = async (
     }
   }
 };
+
+export const PATCH = async (
+  req: NextRequest,
+  { params }: { params: { id: string } }
+) => {
+  try {
+    const id = params.id;
+    const payload: UserPayloadCreateModel = await req.json();
+
+    const data = await UPDATE_USER_DOCUMENT(id, payload);
+
+    return NextResponse.json(
+      {
+        success: true,
+        message: "Successfully updated!",
+        result: data,
+      },
+      { status: 200 }
+    );
+  } catch (error: unknown) {
+    if (error instanceof GeneralError) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: error.error,
+          error_code: error.error_code,
+          details: error.details,
+        },
+        { status: error.code }
+      );
+    }
+  }
+}

@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useCallback, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   Avatar,
@@ -16,6 +16,7 @@ import {
   Tooltip,
   Descriptions,
   Divider,
+  Modal,
 } from "antd";
 import {
   CheckCircleTwoTone,
@@ -30,6 +31,8 @@ import {
 import dayjs from "dayjs";
 import { ApplicantDataModel } from "@/app/models/applicant";
 import ResultMBTIComponent from "./ResultMBTIComponent";
+import KTPWizard from "./UploadIdentityComponent";
+import { useUser } from "@/app/hooks/user";
 
 const { Title, Text } = Typography;
 
@@ -73,187 +76,223 @@ type ActionItem = {
   };
 };
 
-function getStageConfig(
-  stage: string,
-  applicant: ApplicantDataModel,
-  router: ReturnType<typeof useRouter>,
-  meta?: Props["meta"]
-) {
-  const m = meta || {};
-  const startedOn =
-    m.screeningStartedOn || applicant.updatedAt || applicant.createdAt;
-  const deadline =
-    m.screeningDeadline ||
-    dayjs(applicant.createdAt).add(7, "day").toISOString();
-
-  const mbtiUrl = applicant.mbti_test?.link_url || undefined;
-  const mbtiDone = applicant.mbti_test?.is_complete === true;
-
-  switch (stage) {
-    case "APPLICATION":
-      return {
-        title: "Application Details",
-        info: [
-          {
-            label: "Submitted On",
-            value: dayjs(applicant.createdAt).format("MMMM D, YYYY"),
-          },
-          { label: "Position", value: applicant.job?.name ?? "-" },
-        ],
-        actions: [
-          {
-            key: "cv-review",
-            label: "Recruiter will review your CV",
-            button: {
-              text: "View CV",
-              onClick: () =>
-                window.open(
-                  applicant.user?.curiculum_vitae_url || "#",
-                  "_blank"
-                ),
-              disabled: !applicant.user?.curiculum_vitae_url,
-              tooltip: !applicant.user?.curiculum_vitae_url
-                ? "No CV found"
-                : "Open CV",
-            },
-          },
-        ] as ActionItem[],
-      };
-
-    case "SCREENING":
-      return {
-        title: "Screening Stage Details",
-        info: [
-          { label: "STATUS", value: mbtiDone ? "Completed" : "In Progress" },
-          { label: "DEADLINE", value: dayjs(deadline).format("MMMM D, YYYY") },
-          {
-            label: "STARTED ON",
-            value: dayjs(startedOn).format("MMMM D, YYYY"),
-          },
-          { label: "ASSIGNED TO", value: m.assignedTo || "Recruitment Team" },
-        ],
-        actions: [
-          {
-            key: "mbti",
-            label: "Complete MBTI Personality Test",
-            button: {
-              text: mbtiDone ? "Done" : "Take MBTI Test",
-              disabled: mbtiDone ? true : !mbtiUrl,
-              tooltip: mbtiDone
-                ? "Already completed"
-                : mbtiUrl
-                ? "Open MBTI Test"
-                : "Link unavailable",
-              onClick: () => mbtiUrl && window.open(mbtiUrl, "_blank"),
-            },
-          },
-        ] as ActionItem[],
-      };
-
-    case "INTERVIEW":
-      return {
-        title: "Interview Stage Details",
-        info: [
-          {
-            label: "STATUS",
-            value: m.interviewDate ? "Scheduled" : "Awaiting schedule",
-          },
-          {
-            label: "INTERVIEW DATE",
-            value: m.interviewDate
-              ? dayjs(m.interviewDate).format("MMMM D, YYYY • HH:mm")
-              : "-",
-          },
-        ],
-        actions: [
-          {
-            key: "schedule",
-            label: "Schedule interview with recruiter",
-            button: {
-              text: m.interviewDate ? "Reschedule" : "Schedule",
-              tooltip: "Pick interview time",
-              onClick: () =>
-                window.open(
-                  `/evaluator/schedule?applicant_id=${applicant.id}`,
-                  "_blank",
-                  "noopener,noreferrer"
-                ),
-            },
-          },
-          {
-            key: "prep",
-            label: "Read interview preparation guideline",
-            button: {
-              text: "Open Guide",
-              onClick: () => window.open("/guide/interview", "_blank"),
-            },
-          },
-        ] as ActionItem[],
-      };
-
-    case "HIRED":
-      return {
-        title: "Offer & Onboarding",
-        info: [
-          { label: "STATUS", value: "Hired 🎉" },
-          { label: "POSITION", value: applicant.job?.name ?? "-" },
-        ],
-        actions: [
-          {
-            key: "offer",
-            label: "Review and sign the offer letter",
-            button: {
-              text: "View Offer",
-              onClick: () => m.offerUrl && window.open(m.offerUrl, "_blank"),
-              disabled: !m.offerUrl,
-              tooltip: m.offerUrl ? "Open Offer" : "No offer link",
-            },
-          },
-          {
-            key: "onboarding",
-            label: "Complete onboarding documents",
-            button: {
-              text: "Open Onboarding",
-              onClick: () => window.open("/onboarding", "_blank"),
-            },
-          },
-        ] as ActionItem[],
-      };
-
-    case "REJECTED":
-      return {
-        title: "Application Result",
-        info: [
-          { label: "STATUS", value: "Rejected" },
-          { label: "REASON", value: m.rejectedReason || "—" },
-        ],
-        actions: [
-          {
-            key: "feedback",
-            label: "Read feedback & resources to improve",
-            button: {
-              text: "View Resources",
-              onClick: () => window.open("/resources/improve", "_blank"),
-            },
-          },
-        ] as ActionItem[],
-      };
-
-    default:
-      return {
-        title: "Information",
-        info: [],
-        actions: [] as ActionItem[],
-      };
-  }
-}
-
 // ---------------- Component ----------------
 export default function CandidateProgress({ applicant, meta }: Props) {
+  const [isOpenModal, setIsOpenModal] = useState(false);
   const router = useRouter();
   const currentStage = applicant.stage ?? "APPLICATION";
   const nowStageIndex = stageOrder.findIndex((s) => s === currentStage);
   const normalizedStageIndex = nowStageIndex === -1 ? 0 : nowStageIndex;
+
+  const { onPatchDocument } = useUser({ id: applicant.user_id });
+
+  const handlePatchDocument = useCallback(
+    async (nik: string, imageUrl: string) => {
+      if (!applicant.user_id) return;
+      await onPatchDocument({
+        id: applicant.user_id,
+        payload: {
+          no_identity: nik,
+          no_identity_url: imageUrl,
+        },
+      });
+    },
+    [applicant.user_id, onPatchDocument]
+  );
+
+  const handleOpenModal = () => {
+    setIsOpenModal(true);
+  };
+
+  const handleCancelModal = () => {
+    setIsOpenModal(false);
+  };
+
+  function getStageConfig(
+    stage: string,
+    applicant: ApplicantDataModel,
+    router: ReturnType<typeof useRouter>,
+    meta?: Props["meta"]
+  ) {
+    const m = meta || {};
+    const startedOn =
+      m.screeningStartedOn || applicant.updatedAt || applicant.createdAt;
+    const deadline =
+      m.screeningDeadline ||
+      dayjs(applicant.createdAt).add(7, "day").toISOString();
+
+    const mbtiUrl = applicant.mbti_test?.link_url || undefined;
+    const mbtiDone = applicant.mbti_test?.is_complete === true;
+
+    switch (stage) {
+      case "APPLICATION":
+        return {
+          title: "Application Details",
+          info: [
+            {
+              label: "Submitted On",
+              value: dayjs(applicant.createdAt).format("MMMM D, YYYY"),
+            },
+            { label: "Position", value: applicant.job?.name ?? "-" },
+          ],
+          actions: [
+            {
+              key: "cv-review",
+              label: "Recruiter will review your CV",
+              button: {
+                text: "View CV",
+                onClick: () =>
+                  window.open(
+                    applicant.user?.curiculum_vitae_url || "#",
+                    "_blank"
+                  ),
+                disabled: !applicant.user?.curiculum_vitae_url,
+                tooltip: !applicant.user?.curiculum_vitae_url
+                  ? "No CV found"
+                  : "Open CV",
+              },
+            },
+          ] as ActionItem[],
+        };
+
+      case "SCREENING":
+        return {
+          title: "Screening Stage Details",
+          info: [
+            { label: "STATUS", value: mbtiDone ? "Completed" : "In Progress" },
+            {
+              label: "DEADLINE",
+              value: dayjs(deadline).format("MMMM D, YYYY"),
+            },
+            {
+              label: "STARTED ON",
+              value: dayjs(startedOn).format("MMMM D, YYYY"),
+            },
+            { label: "ASSIGNED TO", value: m.assignedTo || "Recruitment Team" },
+          ],
+          actions: [
+            {
+              key: "mbti",
+              label: "Complete MBTI Personality Test",
+              button: {
+                text: mbtiDone ? "Done" : "Take MBTI Test",
+                disabled: mbtiDone ? true : !mbtiUrl,
+                tooltip: mbtiDone
+                  ? "Already completed"
+                  : mbtiUrl
+                  ? "Open MBTI Test"
+                  : "Link unavailable",
+                onClick: () => mbtiUrl && window.open(mbtiUrl, "_blank"),
+              },
+            },
+          ] as ActionItem[],
+        };
+
+      case "INTERVIEW":
+        return {
+          title: "Interview Stage Details",
+          info: [
+            {
+              label: "STATUS",
+              value: m.interviewDate ? "Scheduled" : "Awaiting schedule",
+            },
+            {
+              label: "INTERVIEW DATE",
+              value: m.interviewDate
+                ? dayjs(m.interviewDate).format("MMMM D, YYYY • HH:mm")
+                : "-",
+            },
+          ],
+          actions: [
+            {
+              key: "schedule",
+              label: "Schedule interview with recruiter",
+              button: {
+                text: m.interviewDate ? "Reschedule" : "Schedule",
+                tooltip: "Pick interview time",
+                onClick: () =>
+                  window.open(
+                    `/evaluator/schedule?applicant_id=${applicant.id}`,
+                    "_blank",
+                    "noopener,noreferrer"
+                  ),
+              },
+            },
+            {
+              key: "prep",
+              label: "Read interview preparation guideline",
+              button: {
+                text: "Open Guide",
+                onClick: () => window.open("/guide/interview", "_blank"),
+              },
+            },
+          ] as ActionItem[],
+        };
+
+      case "HIRED":
+        return {
+          title: "Offer & Onboarding",
+          info: [
+            { label: "STATUS", value: "Hired" },
+            { label: "POSITION", value: applicant.job?.name ?? "-" },
+          ],
+          actions: [
+            {
+              key: "upload-identity",
+              label: "Upload identity document",
+              button: {
+                text: "Upload Now",
+                onClick: handleOpenModal,
+              },
+            },
+            {
+              key: "offer",
+              label: "Review and sign the offer letter",
+              button: {
+                text: "View Offer",
+                onClick: () => m.offerUrl && window.open(m.offerUrl, "_blank"),
+                disabled: !m.offerUrl,
+                tooltip: m.offerUrl ? "Open Offer" : "No offer link",
+              },
+            },
+            {
+              key: "onboarding",
+              label: "Complete onboarding documents",
+              button: {
+                text: "Open Onboarding",
+                onClick: () => window.open("/onboarding", "_blank"),
+              },
+            },
+          ] as ActionItem[],
+        };
+
+      case "REJECTED":
+        return {
+          title: "Application Result",
+          info: [
+            { label: "STATUS", value: "Rejected" },
+            { label: "REASON", value: m.rejectedReason || "—" },
+          ],
+          actions: [
+            {
+              key: "feedback",
+              label: "Read feedback & resources to improve",
+              button: {
+                text: "View Resources",
+                onClick: () => window.open("/resources/improve", "_blank"),
+              },
+            },
+          ] as ActionItem[],
+        };
+
+      default:
+        return {
+          title: "Information",
+          info: [],
+          actions: [] as ActionItem[],
+        };
+    }
+  }
 
   const initials =
     (applicant.user?.name || "Candidate")
@@ -459,6 +498,17 @@ export default function CandidateProgress({ applicant, meta }: Props) {
           <ResultMBTIComponent result={applicant.mbti_test.result} />
         </Card>
       )}
+
+      <Modal
+        open={isOpenModal}
+        onCancel={handleCancelModal}
+        onOk={handleCancelModal}
+        title="Upload Identity Document"
+        width={1000}
+        footer={null}
+      >
+        <KTPWizard onPatchDocument={handlePatchDocument} />
+      </Modal>
     </Space>
   );
 }

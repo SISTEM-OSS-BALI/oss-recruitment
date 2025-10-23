@@ -83,10 +83,41 @@ export const useUser = ({ id }: { id: string }) => {
     },
   });
 
+  const { mutateAsync: onPatchDocument, isPending: onPatchDocumentLoading } =
+    useMutation({
+      mutationFn: async ({
+        id,
+        payload,
+      }: {
+        id: string;
+        payload: UserPayloadUpdateModel;
+      }) => {
+        return axios.patch(`${baseUrl}/${id}`, {
+          no_identity: payload.no_identity,
+          no_identity_url: payload.no_identity_url,
+        });
+      },
+      onSuccess: (_, variables) => {
+        // segarkan list & detail
+        queryClient.invalidateQueries({ queryKey: [queryKey] });
+        queryClient.invalidateQueries({ queryKey: [entity, variables.id] });
+        MainNotification({
+          type: "success",
+          entity,
+          action: "document updated",
+        });
+      },
+      onError: () => {
+        MainNotification({ type: "error", entity, action: "document updated" });
+      },
+    });
+
   return {
     data,
     fetchLoading,
     onUpdate,
     onUpdateLoading,
+    onPatchDocument,
+    onPatchDocumentLoading,
   };
 };

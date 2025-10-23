@@ -26,7 +26,7 @@ export default function JobModal({
   return (
     <Modal
       open={open}
-      title={type === "create" ? "Tambah Pekerjaan" : "Edit Pekerjaan"}
+      title={type === "create" ? "Add Job" : "Edit Job"}
       footer={null}
       onCancel={onClose}
     >

@@ -5,14 +5,12 @@ import {
   MatriksBaseQuestionDataModel,
   MatriksColumnDataModel,
   MatriksQuestionDataModel,
-  // DTOs
   MatriksBaseCreateDTO,
   MatriksBaseUpdateDTO,
   MatriksColumnCreateDTO,
   MatriksColumnUpsertDTO,
-  QuestionMatriksCreateDTO,
-  QuestionMatriksUpsertDTO,
-  // Mappers
+  MatriksQuestionCreateDTO,
+  MatriksQuestionUpsertDTO,
   toPrismaMatriksBaseCreate,
   toPrismaMatriksBaseUpdate,
 } from "@/app/models/question-matriks";
@@ -20,65 +18,103 @@ import {
 /* ========================================================================
  * Helpers
  * ===================================================================== */
+function isNonEmptyArray<T>(x: T[] | undefined | null): x is T[] {
+  return Array.isArray(x) && x.length > 0;
+}
 
 /* ========================================================================
  * BASE (MatriksBaseQuestion)
  * ===================================================================== */
 
-/** Ambil semua base (beserta columns & rows) */
+/** (Opsional) Ambil semua base lengkap */
 export async function GET_MATRIKS_BASES() {
   return db.matriksBaseQuestion.findMany({
-    include: { columns: true, rows: true },
+    include: {
+      columns: true,
+      rows: {
+        include: {
+          // pakai nama relasi sesuai schema
+          matriksQuestionOption: {
+            orderBy: [{ order: "asc" }, { createdAt: "asc" }],
+          },
+        },
+        orderBy: [{ order: "asc" }, { createdAt: "asc" }],
+      },
+    },
     orderBy: [{ createdAt: "desc" }],
   }) as Promise<MatriksBaseQuestionDataModel[]>;
 }
 
-/** Ambil daftar pertanyaan (rows) milik sebuah base */
-export async function GET_QUESTIONS_MATRIK(base_id: string) {
-  return db.matriksQuestion.findMany({
-    where: { baseId: base_id },
-    orderBy: [{ order: "asc" }, { createdAt: "asc" }],
-  }) as Promise<MatriksQuestionDataModel[]>;
-}
-
-/** Ambil satu base by id (beserta columns & rows) */
+/** Ambil satu base by id (lengkap) */
 export async function GET_MATRIKS_BASE(id: string) {
   return db.matriksBaseQuestion.findUnique({
     where: { id },
-    include: { columns: true, rows: true },
+    include: {
+      columns: true,
+      rows: {
+        include: {
+          matriksQuestionOption: {
+            orderBy: [{ order: "asc" }, { createdAt: "asc" }],
+          },
+        },
+        orderBy: [{ order: "asc" }, { createdAt: "asc" }],
+      },
+    },
   }) as Promise<MatriksBaseQuestionDataModel | null>;
 }
 
-/** CREATE base + nested columns & rows */
+/** CREATE base + nested columns/rows */
 export async function CREATE_MATRIKS_BASE(dto: MatriksBaseCreateDTO) {
   const data = toPrismaMatriksBaseCreate(dto);
+
   return db.matriksBaseQuestion.create({
     data,
-    include: { columns: true, rows: true },
+    include: {
+      columns: true,
+      rows: {
+        include: {
+          matriksQuestionOption: {
+            orderBy: [{ order: "asc" }, { createdAt: "asc" }],
+          },
+        },
+        orderBy: [{ order: "asc" }, { createdAt: "asc" }],
+      },
+    },
   }) as Promise<MatriksBaseQuestionDataModel>;
 }
 
-/** UPDATE base + nested upsert/delete untuk columns & rows */
+/** UPDATE base + nested columns/rows */
 export async function UPDATE_MATRIKS_BASE(
   id: string,
   dto: MatriksBaseUpdateDTO
 ) {
   const data = toPrismaMatriksBaseUpdate(dto);
+
   return db.matriksBaseQuestion.update({
     where: { id },
     data,
-    include: { columns: true, rows: true },
+    include: {
+      columns: true,
+      rows: {
+        include: {
+          matriksQuestionOption: {
+            orderBy: [{ order: "asc" }, { createdAt: "asc" }],
+          },
+        },
+        orderBy: [{ order: "asc" }, { createdAt: "asc" }],
+      },
+    },
   }) as Promise<MatriksBaseQuestionDataModel>;
 }
 
-/** DELETE base (cascade ke columns & rows sesuai schema) */
 export async function DELETE_MATRIKS_BASE(id: string) {
   return db.matriksBaseQuestion.delete({ where: { id } });
 }
 
 /* ========================================================================
- * COLUMNS (MatriksColumn) — CRUD terpisah bila diperlukan
+ * COLUMNS (MatriksColumn)
  * ===================================================================== */
+
 export async function GET_MATRIKS_COLUMNS(baseId: string) {
   return db.matriksColumn.findMany({
     where: { baseId },
@@ -153,35 +189,58 @@ export async function DELETE_MATRIKS_COLUMN(id: string) {
 }
 
 /* ========================================================================
- * ROWS (MatriksQuestion = baris pertanyaan) — CRUD terpisah
+ * ROWS (MatriksQuestion) + OPTIONS (MatriksQuestionOption)
  * ===================================================================== */
+
+/** Ambil semua pertanyaan (rows) untuk satu base, beserta options */
 export async function GET_QUESTION_MATRIKS(baseId: string) {
   return db.matriksQuestion.findMany({
     where: { baseId },
+    include: {
+      matriksQuestionOption: {
+        orderBy: [{ order: "asc" }, { createdAt: "asc" }],
+      },
+    },
     orderBy: [{ order: "asc" }, { createdAt: "asc" }],
   }) as Promise<MatriksQuestionDataModel[]>;
 }
 
+/** CREATE satu pertanyaan + (opsional) nested options */
 export async function CREATE_QUESTION_MATRIKS(
   baseId: string,
-  dto: QuestionMatriksCreateDTO
+  dto: MatriksQuestionCreateDTO
 ) {
+  const data: any = {
+    baseId,
+    text: dto.text.trim(),
+    inputType: dto.inputType,
+    required: dto.required ?? true,
+    order: dto.order ?? 0,
+    helpText: dto.helpText ?? null,
+    placeholder: dto.placeholder ?? null,
+  };
+
+  if (isNonEmptyArray(dto.options)) {
+    data.matriksQuestionOption = {
+      create: dto.options.map((o, i) => ({
+        label: o.label.trim(),
+        value: o.value.trim(),
+        order: o.order ?? i + 1,
+        active: o.active ?? true,
+      })),
+    };
+  }
+
   return db.matriksQuestion.create({
-    data: {
-      baseId,
-      text: dto.text.trim(),
-      inputType: dto.inputType, // biasanya SINGLE_CHOICE
-      required: dto.required ?? true,
-      order: dto.order ?? 0,
-      helpText: dto.helpText ?? null,
-      placeholder: dto.placeholder ?? null,
-    },
+    data,
+    include: { matriksQuestionOption: true },
   }) as Promise<MatriksQuestionDataModel>;
 }
 
+/** BULK create multiple pertanyaan + (opsional) options */
 export async function CREATE_QUESTION_MATRIKS_BULK(
   baseId: string,
-  items: QuestionMatriksCreateDTO[]
+  items: MatriksQuestionCreateDTO[]
 ) {
   const results = await Promise.allSettled(
     (items || []).map((r, idx) =>
@@ -194,7 +253,20 @@ export async function CREATE_QUESTION_MATRIKS_BULK(
           order: r.order ?? idx + 1,
           helpText: r.helpText ?? null,
           placeholder: r.placeholder ?? null,
+          ...(isNonEmptyArray(r.options)
+            ? {
+                matriksQuestionOption: {
+                  create: r.options.map((o, i) => ({
+                    label: o.label.trim(),
+                    value: o.value.trim(),
+                    order: o.order ?? i + 1,
+                    active: o.active ?? true,
+                  })),
+                },
+              }
+            : {}),
         },
+        include: { matriksQuestionOption: true },
       })
     )
   );
@@ -213,20 +285,62 @@ export async function CREATE_QUESTION_MATRIKS_BULK(
   return { created, errors };
 }
 
+/** UPDATE satu pertanyaan + nested options (update/create/deleteMany) */
 export async function UPDATE_QUESTION_MATRIKS(
   id: string,
-  dto: QuestionMatriksUpsertDTO
+  dto: MatriksQuestionUpsertDTO
 ) {
+  const data: any = {
+    text: dto.text?.trim(),
+    inputType: dto.inputType,
+    required: dto.required ?? undefined,
+    order: dto.order ?? undefined,
+    helpText: dto.helpText ?? undefined,
+    placeholder: dto.placeholder ?? undefined,
+  };
+
+  if (dto.options) {
+    const nested: any = {};
+
+    if (isNonEmptyArray(dto.options.deleteIds)) {
+      nested.deleteMany = dto.options.deleteIds.map((oid) => ({ id: oid }));
+    }
+
+    if (isNonEmptyArray(dto.options.upsert)) {
+      const toUpdate = dto.options.upsert.filter((o) => !!o.id);
+      const toCreate = dto.options.upsert.filter((o) => !o.id);
+
+      if (toUpdate.length > 0) {
+        nested.update = toUpdate.map((o) => ({
+          where: { id: o.id! },
+          data: {
+            label: o.label.trim(),
+            value: o.value.trim(),
+            order: o.order ?? undefined,
+            active: o.active ?? undefined,
+          },
+        }));
+      }
+
+      if (toCreate.length > 0) {
+        nested.create = toCreate.map((o, i) => ({
+          label: o.label.trim(),
+          value: o.value.trim(),
+          order: o.order ?? i + 1,
+          active: o.active ?? true,
+        }));
+      }
+    }
+
+    if (nested.create || nested.update || nested.deleteMany) {
+      data.matriksQuestionOption = nested;
+    }
+  }
+
   return db.matriksQuestion.update({
     where: { id },
-    data: {
-      text: dto.text.trim(),
-      inputType: dto.inputType,
-      required: dto.required ?? undefined,
-      order: dto.order ?? undefined,
-      helpText: dto.helpText ?? undefined,
-      placeholder: dto.placeholder ?? undefined,
-    },
+    data,
+    include: { matriksQuestionOption: true },
   }) as Promise<MatriksQuestionDataModel>;
 }
 

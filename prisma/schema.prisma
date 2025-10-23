@@ -47,6 +47,11 @@ enum QuestionMatriksType {
   TEXT
 }
 
+enum EvaluationStatus {
+  PENDING
+  SUBMITTED
+}
+
 model Job {
   id           String   @id @default(cuid())
   name         String
@@ -88,6 +93,7 @@ model User {
   curiculum_vitae_url String?
   address             String?
   no_identity         String?
+  no_identity_url     String?
   gender              String?
   date_of_birth       DateTime?
   photo_url           String?
@@ -95,8 +101,7 @@ model User {
   job_id              String?
   job                 Job?      @relation(fields: [job_id], references: [id], onDelete: Cascade, onUpdate: Cascade)
 
-  scheduleHired  ScheduleHired[]
-  FormEvaluation FormEvaluation[]
+  scheduleHired ScheduleHired[]
 
   createdAt DateTime    @default(now())
   updatedAt DateTime    @updatedAt
@@ -121,10 +126,13 @@ model Applicant {
 
   screeningSubmittedAt DateTime?
 
-  mbti_test_id      String?             @unique
-  mbti_test         MbtiTest?           @relation("ApplicantMbti", fields: [mbti_test_id], references: [id], onDelete: SetNull, onUpdate: Cascade)
-  historyCandidate  HistoryCandidate[]
-  scheduleInterview ScheduleInterview[]
+  mbti_test_id        String?               @unique
+  mbti_test           MbtiTest?             @relation("ApplicantMbti", fields: [mbti_test_id], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  historyCandidate    HistoryCandidate[]
+  scheduleInterview   ScheduleInterview[]
+  noteInterview       NoteInterview[]
+  matriksAnswer       MatriksAnswer[]
+  evaluatorAssignment EvaluatorAssignment[]
 
   @@map("applicant")
 }
@@ -229,33 +237,6 @@ model Contract {
   @@map("contract")
 }
 
-model BaseForm {
-  id             String           @id @default(cuid())
-  name           String
-  createdAt      DateTime         @default(now())
-  updatedAt      DateTime         @updatedAt
-  formEvaluation FormEvaluation[]
-
-  @@map("base_form")
-}
-
-model FormEvaluation {
-  id           String   @id @default(cuid())
-  candidate_id String
-  baseFormId   String
-  baseForm     BaseForm @relation(fields: [baseFormId], references: [id], onDelete: Cascade, onUpdate: Cascade)
-  candidate    User     @relation(fields: [candidate_id], references: [id], onDelete: Cascade, onUpdate: Cascade)
-
-  name_evaluation String
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-
-  assignments EvaluationAssignment[]
-  questions   FormQuestion[]
-
-  @@map("form_evaluation")
-}
-
 model Posisition {
   id        String   @id @default(cuid())
   name      String
@@ -294,89 +275,45 @@ model Evaluator {
 
   schedule ScheduleEvaluator[] @relation("Schedule")
 
-  assignments EvaluationAssignment[]
+  assignments EvaluatorAssignment[]
 
   @@map("evaluator")
 }
 
-// model ReviewEvaluator {
-//   id           String    @id @default(cuid())
-//   evaluator_id String
-//   evaluator    Evaluator @relation(fields: [evaluator_id], references: [id], onDelete: Cascade, onUpdate: Cascade)
-//   createdAt    DateTime  @default(now())
-//   updatedAt    DateTime  @updatedAt
-// }
+model EvaluatorAssignment {
+  id              String           @id @default(cuid())
+  base_matriks_id String
+  evaluatorId     String
+  status          EvaluationStatus @default(PENDING) // tracking
+  assignedAt      DateTime         @default(now())
+  applicant_id    String
+  submittedAt     DateTime?
+  link_url        String?
 
-// model EvaluatorAssignment {
-//   id           String @id @default(cuid())
-//   evaluatorId  String
-//   candidate_id String
+  baseMatriks  MatriksBaseQuestion @relation(fields: [base_matriks_id], references: [id], onDelete: Cascade)
+  applicant    Applicant           @relation(fields: [applicant_id], references: [id], onDelete: Cascade)
+  evaluator    Evaluator           @relation(fields: [evaluatorId], references: [id], onDelete: Cascade)
+  answers      EvaluatorReview[]
+  overallScore Int?
 
-//   candidate User      @relation(fields: [candidate_id], references: [id], onDelete: Cascade, onUpdate: Cascade)
-//   evaluator Evaluator @relation(fields: [evaluatorId], references: [id], onDelete: Cascade)
-//   createdAt DateTime  @default(now())
-//   updatedAt DateTime  @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-//   @@map("evaluator_assignment")
-// }
-
-model EvaluationAssignment {
-  id               String           @id @default(cuid())
-  formEvaluationId String
-  evaluatorId      String
-  status           EvaluationStatus @default(PENDING) // tracking
-  assignedAt       DateTime         @default(now())
-  submittedAt      DateTime?
-
-  formEvaluation FormEvaluation @relation(fields: [formEvaluationId], references: [id], onDelete: Cascade)
-  evaluator      Evaluator      @relation(fields: [evaluatorId], references: [id], onDelete: Cascade)
-
-  summary EvaluationSummary?
-  answers EvaluationReview[]
-
-  @@unique([formEvaluationId, evaluatorId])
+  @@map("evaluator_assignment")
 }
 
-enum EvaluationStatus {
-  PENDING
-  SUBMITTED
-}
-
-model FormQuestion {
-  id               String                  @id @default(cuid())
-  formEvaluationId String
-  order            Int
-  text             String
-  type             QuestionEvaluastionType
-  options          Json?
-
-  formEvaluation FormEvaluation     @relation(fields: [formEvaluationId], references: [id], onDelete: Cascade)
-  answers        EvaluationReview[]
-}
-
-model EvaluationReview {
+model EvaluatorReview {
   id           String   @id @default(cuid())
   assignmentId String
   questionId   String
   value        Json
   createdAt    DateTime @default(now())
 
-  assignment EvaluationAssignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
-  question   FormQuestion         @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  assignment EvaluatorAssignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+  question   MatriksQuestion     @relation(fields: [questionId], references: [id], onDelete: Cascade)
 
-  @@unique([assignmentId, questionId]) // satu jawaban per pertanyaan
-}
-
-model EvaluationSummary {
-  id           String  @id @default(cuid())
-  assignmentId String  @unique
-  overallScore Float?
-  notes        String?
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  assignment EvaluationAssignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+  @@unique([assignmentId, questionId])
+  @@map("evaluator_review")
 }
 
 model QuestionBaseScreening {
@@ -477,8 +414,9 @@ model MatriksBaseQuestion {
   // baris/pertanyaan
   rows MatriksQuestion[] @relation("BaseRows")
 
-  createdAt       DateTime          @default(now())
-  updatedAt       DateTime          @updatedAt
+  createdAt           DateTime              @default(now())
+  updatedAt           DateTime              @updatedAt
+  EvaluatorAssignment EvaluatorAssignment[]
 
   @@map("matriks_base_question")
 }
@@ -510,12 +448,58 @@ model MatriksQuestion {
   order       Int                 @default(0)
   helpText    String?
   placeholder String?
+  maxScore    Float?
+  weight      Float?
 
   base MatriksBaseQuestion @relation("BaseRows", fields: [baseId], references: [id], onDelete: Cascade, onUpdate: Cascade)
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt             DateTime                @default(now())
+  updatedAt             DateTime                @updatedAt
+  matriksQuestionOption MatriksQuestionOption[]
+  MatriksAnswer         MatriksAnswer[]
+  EvaluatorReview       EvaluatorReview[]
 
   @@map("question_matriks")
 }
 
+model MatriksQuestionOption {
+  id         String  @id @default(cuid())
+  questionId String
+  label      String
+  value      String
+  order      Int     @default(0)
+  active     Boolean @default(true)
+
+  question MatriksQuestion @relation(fields: [questionId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([questionId, value])
+  @@index([questionId, order])
+  @@map("matriks_question_option")
+}
+
+model MatriksAnswer {
+  id          String          @id @default(cuid())
+  questionId  String
+  answerText  String?
+  question    MatriksQuestion @relation(fields: [questionId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  createdAt   DateTime        @default(now())
+  applicant   Applicant?      @relation(fields: [applicantId], references: [id])
+  applicantId String?
+
+  @@index([questionId])
+}
+
+model NoteInterview {
+  id           String @id @default(cuid())
+  note         String @db.LongText
+  applicant_id String
+
+  applicant Applicant @relation(fields: [applicant_id], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@map("note_interview")
+}

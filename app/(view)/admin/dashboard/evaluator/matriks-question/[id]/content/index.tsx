@@ -16,8 +16,15 @@ import {
   Space,
   Switch,
   Typography,
+  Select,
+  Tooltip,
 } from "antd";
-import { PlusOutlined, EditOutlined, DeleteOutlined } from "@ant-design/icons";
+import {
+  PlusOutlined,
+  EditOutlined,
+  DeleteOutlined,
+  QuestionCircleOutlined,
+} from "@ant-design/icons";
 import { useParams } from "next/navigation";
 
 import {
@@ -26,17 +33,29 @@ import {
 } from "@/app/hooks/question-matriks";
 
 import type { QuestionMatriksType } from "@prisma/client";
+import { prettyType } from "@/app/utils/humanize";
 
 const BRAND = "#003A6F";
 const { Title, Text } = Typography;
 const { useBreakpoint } = Grid;
 
+/* -------------------- Types -------------------- */
+type OptionItem = {
+  label: string;
+  value: string;
+  order?: number | null;
+  active?: boolean | null;
+  // id?: string // (uncomment if your update API supports option IDs)
+};
+
 type CreateFormValues = {
   text: string;
+  inputType: QuestionMatriksType;
   required?: boolean;
   order?: number;
   helpText?: string | null;
   placeholder?: string | null;
+  options?: OptionItem[];
 };
 
 type UpdateFormValues = {
@@ -46,13 +65,14 @@ type UpdateFormValues = {
   order?: number;
   helpText?: string | null;
   placeholder?: string | null;
+  options?: OptionItem[];
 };
 
 export default function Content() {
   const { notification } = AntdApp.useApp();
   const screens = useBreakpoint();
 
-  // baseId dari route
+  // baseId from route
   const params = useParams();
   const baseId = String(params?.id ?? "");
 
@@ -68,14 +88,16 @@ export default function Content() {
     queryString: baseId ? `base_id=${baseId}` : undefined,
   });
 
-  // Create form
+  // Create modal state
+  const [createOpen, setCreateOpen] = useState(false);
   const [createForm] = Form.useForm<CreateFormValues>();
+  const createInputType = Form.useWatch("inputType", createForm);
 
   // Edit modal state
   const [editOpen, setEditOpen] = useState(false);
   const [editingId, setEditingId] = useState<string>("");
 
-  // Detail + update hook (diaktifkan hanya ketika ada id)
+  // Detail + update hook (enabled only when id available)
   const {
     data: editingRow,
     onUpdate,
@@ -83,37 +105,80 @@ export default function Content() {
   } = useQuestionMatriksById({ id: editingId || "" });
 
   const [editForm] = Form.useForm<UpdateFormValues>();
+  const editInputType = Form.useWatch("inputType", editForm);
 
-  // Ketika modal edit dibuka & data siap → isi form
+  // Prefill edit form when data is loaded
   useEffect(() => {
-    if (editingRow) {
-      editForm.setFieldsValue({
-        text: editingRow.text,
-        inputType: editingRow.inputType,
-        required: editingRow.required,
-        order: editingRow.order,
-        helpText: editingRow.helpText ?? null,
-        placeholder: editingRow.placeholder ?? null,
-      });
-    }
+    if (!editingRow) return;
+
+    const mappedOptions: OptionItem[] = (
+      ((editingRow as any)?.matriksQuestionOption as any[]) || []
+    ).map((o: any) => ({
+      label: o.label,
+      value: o.value,
+      order: o.order ?? 0,
+      active: o.active ?? true,
+      // id: o.id,
+    }));
+
+    editForm.setFieldsValue({
+      text: editingRow.text,
+      inputType: editingRow.inputType,
+      required: editingRow.required,
+      order: editingRow.order,
+      helpText: editingRow.helpText ?? null,
+      placeholder: editingRow.placeholder ?? null,
+      options: mappedOptions,
+    });
   }, [editingRow, editForm]);
+
+  // When the user switches a create form to TEXT, clear options
+  useEffect(() => {
+    if (createInputType === "TEXT") {
+      createForm.setFieldValue("options", []);
+    }
+  }, [createInputType, createForm]);
+
+  // When the user switches an edit form to TEXT, clear options
+  useEffect(() => {
+    if (editInputType === "TEXT") {
+      editForm.setFieldValue("options", []);
+    }
+  }, [editInputType, editForm]);
 
   async function handleCreate(values: CreateFormValues) {
     if (!baseId) {
       notification.error({ message: "Missing base id" });
       return;
     }
+
+    // Only send options on SINGLE_CHOICE
+    const shouldSendOptions = values.inputType === "SINGLE_CHOICE";
+    const payloadOptions =
+      shouldSendOptions &&
+      Array.isArray(values.options) &&
+      values.options.length > 0
+        ? values.options.map((o, i) => ({
+            label: o.label.trim(),
+            value: o.value.trim(),
+            order: o.order ?? i + 1,
+            active: o.active ?? true,
+          }))
+        : undefined;
+
     try {
       await onCreate({
         baseId,
         text: values.text.trim(),
-        inputType: "SINGLE_CHOICE", // Matriks row = single choice
+        inputType: values.inputType,
         required: values.required ?? true,
         order: values.order ?? 0,
         helpText: values.helpText ?? null,
         placeholder: values.placeholder ?? null,
+        options: payloadOptions,
       });
       createForm.resetFields();
+      setCreateOpen(false);
     } catch (e: any) {
       notification.error({
         message: "Create failed",
@@ -122,22 +187,37 @@ export default function Content() {
     }
   }
 
-  async function openEdit(id: string) {
+  function openEdit(id: string) {
     setEditingId(id);
     setEditOpen(true);
   }
 
   async function handleUpdate(values: UpdateFormValues) {
     if (!editingId) return;
+
+    const shouldSendOptions = values.inputType === "SINGLE_CHOICE";
+    const payloadOptions =
+      shouldSendOptions &&
+      Array.isArray(values.options) &&
+      values.options.length > 0
+        ? values.options.map((o, i) => ({
+            label: o.label.trim(),
+            value: o.value.trim(),
+            order: o.order ?? i + 1,
+            active: o.active ?? true,
+          }))
+        : undefined;
+
     try {
       await onUpdate({
         text: values.text?.trim(),
-        inputType: "SINGLE_CHOICE",
+        inputType: values.inputType,
         required: values.required,
         order: values.order,
         helpText: values.helpText ?? null,
         placeholder: values.placeholder ?? null,
-      });
+        options: payloadOptions as any, // keep if your DTO supports options update
+      } as any);
       setEditOpen(false);
       setEditingId("");
     } catch (e: any) {
@@ -153,101 +233,43 @@ export default function Content() {
     [rows]
   );
 
+  const typeBadgeColor = (t: QuestionMatriksType) =>
+    t === "SINGLE_CHOICE" ? "#F6FFED" : "#E6F4FF";
+
   return (
     <div style={{ padding: screens.md ? 24 : 16 }}>
       {/* Header */}
-      <Space direction="vertical" size={6} style={{ display: "block" }}>
-        <Title level={3} style={{ margin: 0, color: "#111827" }}>
-          Matriks Questions
-        </Title>
-        <Text type="secondary">
-          Tambah, edit, dan hapus baris pertanyaan untuk matriks (single
-          choice).
-        </Text>
+      <Space
+        align="center"
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          width: "100%",
+        }}
+      >
+        <Space direction="vertical" size={6}>
+          <Title level={3} style={{ margin: 0, color: "#111827" }}>
+            Matrix Questions
+          </Title>
+          <Text type="secondary">
+            Manage rows for your matrix (supports Single Choice and Text).
+          </Text>
+        </Space>
+
+        <Button
+          type="primary"
+          icon={<PlusOutlined />}
+          style={{ background: BRAND, borderRadius: 12 }}
+          onClick={() => setCreateOpen(true)}
+          disabled={!baseId}
+        >
+          Add Question
+        </Button>
       </Space>
 
       <Divider style={{ marginTop: 16, marginBottom: 16 }} />
 
-      {/* Create panel */}
-      <div
-        style={{
-          background: "#fff",
-          border: "1px solid #EDF1F5",
-          borderRadius: 12,
-          padding: 16,
-          marginBottom: 16,
-        }}
-      >
-        <Space
-          align="center"
-          style={{ justifyContent: "space-between", width: "100%", gap: 12 }}
-        >
-          <Text strong style={{ color: BRAND }}>
-            Tambah Pertanyaan
-          </Text>
-        </Space>
-
-        <Form<CreateFormValues>
-          form={createForm}
-          layout="vertical"
-          onFinish={handleCreate}
-          initialValues={{
-            text: "",
-            required: true,
-            order: 0,
-            helpText: "",
-            placeholder: "",
-          }}
-          style={{ marginTop: 12 }}
-        >
-          <Form.Item
-            label="Teks Pertanyaan"
-            name="text"
-            rules={[
-              { required: true, message: "Pertanyaan wajib diisi." },
-              { min: 3, message: "Minimal 3 karakter." },
-            ]}
-          >
-            <Input placeholder="Tuliskan pertanyaan…" />
-          </Form.Item>
-
-          <Space size="large" wrap>
-            <Form.Item label="Wajib" name="required" valuePropName="checked">
-              <Switch defaultChecked />
-            </Form.Item>
-
-            <Form.Item
-              label="Urutan"
-              name="order"
-              tooltip="Urutan tampil (menaik)"
-            >
-              <InputNumber min={0} style={{ width: 140 }} />
-            </Form.Item>
-          </Space>
-
-          <Form.Item label="Bantuan (opsional)" name="helpText">
-            <Input placeholder="Teks bantu singkat…" />
-          </Form.Item>
-
-          <Form.Item label="Placeholder (opsional)" name="placeholder">
-            <Input placeholder="Placeholder input…" />
-          </Form.Item>
-
-          <Space>
-            <Button
-              type="primary"
-              htmlType="submit"
-              icon={<PlusOutlined />}
-              loading={onCreateLoading}
-              disabled={!baseId}
-            >
-              Tambah
-            </Button>
-          </Space>
-        </Form>
-      </div>
-
-      {/* List */}
+      {/* List FIRST */}
       {fetchLoading ? (
         <Space direction="vertical" style={{ width: "100%" }}>
           {Array.from({ length: 3 }).map((_, i) => (
@@ -255,10 +277,10 @@ export default function Content() {
           ))}
         </Space>
       ) : sortedRows.length === 0 ? (
-        <Empty description="Belum ada pertanyaan." />
+        <Empty description="No questions yet." />
       ) : (
         <div style={{ display: "grid", gap: 12 }}>
-          {sortedRows.map((row) => (
+          {sortedRows.map((row: any) => (
             <div
               key={row.id}
               style={{
@@ -286,12 +308,12 @@ export default function Content() {
                         borderRadius: 999,
                         fontSize: 12,
                         lineHeight: "20px",
-                        background: "#F6FFED",
+                        background: typeBadgeColor(row.inputType),
                         border: "1px solid rgba(0,0,0,0.05)",
                         marginRight: 8,
                       }}
                     >
-                      SINGLE_CHOICE
+                      {prettyType(row.inputType)}
                     </span>
                     <span
                       style={{
@@ -331,6 +353,51 @@ export default function Content() {
                       {row.helpText}
                     </Text>
                   ) : null}
+
+                  {/* NEW: show options for SINGLE_CHOICE */}
+                  {row.inputType === "SINGLE_CHOICE" &&
+                    Array.isArray(row.matriksQuestionOption) &&
+                    row.matriksQuestionOption.length > 0 && (
+                      <div style={{ marginTop: 8 }}>
+                        <Text
+                          type="secondary"
+                          style={{ display: "block", marginBottom: 4 }}
+                        >
+                          Options:
+                        </Text>
+                        <div
+                          style={{
+                            display: "flex",
+                            flexWrap: "wrap",
+                            gap: 8,
+                          }}
+                        >
+                          {row.matriksQuestionOption
+                            .slice()
+                            .sort(
+                              (a: any, b: any) =>
+                                (a.order ?? 0) - (b.order ?? 0)
+                            )
+                            .map((opt: any) => (
+                              <span
+                                key={opt.id}
+                                title={`value: ${opt.value}`}
+                                style={{
+                                  display: "inline-block",
+                                  padding: "2px 10px",
+                                  borderRadius: 999,
+                                  fontSize: 12,
+                                  lineHeight: "20px",
+                                  background: "#FFF7ED",
+                                  border: "1px solid rgba(0,0,0,0.06)",
+                                }}
+                              >
+                                {opt.label}
+                              </span>
+                            ))}
+                        </div>
+                      </div>
+                    )}
                 </div>
 
                 <Space>
@@ -341,11 +408,11 @@ export default function Content() {
                     Edit
                   </Button>
                   <Popconfirm
-                    title="Hapus pertanyaan?"
-                    description="Tindakan ini tidak dapat dibatalkan."
-                    okText="Hapus"
+                    title="Delete question?"
+                    description="This action cannot be undone."
+                    okText="Delete"
                     okButtonProps={{ danger: true, loading: onDeleteLoading }}
-                    cancelText="Batal"
+                    cancelText="Cancel"
                     onConfirm={() => onDelete(row.id)}
                   >
                     <Button
@@ -363,19 +430,188 @@ export default function Content() {
         </div>
       )}
 
-      {/* Edit Modal */}
+      {/* Create Modal (choose input type + options for Single Choice) */}
       <Modal
-        title="Edit Pertanyaan Matriks"
+        title="Add Matrix Question"
+        open={createOpen}
+        onCancel={() => setCreateOpen(false)}
+        okText="Create"
+        cancelText="Cancel"
+        onOk={() => createForm.submit()}
+        confirmLoading={onCreateLoading}
+        width={720}
+      >
+        <Form<CreateFormValues>
+          form={createForm}
+          layout="vertical"
+          onFinish={handleCreate}
+          initialValues={{
+            text: "",
+            inputType: "SINGLE_CHOICE",
+            required: true,
+            order: 0,
+            helpText: "",
+            placeholder: "",
+            options: [],
+          }}
+        >
+          <Form.Item
+            label="Question Text"
+            name="text"
+            rules={[
+              { required: true, message: "Question is required." },
+              { min: 3, message: "Minimum 3 characters." },
+            ]}
+          >
+            <Input placeholder="Type the question…" />
+          </Form.Item>
+
+          <Form.Item
+            label="Input Type"
+            name="inputType"
+            rules={[{ required: true, message: "Input type is required." }]}
+          >
+            <Select
+              options={[
+                { value: "SINGLE_CHOICE", label: "Single Choice" },
+                { value: "TEXT", label: "Text" },
+              ]}
+              style={{ maxWidth: 280 }}
+            />
+          </Form.Item>
+
+          <Space size="large" wrap>
+            <Form.Item label="Required" name="required" valuePropName="checked">
+              <Switch defaultChecked />
+            </Form.Item>
+
+            <Form.Item label="Order" name="order" tooltip="Ascending order">
+              <InputNumber min={0} style={{ width: 140 }} />
+            </Form.Item>
+          </Space>
+
+          <Form.Item label="Help Text (optional)" name="helpText">
+            <Input placeholder="Optional hint…" />
+          </Form.Item>
+
+          <Form.Item label="Placeholder (optional)" name="placeholder">
+            <Input placeholder="Placeholder…" />
+          </Form.Item>
+
+          {/* Options section — visible only for SINGLE_CHOICE */}
+          <FormDependency path={["inputType"]}>
+            {(type: QuestionMatriksType) =>
+              type === "SINGLE_CHOICE" && (
+                <>
+                  <Divider style={{ margin: "12px 0" }} />
+                  <Space align="center">
+                    <Text strong>Options</Text>
+                    <Tooltip title="Provide at least one option for SINGLE_CHOICE.">
+                      <QuestionCircleOutlined />
+                    </Tooltip>
+                  </Space>
+
+                  <Form.List name="options">
+                    {(fields, { add, remove }) => (
+                      <Space direction="vertical" style={{ width: "100%" }}>
+                        {fields.map(({ key, name, ...rest }, idx) => (
+                          <Space
+                            key={key}
+                            align="baseline"
+                            wrap
+                            style={{ width: "100%" }}
+                          >
+                            <Form.Item
+                              {...rest}
+                              name={[name, "label"]}
+                              label={idx === 0 ? "Label" : ""}
+                              rules={[
+                                {
+                                  required: true,
+                                  message: "Label is required.",
+                                },
+                              ]}
+                            >
+                              <Input
+                                placeholder="e.g., Strongly Disagree"
+                                style={{ width: 240 }}
+                              />
+                            </Form.Item>
+
+                            <Form.Item
+                              {...rest}
+                              name={[name, "value"]}
+                              label={idx === 0 ? "Value" : ""}
+                              rules={[
+                                {
+                                  required: true,
+                                  message: "Value is required.",
+                                },
+                              ]}
+                            >
+                              <Input
+                                placeholder="e.g., sd"
+                                style={{ width: 200 }}
+                              />
+                            </Form.Item>
+
+                            <Form.Item
+                              {...rest}
+                              name={[name, "order"]}
+                              label={idx === 0 ? "Order" : ""}
+                            >
+                              <InputNumber min={0} style={{ width: 120 }} />
+                            </Form.Item>
+
+                            <Form.Item
+                              {...rest}
+                              name={[name, "active"]}
+                              label={idx === 0 ? "Active" : ""}
+                              valuePropName="checked"
+                              initialValue={true}
+                            >
+                              <Switch />
+                            </Form.Item>
+
+                            <Button
+                              danger
+                              type="link"
+                              onClick={() => remove(name)}
+                            >
+                              Remove
+                            </Button>
+                          </Space>
+                        ))}
+
+                        <Button
+                          onClick={() => add({ active: true })}
+                          icon={<PlusOutlined />}
+                        >
+                          Add Option
+                        </Button>
+                      </Space>
+                    )}
+                  </Form.List>
+                </>
+              )
+            }
+          </FormDependency>
+        </Form>
+      </Modal>
+
+      {/* Edit Modal (also supports options for SINGLE_CHOICE) */}
+      <Modal
+        title="Edit Matrix Question"
         open={editOpen}
         onCancel={() => {
           setEditOpen(false);
           setEditingId("");
         }}
         okText="Update"
-        cancelText="Batal"
+        cancelText="Cancel"
         onOk={() => editForm.submit()}
         confirmLoading={onUpdateLoading}
-        width={680}
+        width={720}
       >
         <Form<UpdateFormValues>
           form={editForm}
@@ -387,37 +623,175 @@ export default function Content() {
             order: 0,
             helpText: "",
             placeholder: "",
+            options: [],
           }}
         >
           <Form.Item
-            label="Teks Pertanyaan"
+            label="Question Text"
             name="text"
             rules={[
-              { required: true, message: "Pertanyaan wajib diisi." },
-              { min: 3, message: "Minimal 3 karakter." },
+              { required: true, message: "Question is required." },
+              { min: 3, message: "Minimum 3 characters." },
             ]}
           >
-            <Input placeholder="Ubah pertanyaan…" />
+            <Input placeholder="Edit the question…" />
+          </Form.Item>
+
+          <Form.Item
+            label="Input Type"
+            name="inputType"
+            rules={[{ required: true, message: "Input type is required." }]}
+          >
+            <Select
+              options={[
+                { value: "SINGLE_CHOICE", label: "Single Choice" },
+                { value: "TEXT", label: "Text" },
+              ]}
+              style={{ maxWidth: 280 }}
+            />
           </Form.Item>
 
           <Space size="large" wrap>
-            <Form.Item label="Wajib" name="required" valuePropName="checked">
+            <Form.Item label="Required" name="required" valuePropName="checked">
               <Switch />
             </Form.Item>
-            <Form.Item label="Urutan" name="order">
+            <Form.Item label="Order" name="order">
               <InputNumber min={0} style={{ width: 140 }} />
             </Form.Item>
           </Space>
 
-          <Form.Item label="Bantuan (opsional)" name="helpText">
-            <Input placeholder="Teks bantu singkat…" />
+          <Form.Item label="Help Text (optional)" name="helpText">
+            <Input placeholder="Optional hint…" />
           </Form.Item>
 
-          <Form.Item label="Placeholder (opsional)" name="placeholder">
-            <Input placeholder="Placeholder input…" />
+          <Form.Item label="Placeholder (optional)" name="placeholder">
+            <Input placeholder="Placeholder…" />
           </Form.Item>
+
+          {/* Options section — visible only for SINGLE_CHOICE */}
+          <FormDependency path={["inputType"]}>
+            {(type: QuestionMatriksType) =>
+              type === "SINGLE_CHOICE" && (
+                <>
+                  <Divider style={{ margin: "12px 0" }} />
+                  <Space align="center">
+                    <Text strong>Options</Text>
+                    <Tooltip title="Edit options for SINGLE_CHOICE question.">
+                      <QuestionCircleOutlined />
+                    </Tooltip>
+                  </Space>
+
+                  <Form.List name="options">
+                    {(fields, { add, remove }) => (
+                      <Space direction="vertical" style={{ width: "100%" }}>
+                        {fields.map(({ key, name, ...rest }, idx) => (
+                          <Space
+                            key={key}
+                            align="baseline"
+                            wrap
+                            style={{ width: "100%" }}
+                          >
+                            <Form.Item
+                              {...rest}
+                              name={[name, "label"]}
+                              label={idx === 0 ? "Label" : ""}
+                              rules={[
+                                {
+                                  required: true,
+                                  message: "Label is required.",
+                                },
+                              ]}
+                            >
+                              <Input
+                                placeholder="e.g., Strongly Disagree"
+                                style={{ width: 240 }}
+                              />
+                            </Form.Item>
+
+                            <Form.Item
+                              {...rest}
+                              name={[name, "value"]}
+                              label={idx === 0 ? "Value" : ""}
+                              rules={[
+                                {
+                                  required: true,
+                                  message: "Value is required.",
+                                },
+                              ]}
+                            >
+                              <Input
+                                placeholder="e.g., sd"
+                                style={{ width: 200 }}
+                              />
+                            </Form.Item>
+
+                            <Form.Item
+                              {...rest}
+                              name={[name, "order"]}
+                              label={idx === 0 ? "Order" : ""}
+                            >
+                              <InputNumber min={0} style={{ width: 120 }} />
+                            </Form.Item>
+
+                            <Form.Item
+                              {...rest}
+                              name={[name, "active"]}
+                              label={idx === 0 ? "Active" : ""}
+                              valuePropName="checked"
+                              initialValue={true}
+                            >
+                              <Switch />
+                            </Form.Item>
+
+                            <Button
+                              danger
+                              type="link"
+                              onClick={() => remove(name)}
+                            >
+                              Remove
+                            </Button>
+                          </Space>
+                        ))}
+
+                        <Button
+                          onClick={() => add({ active: true })}
+                          icon={<PlusOutlined />}
+                        >
+                          Add Option
+                        </Button>
+                      </Space>
+                    )}
+                  </Form.List>
+                </>
+              )
+            }
+          </FormDependency>
         </Form>
       </Modal>
     </div>
+  );
+}
+
+/* -------------------- Small helper -------------------- */
+/** Render conditional fields based on a form path value */
+function FormDependency<T>({
+  path,
+  children,
+}: {
+  path: (string | number)[];
+  children: (val: any) => T;
+}) {
+  return (
+    <Form.Item
+      noStyle
+      shouldUpdate={(prev, cur) => {
+        // re-render when specific nested field changed
+        const get = (obj: any, keys: (string | number)[]) =>
+          keys.reduce((acc, k) => (acc ? acc[k] : undefined), obj);
+        return get(prev, path) !== get(cur, path);
+      }}
+    >
+      {({ getFieldValue }) => children(getFieldValue(path))}
+    </Form.Item>
   );
 }

@@ -3,6 +3,7 @@ import "dayjs/locale/id";
 
 import { TableProps } from "antd";
 import { ContractTemplateDataModel } from "@/app/models/contract-template";
+import { makeActionsByType } from "@/app/utils/presets";
 
 export const ContractTemplateColumns = ({
   onDelete,
@@ -47,16 +48,21 @@ export const ContractTemplateColumns = ({
       key: "action",
       render: (record: ContractTemplateDataModel) => (
         <ActionTable
-          title="Contract Template"
-          description={record.name ? record.name : ""}
-          actions="delete"
           id={record.id}
-          onEdit={() => {
-            onEdit(record.id);
-          }}
-          onDelete={() => {
-            onDelete(record.id);
-          }}
+          title="Contract Template"
+          description={record.name ?? ""}
+          items={makeActionsByType({
+            type: "default",
+            confirmDelete: {
+              title: "Delete Contract Template",
+              description: `Record "${
+                record.name ?? "-"
+              }" will be permanently deleted. Continue?`,
+              okText: "Delete",
+            },
+            onEdit: (id: string) => onEdit(id),
+            onDelete: (id: string) => onDelete(id),
+          })}
         />
       ),
     },

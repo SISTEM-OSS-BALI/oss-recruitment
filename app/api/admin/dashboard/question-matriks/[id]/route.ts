@@ -2,7 +2,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { GeneralError } from "@/app/utils/general-error";
 import { UPDATE_QUESTION_MATRIKS } from "@/app/providers/question-matriks";
-import type { QuestionMatriksUpsertDTO } from "@/app/models/question-matriks";
+import { MatriksQuestionDataModel } from "@/app/models/question-matriks";
+
 
 export const POST = async (req: NextRequest) => {
   try {
@@ -15,7 +16,7 @@ export const POST = async (req: NextRequest) => {
       );
     }
 
-    const body: QuestionMatriksUpsertDTO = await req.json();
+    const body: MatriksQuestionDataModel = await req.json();
 
     if (body.text !== undefined && body.text.trim().length === 0) {
       return NextResponse.json(

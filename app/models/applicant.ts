@@ -8,7 +8,25 @@ export type ApplicantDataModel = Prisma.ApplicantGetPayload<{
     job: true;
     user: true;
     mbti_test: true;
-    scheduleIntreview: true;
+    scheduleInterview: true;
+    evaluatorAssignment: {
+      include: {
+        evaluator: true;
+        baseMatriks: {
+          include: {
+            columns: true;
+            rows: {
+              include: {
+                matriksQuestionOption: {
+                  orderBy: [{ order: "asc" }, { createdAt: "asc" }];
+                };
+              };
+              orderBy: [{ order: "asc" }, { createdAt: "asc" }];
+            };
+          };
+        };
+      }
+    }
   };
 }>;
 

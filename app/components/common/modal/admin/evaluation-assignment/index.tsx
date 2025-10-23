@@ -1,15 +1,23 @@
 import { Modal } from "antd";
-import EvaluationAssignmentForm from "../../../form/admin/evaluation-assignment";
-import { EvaluatorAssignmentDataModel } from "@/app/models/evaluator-assignment";
+import EvaluationAssignmentForm, {
+  CreatePayload,
+  UpdatePayload,
+} from "../../../form/admin/evaluation-assignment";
 
 type EvaluationAssignmentModalProps = {
   open: boolean;
   onClose: () => void;
-  handleFinish: (values: EvaluatorAssignmentDataModel) => Promise<void>;
+  handleFinish: (values: CreatePayload | UpdatePayload) => Promise<void>;
   loadingCreate: boolean;
   loadingUpdate: boolean;
   type: "create" | "update";
-  initialValues?: EvaluatorAssignmentDataModel;
+  initialValues?: Partial<UpdatePayload> & {
+    base_matriks_id?: string;
+    evaluatorId?: string;
+    status?: any;
+    link_url?: string | null;
+  };
+  applicantId?: string; // ⬅️ penting untuk CREATE
 };
 
 export default function EvaluationAssignmentModal({
@@ -20,6 +28,7 @@ export default function EvaluationAssignmentModal({
   loadingUpdate,
   type,
   initialValues,
+  applicantId,
 }: EvaluationAssignmentModalProps) {
   return (
     <Modal
@@ -34,12 +43,12 @@ export default function EvaluationAssignmentModal({
       }
     >
       <EvaluationAssignmentForm
-        onClose={onClose}
         handleFinish={handleFinish}
         loadingCreate={loadingCreate}
         loadingUpdate={loadingUpdate}
         type={type}
         initialValues={initialValues}
+        applicantId={applicantId} // ⬅️ PASS KE FORM
       />
     </Modal>
   );

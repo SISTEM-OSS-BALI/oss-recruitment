@@ -12,6 +12,24 @@ export const GET_APPLICANTS = async () => {
       user: true,
       mbti_test: true,
       scheduleInterview: true,
+      evaluatorAssignment: {
+        include: {
+          evaluator: true,
+          baseMatriks: {
+            include: {
+              columns: true,
+              rows: {
+                include: {
+                  matriksQuestionOption: {
+                    orderBy: [{ order: "asc" }, { createdAt: "asc" }],
+                  },
+                },
+                orderBy: [{ order: "asc" }, { createdAt: "asc" }],
+              },
+            },
+          },
+        },
+      },
     },
   });
 
@@ -31,7 +49,7 @@ export const GET_APPLICANT_BY_USER_ID = async (user_id: string) => {
   });
 
   return candidates;
-}
+};
 
 export const CREATE_APPLICANT = async (
   payload: ApplicantPayloadCreateModel
@@ -111,6 +129,24 @@ export const GET_APPLICANTS_BY_JOB_ID = async (job_id: string) => {
       user: true,
       mbti_test: true,
       scheduleInterview: true,
+      evaluatorAssignment: {
+        include: {
+          evaluator: true,
+          baseMatriks: {
+            include: {
+              columns: true,
+              rows: {
+                include: {
+                  matriksQuestionOption: {
+                    orderBy: [{ order: "asc" }, { createdAt: "asc" }],
+                  },
+                },
+                orderBy: [{ order: "asc" }, { createdAt: "asc" }],
+              },
+            },
+          },
+        },
+      },
     },
   });
   return result;

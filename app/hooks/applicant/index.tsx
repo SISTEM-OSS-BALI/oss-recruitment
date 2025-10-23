@@ -121,7 +121,7 @@ export const useCandidateByUserId = ({ id }: { id?: string }) => {
 };
 
 export const useCandidateByJobId = ({ id }: { id?: string }) => {
-  const { data, isLoading: fetchLoading } = useQuery({
+  const { data, isLoading: fetchLoading, error } = useQuery({
     queryKey: [entity, id],
     queryFn: async () => {
       const result = await axios.get(
@@ -135,5 +135,6 @@ export const useCandidateByJobId = ({ id }: { id?: string }) => {
   return {
     data,
     fetchLoading,
+    error,
   };
 };

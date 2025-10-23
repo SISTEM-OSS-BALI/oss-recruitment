@@ -6,9 +6,12 @@ import {
 import { GeneralError } from "@/app/utils/general-error";
 import { NextRequest, NextResponse } from "next/server";
 
-export const GET = async () => {
+export const GET = async (req: NextRequest) => {
+  const { searchParams } = new URL(req.url);
+
+  const applicant_id = searchParams.get("applicant_id") ?? undefined;
   try {
-    const data = await GET_EVALUATOR_ASSIGNMENTS();
+    const data = await GET_EVALUATOR_ASSIGNMENTS({ applicant_id });
     return NextResponse.json(
       {
         success: true,

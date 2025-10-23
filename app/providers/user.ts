@@ -1,5 +1,5 @@
 import db from "@/lib/prisma";
-import { UserPayloadCreateModel } from "../models/user";
+import { UserPayloadCreateModel, UserPayloadUpdateModel } from "../models/user";
 import bcrypt from "bcrypt";
 
 export const CREATE_USER = async (payload: UserPayloadCreateModel) => {
@@ -36,3 +36,26 @@ export const UPDATE_USER = async (
   });
   return result;
 };
+
+export const DELETE_USER = async (id: string) => {
+  const result = await db.user.delete({
+    where: {
+      id,
+    },
+  });
+  return result;
+};
+
+export const UPDATE_USER_DOCUMENT = async (user_id: string, payload: UserPayloadUpdateModel) => {
+  const result = await db.user.update({
+    where: {
+      id: user_id,
+    },
+
+    data: {
+      no_identity: payload.no_identity,
+      no_identity_url: payload.no_identity_url,
+    },
+  });
+  return result;
+}

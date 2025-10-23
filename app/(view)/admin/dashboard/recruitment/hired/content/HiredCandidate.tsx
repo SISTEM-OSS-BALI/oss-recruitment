@@ -56,14 +56,15 @@ export default function HiredSchedulePage({
       {/* LEFT PANEL (Profile) */}
       <Col xs={24} md={8}>
         <CandidateInfoPanel
-          email={candidate.applicant.email}
-          phone={candidate.applicant.phone}
-          dateOfBirth={candidate.applicant.date_of_birth}
+          email={candidate.user.email}
+          phone={candidate.user.phone}
+          dateOfBirth={candidate.user.date_of_birth}
           jobName={candidate.job?.name}
           appliedAt={candidate.createdAt}
+          stage={candidate.stage}
           updatedAt={candidate.updatedAt}
-          cvUrl={candidate.applicant.curiculum_vitae_url}
-          portfolioUrl={candidate.applicant.portfolio_url}
+          cvUrl={candidate.user.curiculum_vitae_url}
+          portfolioUrl={candidate.user.portfolio_url}
         />
       </Col>
 

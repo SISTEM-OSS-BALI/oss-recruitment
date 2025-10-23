@@ -26,7 +26,6 @@ export const GET = async () => {
         { status: error.code }
       );
     }
-
   }
 };
 

@@ -17,13 +17,14 @@ import { SearchOutlined } from "@ant-design/icons";
 
 import { reorderImmutable } from "@/app/utils/reoder";
 import DraggableCandidateItem from "@/app/utils/dnd-helper";
-import { CandidateDataModel } from "@/app/models/applicant";
+
 import { useCandidate, useCandidates } from "@/app/hooks/applicant";
 import { useRecruitment } from "../../context";
-import { Location, RecruitmentStage } from "@prisma/client";
+import { RecruitmentStage } from "@prisma/client";
 import HiredSchedulePage from "./HiredCandidate";
 import { useScheduleHired, useScheduleHireds } from "@/app/hooks/hired";
 import { ScheduleHiredPayloadCreateModel } from "@/app/models/hired";
+import { ApplicantDataModel } from "@/app/models/applicant";
 
 const { Title, Text } = Typography;
 
@@ -41,17 +42,19 @@ export default function CandidatesPage() {
   const { setSummary, setSectionTitle, setSectionSubtitle, setOnUpdateStatus } =
     useRecruitment();
 
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+
   const { data: candidatesData = [] } = useCandidates({});
-  const { onUpdateStatus: updateStatus } = useCandidate();
+  const { onUpdateStatus: updateStatus } = useCandidate({ id: selectedId! });
 
   // hanya tampilkan kandidat di stage NEW_APLICANT (halaman Screening)
   const screening = useMemo(
-    () => candidatesData.filter((c) => c.user.stage === RecruitmentStage.HIRED),
+    () => candidatesData.filter((c) => c.stage === RecruitmentStage.HIRED),
     [candidatesData]
   );
 
   // sumber kebenaran untuk DnD list (lokal)
-  const [list, setList] = useState<CandidateDataModel[]>([]);
+  const [list, setList] = useState<ApplicantDataModel[]>([]);
   useEffect(() => {
     // inisialisasi / merge aman saat data berubah
     setList((prev) => {
@@ -95,7 +98,6 @@ export default function CandidatesPage() {
 
   // Search, selection, pagination (berbasis list lokal)
   const [query, setQuery] = useState("");
-  const [selectedId, setSelectedId] = useState<string | null>(null);
 
   const [selectedScheduleId, setSelectedScheduleId] = useState<string | null>(
     null
@@ -107,9 +109,9 @@ export default function CandidatesPage() {
     const q = query.trim().toLowerCase();
     if (!q) return list;
     return list.filter((c) => {
-      const n = c.name?.toLowerCase() ?? "";
-      const e = c.email?.toLowerCase() ?? "";
-      const p = c.phone?.toLowerCase() ?? "";
+      const n = c.user.name?.toLowerCase() ?? "";
+      const e = c.user.email?.toLowerCase() ?? "";
+      const p = c.user.phone?.toLowerCase() ?? "";
       return n.includes(q) || e.includes(q) || p.includes(q);
     });
   }, [list, query]);
@@ -179,7 +181,7 @@ export default function CandidatesPage() {
     const payload = {
       ...values,
       candidate_id: selected?.id || "",
-      location: selected?.job.location.name || "",
+      location: selected?.job.location_id || "",
     };
 
     const result = await createHired(payload);
@@ -227,10 +229,10 @@ export default function CandidatesPage() {
               <DraggableCandidateItem
                 key={item.id}
                 id={item.id}
-                name={item.name}
-                image_url={item.photo_url}
-                email={item.email}
-                status={item.stage} // tampilkan stage sekarang
+                name={item.user.name}
+                image_url={item.user.photo_url || undefined}
+                email={item.user.email}
+                status={item.stage ?? "all"} // tampilkan stage sekarang
                 active={item.id === selectedId}
                 onClick={() => setSelectedId(item.id)}
                 visibleIndex={(page - 1) * pageSize + idx}

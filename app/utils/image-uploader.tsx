@@ -19,7 +19,7 @@ interface SupaImageUploaderProps {
   onDelete?: (path: string) => void;
   value?: string | null;
   onChange?: (value: string | null) => void;
-  variant?: Variant; // "thumbnail"=16:9, "profile"=1:1
+  variant?: Variant; 
   maxSizeMB?: number;
   accept?: string;
 }
@@ -29,7 +29,6 @@ export default function SupaImageUploader({
   folder = "",
   onUpload,
   onDelete,
-  label,
   value,
   onChange,
   variant = "thumbnail",

@@ -46,6 +46,7 @@ import type {
   QuestionScreeningCreateDTO,
   QuestionScreeningUpdateDTO,
 } from "@/app/models/question-screening";
+import { prettyType } from "@/app/utils/humanize";
 
 const BRAND = "#003A6F";
 const { Title, Text } = Typography;
@@ -407,7 +408,7 @@ export default function Content(): JSX.Element {
                           className="q-pill"
                           style={{ background: typeBadgeBg(q.inputType) }}
                         >
-                          {q.inputType}
+                          {prettyType(q.inputType)}
                         </span>
                         <span
                           className={`q-pill ${

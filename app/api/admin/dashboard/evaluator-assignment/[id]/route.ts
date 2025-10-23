@@ -16,7 +16,7 @@ export const GET = async (
     return NextResponse.json(
       {
         success: true,
-        message: "Successfully get job!",
+        message: "Successfully get data!",
         result: data,
       },
       { status: 200 }

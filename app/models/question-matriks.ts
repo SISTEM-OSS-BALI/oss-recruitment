@@ -10,6 +10,7 @@ export type MatriksBaseQuestionDataModel =
     include: {
       columns: true;
       rows: true;
+      options: true;
     };
   }>;
 
@@ -77,6 +78,10 @@ export type MatriksQuestionUpsertDTO = {
   order?: number;
   helpText?: string | null;
   placeholder?: string | null;
+  options?: {
+    upsert?: MatriksColumnUpsertDTO[];
+    deleteIds?: string[];
+  };
 };
 
 // CREATE base + (opsional) nested columns/rows
