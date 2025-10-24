@@ -230,6 +230,7 @@ export default function CandidatesPage() {
                 key={item.id}
                 id={item.id}
                 name={item.user.name}
+                stage={item.stage}
                 image_url={item.user.photo_url || undefined}
                 email={item.user.email}
                 status={item.stage ?? "all"} // tampilkan stage sekarang

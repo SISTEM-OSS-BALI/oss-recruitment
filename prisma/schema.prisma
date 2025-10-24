@@ -133,6 +133,7 @@ model Applicant {
   noteInterview       NoteInterview[]
   matriksAnswer       MatriksAnswer[]
   evaluatorAssignment EvaluatorAssignment[]
+  OfferingContract    OfferingContract[]
 
   @@map("applicant")
 }
@@ -212,6 +213,18 @@ model ScheduleHired {
   location_id  String
 
   @@map("schedule_hired")
+}
+
+model OfferingContract {
+  id           String    @id @default(cuid())
+  applicant_id String
+  applicant    Applicant @relation(fields: [applicant_id], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  filePath     String
+  status       String    @default("SENT")
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  @@map("offering_contract")
 }
 
 model ContractTemplate {

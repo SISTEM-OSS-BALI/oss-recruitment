@@ -51,6 +51,11 @@ const resolvers: Record<string, Resolver> = {
     return res.data?.result?.name;
   },
 
+  "contract-template": async (id) => {
+    const res = await axios.get(`/api/admin/dashboard/contract-template/${id}`);
+    return res.data?.result?.name;
+  }
+
   // Contoh lain bila nanti dibutuhkan:
   // "users": async (id) => (await axios.get(`/api/users/${id}`)).data?.result?.fullName,
   // "projects": async (id) => (await axios.get(`/api/projects/${id}`)).data?.result?.title,
@@ -64,6 +69,7 @@ const defaultResolver: Resolver = async (id) => {
   const candidates = [
     `/api/admin/dashboard/base-question-matriks/${id}`,
     `/api/admin/dashboard/question-matriks/${id}`,
+    `/api/admin/dashboard/contract-template/${id}`,
     // Tambahkan kandidat lain sesuai kebutuhanmu
   ];
   for (const url of candidates) {
