@@ -101,8 +101,6 @@ model User {
   job_id              String?
   job                 Job?      @relation(fields: [job_id], references: [id], onDelete: Cascade, onUpdate: Cascade)
 
-  scheduleHired ScheduleHired[]
-
   createdAt DateTime    @default(now())
   updatedAt DateTime    @updatedAt
   Applicant Applicant[]
@@ -134,6 +132,7 @@ model Applicant {
   matriksAnswer       MatriksAnswer[]
   evaluatorAssignment EvaluatorAssignment[]
   OfferingContract    OfferingContract[]
+  ScheduleHired       ScheduleHired[]
 
   @@map("applicant")
 }
@@ -202,14 +201,14 @@ model ScheduleInterview {
 }
 
 model ScheduleHired {
-  id           String   @id @default(cuid())
-  candidate_id String
-  candidate    User     @relation(fields: [candidate_id], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  id           String    @id @default(cuid())
+  applicant_id String
+  applicant    Applicant @relation(fields: [applicant_id], references: [id], onDelete: Cascade, onUpdate: Cascade)
   date         DateTime
   start_time   DateTime
-  location     Location @relation(fields: [location_id], references: [id])
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  location     Location  @relation(fields: [location_id], references: [id])
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
   location_id  String
 
   @@map("schedule_hired")
@@ -219,8 +218,8 @@ model OfferingContract {
   id           String    @id @default(cuid())
   applicant_id String
   applicant    Applicant @relation(fields: [applicant_id], references: [id], onDelete: Cascade, onUpdate: Cascade)
-  filePath     String
-  status       String    @default("SENT")
+  filePath     String    @db.LongText
+  name         String
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
 

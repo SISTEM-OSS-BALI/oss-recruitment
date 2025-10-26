@@ -22,9 +22,10 @@ import { useCandidate, useCandidates } from "@/app/hooks/applicant";
 import { useRecruitment } from "../../context";
 import { RecruitmentStage } from "@prisma/client";
 import HiredSchedulePage from "./HiredCandidate";
-import { useScheduleHired, useScheduleHireds } from "@/app/hooks/hired";
 import { ScheduleHiredPayloadCreateModel } from "@/app/models/hired";
 import { ApplicantDataModel } from "@/app/models/applicant";
+import { useScheduleHireds } from "@/app/hooks/schedule-hired";
+import type { ScheduleHiredFormValues } from "@/app/components/common/form/admin/hired";
 
 const { Title, Text } = Typography;
 
@@ -103,8 +104,13 @@ export default function CandidatesPage() {
     null
   );
 
-  const { onCreate: createHired, onCreateLoading: createHiredLoading } =
-    useScheduleHireds();
+  const {
+    data: scheduleHireds = [],
+    fetchLoading: scheduleLoading,
+    refetch: refetchScheduleHireds,
+    onCreate: createHired,
+    onCreateLoading: createHiredLoading,
+  } = useScheduleHireds({});
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     if (!q) return list;
@@ -166,26 +172,44 @@ export default function CandidatesPage() {
     // setOnUpdateStatus stabil dari context; updateStatus stabil dari react-query
   }, [setOnUpdateStatus, updateStatus]);
 
-  const {
-    listData = [],
-    listLoading,
-    refetchList,
-  } = useScheduleHired({
-    id: selectedScheduleId ?? "",
-    candidate_id: selected?.id || "",
-  });
+
 
   const handleCreateSceheduleHired = async (
-    values: ScheduleHiredPayloadCreateModel
+    values: ScheduleHiredFormValues
   ) => {
-    const payload = {
-      ...values,
-      candidate_id: selected?.id || "",
-      location: selected?.job.location_id || "",
+    if (!selected) {
+      message.error("Please select candidate before scheduling.");
+      return;
+    }
+
+    const locationId =
+      values.location_id ?? selected.job?.location_id ?? "";
+
+    if (!locationId) {
+      message.error("Please select a location for the schedule.");
+      return;
+    }
+
+    const dateValue = values.date?.startOf("day").toDate();
+    const startTimeValue =
+      values.date && values.start_time
+        ? values.date
+            .hour(values.start_time.hour())
+            .minute(values.start_time.minute())
+            .second(values.start_time.second())
+            .millisecond(0)
+            .toDate()
+        : values.start_time?.toDate();
+
+    const payload: ScheduleHiredPayloadCreateModel = {
+      applicant_id: selected.id,
+      location_id: locationId,
+      date: dateValue,
+      start_time: startTimeValue,
     };
 
     const result = await createHired(payload);
-    await refetchList();
+    await refetchScheduleHireds();
     setSelectedScheduleId(result.data?.result?.id || null);
   };
 
@@ -266,8 +290,8 @@ export default function CandidatesPage() {
         <Card style={{ height: "100%" }}>
           <HiredSchedulePage
             candidate={selected}
-            listData={listData}
-            listLoading={listLoading}
+            listData={scheduleHireds}
+            listLoading={scheduleLoading}
             onCreateSchedule={handleCreateSceheduleHired}
             selectedScheduleId={selectedScheduleId}
             onLoadingCreate={createHiredLoading}

@@ -18,10 +18,10 @@ export const SidebarMenuMainAdmin = (): MenuProps["items"] => {
       onClick: () => router.push("/admin/dashboard/recruitment"),
     },
     {
-      key: "/admin/dashboard/appressal",
-      label: "Appraisal",
+      key: "/admin/dashboard/management-contract",
+      label: "Management Contract",
       icon: <FontAwesomeIcon icon={faChartLine} />,
-      onClick: () => router.push("/admin/dashboard/appressal"),
+      onClick: () => router.push("/admin/dashboard/management-contract"),
     },
     {
       key: "/admin/dashboard/schedule-interview",

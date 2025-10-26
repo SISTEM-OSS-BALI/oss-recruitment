@@ -1,15 +1,15 @@
 "use client";
 
-import React, { useMemo, useState } from "react";
+import React, { useMemo } from "react";
 import {
   Button,
   Card,
-  Checkbox,
   Col,
   DatePicker,
   Form,
   Input,
   Row,
+  Select,
   Space,
   TimePicker,
   Typography,
@@ -17,40 +17,36 @@ import {
 } from "antd";
 import { CalendarOutlined } from "@ant-design/icons";
 import dayjs, { Dayjs } from "dayjs";
-import { ScheduleHiredPayloadCreateModel } from "@/app/models/hired";
+import { useLocations } from "@/app/hooks/location";
 
 const { Text } = Typography;
 
-type FormValues = {
-  interviewer: string;
+export type ScheduleHiredFormValues = {
   date: Dayjs;
-  time: Dayjs;
-  online?: boolean;
-  link?: string;
+  start_time: Dayjs;
+  location_id?: string;
   note?: string;
 };
 
 type Props = {
   candidateId: string;
   loading?: boolean;
-  onSubmit: (values: ScheduleHiredPayloadCreateModel) => Promise<void>;
+  onSubmit: (values: ScheduleHiredFormValues) => Promise<void>;
 };
 
 /* ==================== Component ==================== */
 export default function ScheduleHiredForm({ loading, onSubmit }: Props) {
-  const [form] = Form.useForm<FormValues>();
-  const [isOnline, setIsOnline] = useState(false);
-
+  const [form] = Form.useForm<ScheduleHiredFormValues>();
+  const { data: location } = useLocations({});
   const disabledDate = useMemo(
     () => (current: Dayjs) => current && current < dayjs().startOf("day"),
     []
   );
 
-  const handleFinish = async (values: ScheduleHiredPayloadCreateModel) => {
+  const handleFinish = async (values: ScheduleHiredFormValues) => {
     await onSubmit(values);
     message.success("Hired schedule submitted");
     form.resetFields();
-    setIsOnline(false);
   };
 
   return (
@@ -65,11 +61,11 @@ export default function ScheduleHiredForm({ loading, onSubmit }: Props) {
       headStyle={{ borderBottom: "none" }}
     >
       <Text type="secondary">
-        Set up Hired schedule for the candidate. Default Hired duration
-        is flexible.
+        Set up Hired schedule for the candidate. Default Hired duration is
+        flexible.
       </Text>
 
-      <Form<FormValues>
+      <Form<ScheduleHiredFormValues>
         form={form}
         layout="vertical"
         style={{ marginTop: 16 }}
@@ -104,28 +100,20 @@ export default function ScheduleHiredForm({ loading, onSubmit }: Props) {
           </Col>
         </Row>
 
-        <Form.Item
-          name="online"
-          valuePropName="checked"
-          style={{ marginBottom: 8 }}
-        >
-          <Checkbox onChange={(e) => setIsOnline(e.target.checked)}>
-            Is this Hired online?
-          </Checkbox>
-        </Form.Item>
 
-        {isOnline && (
-          <Form.Item
-            label="Meeting Link"
-            name="link"
-            rules={[
-              { required: true, message: "Please input meeting link" },
-              { type: "url", message: "Link must be a valid URL (https://…)" },
-            ]}
-          >
-            <Input placeholder="https://meet.google.com/abc-defg-hij" />
-          </Form.Item>
-        )}
+        <Form.Item
+          label="Location"
+          name="location_id"
+          rules={[{ required: true, message: "Please select location" }]}
+        >
+          <Select>
+            {location?.map((location) => (
+              <Select.Option key={location.id} value={location.id}>
+                {location.name}
+              </Select.Option>
+            ))}
+          </Select>
+        </Form.Item>
 
         <Form.Item label="Notes (optional)" name="note">
           <Input.TextArea

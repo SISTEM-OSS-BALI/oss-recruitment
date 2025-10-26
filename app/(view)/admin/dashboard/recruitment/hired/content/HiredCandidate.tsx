@@ -1,12 +1,6 @@
 "use client";
 
-import React, {
-  useMemo,
-  useState,
-  useCallback,
-  useEffect,
-  useRef,
-} from "react";
+import React, { useMemo, useState, useCallback, useEffect } from "react";
 import {
   Card,
   Col,
@@ -24,6 +18,9 @@ import {
   Tabs,
   Spin,
   Alert,
+  Input,
+  DatePicker,
+  FormInstance,
 } from "antd";
 import {
   ClockCircleOutlined,
@@ -34,15 +31,15 @@ import {
   EditOutlined,
   SaveOutlined,
   FileSearchOutlined,
+  PlusOutlined,
+  DeleteOutlined,
 } from "@ant-design/icons";
+import dayjs, { Dayjs } from "dayjs";
 
 import type { ApplicantDataModel } from "@/app/models/applicant";
-import {
-  ScheduleHiredDataModel,
-  ScheduleHiredPayloadCreateModel,
-} from "@/app/models/hired";
+import { ScheduleHiredDataModel } from "@/app/models/hired";
 
-import ScheduleHiredForm from "@/app/components/common/form/admin/hired";
+import ScheduleHiredForm, { ScheduleHiredFormValues } from "@/app/components/common/form/admin/hired";
 import { formatDate, formatTime } from "@/app/utils/date-helper";
 import CandidateInfoPanel from "@/app/components/common/information-panel";
 import {
@@ -50,29 +47,178 @@ import {
   useContractTemplates,
 } from "@/app/hooks/contract-template";
 
-// templating + conversions
+// templating
 import PizZip from "pizzip";
 import Docxtemplater from "docxtemplater";
-import mammoth from "mammoth";
+
+// supabase upload
+import { createClient } from "@supabase/supabase-js";
+import { useOfferingContractByApplicantId, useOfferingContracts } from "@/app/hooks/offering-contract";
+import type { ContractTemplateDataModel } from "@/app/models/contract-template";
 
 const { Text } = Typography;
 
+/** ==== STATE TYPE ==== */
 type GeneratedDoc = {
-  // current authoritative DOCX blob
+  templateUrl: string;
   docBlob: Blob | null;
   docName: string;
-
-  // editable HTML content (text-based, not perfect layout)
-  editedHtml: string;
-
-  // preview render status
-  previewReady: boolean;
-
-  // optional PDF export
+  vars: TemplateVariables;
   pdfBlob?: Blob | null;
   pdfName?: string;
   pdfUrl?: string;
-  previewError?: string | null;
+};
+
+type ContractFormValues = {
+  candidate_full_name?: string;
+  no_identity?: string;
+  address?: string;
+  no_phone?: string;
+  position?: string;
+  duties?: string[];
+  month?: string;
+  start_date?: Dayjs;
+  salary?: string;
+  bonus?: string[];
+};
+
+type TemplateVariables = {
+  candidate_full_name: string;
+  address: string;
+  no_phone: string;
+  no_identity: string;
+  position: string;
+  duties: string[];
+  month: string;
+  start_date: string;
+  end_date: string;
+  salary: string;
+  sal: string;
+  bonus: string[];
+  candidate: ApplicantDataModel | null;
+  user: ApplicantDataModel["user"] | null;
+  job: ApplicantDataModel["job"] | null;
+  schedules: ScheduleHiredDataModel[] | null;
+  [key: string]: unknown;
+};
+
+/** ==== SUPABASE CLIENT ==== */
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+const supabaseBucket = "web-oss-recruitment";
+const supabase = createClient(supabaseUrl, supabaseKey);
+
+/** ==== HELPERS ==== */
+const fetchArrayBuffer = async (url: string) => {
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`Failed to fetch template: ${res.status}`);
+  return res.arrayBuffer();
+};
+
+// pecah textarea/baris menjadi array item
+const parseMultilineList = (
+  vals?: Array<string | null | undefined>
+): string[] =>
+  (vals ?? [])
+    .flatMap((value) =>
+      String(value ?? "")
+        .split(/\r?\n|;/g)
+        .map((s) => s.replace(/^\s*[-–—•]\s*/, ""))
+    )
+    .map((s) => s.trim())
+    .filter(Boolean);
+
+const fillTemplateToDocxBlob = (
+  buf: ArrayBuffer,
+  data: TemplateVariables
+) => {
+  const zip = new PizZip(buf);
+  const doc = new Docxtemplater(zip, {
+    paragraphLoop: true,
+    linebreaks: true,
+    delimiters: { start: "{{", end: "}}" },
+  });
+  doc.setData(data);
+  try {
+    doc.render();
+  } catch (error) {
+    console.error("Docxtemplater render error:", error);
+    throw new Error(
+      "Failed to fill template. Please check variable placeholders."
+    );
+  }
+  const out = doc.getZip().generate({
+    type: "blob",
+    mimeType:
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  });
+  return out as Blob;
+};
+
+const revokeBlobUrl = (url?: string) => {
+  if (url?.startsWith("blob:")) URL.revokeObjectURL(url);
+};
+
+const buildTemplateVariables = (
+  candidate: ApplicantDataModel | null,
+  schedules: ScheduleHiredDataModel[]
+): TemplateVariables => {
+  const candidateName = candidate?.user.name || "";
+  const candidateUser = candidate?.user ?? null;
+  const candidateJob = candidate?.job ?? null;
+  const startDefault = candidate?.createdAt
+    ? formatDate(candidate.createdAt)
+    : "";
+
+  return {
+    candidate_full_name: candidateName,
+    address: candidateUser?.address || "",
+    no_phone: candidateUser?.phone || "",
+    no_identity: candidateUser?.no_identity || "",
+    position: candidateJob?.name || "",
+    duties: [] as string[],
+    month: "",
+    start_date: startDefault,
+    end_date: "",
+    salary: "",
+    sal: "",
+    bonus: [] as string[],
+    candidate,
+    user: candidateUser,
+    job: candidateJob,
+    schedules: schedules.length ? schedules : null,
+  };
+};
+
+const mapTemplateVarsToFormValues = (
+  vars: TemplateVariables
+): ContractFormValues => ({
+  candidate_full_name: vars.candidate_full_name,
+  address: vars.address,
+  no_phone: vars.no_phone,
+  no_identity: vars.no_identity,
+  position: vars.position,
+  duties: Array.isArray(vars.duties) && vars.duties.length ? vars.duties : [""],
+  month: vars.month,
+  start_date: vars.start_date ? dayjs(vars.start_date) : undefined,
+  salary: vars.salary,
+  bonus: Array.isArray(vars.bonus) && vars.bonus.length ? vars.bonus : [""],
+});
+
+const cloneTemplateVariables = (vars: TemplateVariables): TemplateVariables => ({
+  ...vars,
+  duties: Array.isArray(vars.duties) ? [...vars.duties] : [],
+  bonus: Array.isArray(vars.bonus) ? [...vars.bonus] : [],
+});
+
+const getErrorMessage = (error: unknown): string => {
+  if (error instanceof Error) {
+    return error.message;
+  }
+  if (typeof error === "string") {
+    return error;
+  }
+  return "An unexpected error occurred.";
 };
 
 export default function HiredSchedulePage({
@@ -86,17 +232,27 @@ export default function HiredSchedulePage({
   candidate: ApplicantDataModel | null;
   listData?: ScheduleHiredDataModel[];
   listLoading?: boolean;
-  onCreateSchedule: (payload: ScheduleHiredPayloadCreateModel) => Promise<void>;
+  onCreateSchedule: (payload: ScheduleHiredFormValues) => Promise<void>;
   onLoadingCreate: boolean;
 }) {
-  // ===== Filter schedules for this candidate
+  // ===== Filter schedules untuk kandidat ini
   const schedules = useMemo(
-    () => listData.filter((s) => s.candidate_id === candidate?.id),
+    () => listData.filter((s) => s.applicant_id === candidate?.id),
     [listData, candidate?.id]
   );
   const hasSchedules = schedules.length > 0;
+  const templateDefaults = useMemo(
+    () => buildTemplateVariables(candidate ?? null, schedules),
+    [candidate, schedules]
+  );
 
-  // ===== Modal: pick contract template
+  const { onCreate: onCreateContract } = useOfferingContracts({});
+  const { data: contractByApplicant } = useOfferingContractByApplicantId({
+    applicant_id: candidate?.id || "",
+  });
+  const hasExistingContract = Boolean(contractByApplicant);
+
+  // ===== Modal: pilih template
   const [isPickerOpen, setIsPickerOpen] = useState(false);
   const [selectedTemplateId, setSelectedTemplateId] = useState<string>("");
 
@@ -105,256 +261,74 @@ export default function HiredSchedulePage({
     id: selectedTemplateId || "",
   });
 
-  // ===== Modal: contract preview/editor/export
+  // ===== Modal: hasil (preview/edit/export)
   const [isResultOpen, setIsResultOpen] = useState(false);
 
-  // full contract state
+  // state kontrak
   const [docState, setDocState] = useState<GeneratedDoc | null>(null);
 
   // loading flags
-  const [generating, setGenerating] = useState(false); // generate first doc
-  const [applyingEdits, setApplyingEdits] = useState(false); // rebuild docx from edited text
-  const [convertingPdf, setConvertingPdf] = useState(false); // server PDF convert
+  const [generating, setGenerating] = useState(false);
+  const [applyingEdits, setApplyingEdits] = useState(false);
+  const [convertingPdf, setConvertingPdf] = useState(false);
+  const [creatingContract, setCreatingContract] = useState(false);
 
-  // editable content DOM ref (contentEditable div)
-  const editorRef = useRef<HTMLDivElement | null>(null);
+  // form edit variabel
+  const [form] = Form.useForm<ContractFormValues>();
 
-  // high-fidelity preview DOM ref (for docx-preview)
-  const previewRef = useRef<HTMLDivElement | null>(null);
-
-  // cleanup object URLs (PDF) when unmount or modal close
+  // cleanup blob URL PDF saat unmount/tutup
   useEffect(() => {
-    return () => {
-      if (docState?.pdfUrl?.startsWith("blob:")) {
-        URL.revokeObjectURL(docState.pdfUrl);
-      }
-    };
+    return () => revokeBlobUrl(docState?.pdfUrl);
   }, [docState]);
 
-  // picker modal helpers
   const openPicker = () => setIsPickerOpen(true);
   const closePicker = () => {
     if (generating) return;
     setIsPickerOpen(false);
   };
-
-  // result modal close helper
   const closeResult = () => {
-    if (docState?.pdfUrl?.startsWith("blob:")) {
-      URL.revokeObjectURL(docState.pdfUrl);
-    }
+    revokeBlobUrl(docState?.pdfUrl);
     setDocState(null);
     setIsResultOpen(false);
   };
 
-  // =========================
-  // Utility functions
-  // =========================
-
-  // 1. download template docx as ArrayBuffer
-  const fetchArrayBuffer = async (url: string) => {
-    const res = await fetch(url);
-    if (!res.ok) throw new Error(`Failed to fetch template: ${res.status}`);
-    return res.arrayBuffer();
-  };
-
-  // 2. fill {{placeholders}} using docxtemplater -> return filled DOCX Blob
-  const fillTemplateToDocxBlob = (
-    buf: ArrayBuffer,
-    data: Record<string, any>
-  ) => {
-    const zip = new PizZip(buf);
-    const doc = new Docxtemplater(zip, {
-      paragraphLoop: true,
-      linebreaks: true,
-      delimiters: { start: "{{", end: "}}" },
-    });
-
-    doc.setData(data);
-
-    try {
-      doc.render();
-    } catch (e: any) {
-      console.error("Docxtemplater render error:", e);
-      throw new Error(
-        "Failed to fill template. Please check variable placeholders."
-      );
-    }
-
-    const out = doc.getZip().generate({
-      type: "blob",
-      mimeType:
-        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-    });
-
-    return out as Blob;
-  };
-
-  // 3. DOCX Blob → editable HTML (mammoth). This loses some complex layout, but gives text.
-  const docxBlobToEditableHtml = async (docBlob: Blob): Promise<string> => {
-    const ab = await docBlob.arrayBuffer();
-    const { value: html } = await mammoth.convertToHtml({ arrayBuffer: ab });
-    return html;
-  };
-
-  // 4. edited HTML → DOCX Blob (html-docx-js). This loses high-end Word styling, but round-trips the text.
-  const htmlToDocxBlob = async (html: string): Promise<Blob> => {
-    const htmlDocx = (await import("html-docx-js/dist/html-docx")).default;
-    const wrappedHtml = `
-      <!DOCTYPE html>
-      <html>
-        <head><meta charSet="utf-8" /></head>
-        <body>${html}</body>
-      </html>`;
-    const blob = htmlDocx.asBlob(wrappedHtml);
-    return blob;
-  };
-
-  // 5. render DOCX visually with docx-preview into previewRef
-  // 5. render DOCX visually with docx-preview into previewRef
-  const renderAccuratePreview = useCallback(async (blob: Blob | null) => {
-    if (!blob || !previewRef.current) {
-      return null;
-    }
-
-    const container = previewRef.current;
-    container.innerHTML = "";
-
-    try {
-      const { renderAsync } = await import("docx-preview");
-      const ab = await blob.arrayBuffer();
-
-      // Render into container
-      await renderAsync(ab, container, undefined, {
-        className: "docx-wrapper",
-        ignoreWidth: false,
-        ignoreHeight: false,
-        breakPages: true,
-      });
-
-      // --- PATCH 1: normalize text color so it's readable ---
-      // Some templates use white text for headers/body. On white bg it's invisible.
-      // We'll check computed color; if it's too light, force black.
-      const normalizeTextColor = () => {
-        // Query all text elements that might carry inline styles
-        const textNodes = container.querySelectorAll<HTMLElement>(
-          ".docx p, .docx span, .docx div, .docx li"
-        );
-
-        textNodes.forEach((el) => {
-          const style = window.getComputedStyle(el);
-          const color = style.color; // like 'rgb(255, 255, 255)'
-          // parse rgb(...) → [r,g,b]
-          const match = color.match(
-            /rgb\s*\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*\)/
-          );
-          if (!match) return;
-          const r = parseInt(match[1], 10);
-          const g = parseInt(match[2], 10);
-          const b = parseInt(match[3], 10);
-
-          // compute simple luminance-like brightness
-          // classic formula: 0 (black) ... 255 (white-ish)
-          const brightness = 0.299 * r + 0.587 * g + 0.114 * b;
-
-          // if it's too bright (super light on white bg), force black
-          if (brightness > 200) {
-            // override inline to something readable
-            el.style.color = "#000000";
-          }
+  /** Convert DOCX → PDF via API server */
+  const convertDocxBlobToPdf = useCallback(
+    async (docBlob: Blob, docName: string) => {
+      setConvertingPdf(true);
+      try {
+        const fileForServer = new File([docBlob], docName, {
+          type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
         });
-      };
+        const fd = new FormData();
+        fd.append("file", fileForServer);
 
-      normalizeTextColor();
-
-      // --- PATCH 2: scale page(s) to fit width ---
-      requestAnimationFrame(() => {
-        const pageEl = container.querySelector<HTMLElement>(".docx");
-        if (!pageEl) return;
-
-        const pageWidthPx = pageEl.scrollWidth;
-        const maxWidthPx = container.clientWidth;
-
-        if (pageWidthPx > 0 && maxWidthPx > 0) {
-          // downscale only (never blow up)
-          const scale = Math.min(1, maxWidthPx / pageWidthPx);
-
-          pageEl.style.transformOrigin = "top left";
-          pageEl.style.transform = `scale(${scale})`;
-
-          const scaledHeight = pageEl.scrollHeight * scale;
-          container.style.height = `${scaledHeight}px`;
+        const res = await fetch("/api/convert/docs-pdf", {
+          method: "POST",
+          body: fd,
+        });
+        if (!res.ok) {
+          const t = await res.text().catch(() => "");
+          throw new Error(t || `Convert error ${res.status}`);
         }
-      });
-
-      return { success: true, error: null as string | null };
-    } catch (error: any) {
-      console.error("Preview render error:", error);
-      container.innerHTML = "";
-
-      const errorMessage =
-        error?.message || "Failed to render document preview.";
-      return { success: false, error: errorMessage };
-    }
-  }, []);
-
-  // whenever the modal opens AND we have a docBlob AND preview isn't ready,
-  // actually render the preview now that previewRef is mounted.
-  useEffect(() => {
-    (async () => {
-      if (
-        isResultOpen &&
-        docState?.docBlob &&
-        previewRef.current &&
-        !docState.previewReady
-      ) {
-        const previewResult = await renderAccuratePreview(docState.docBlob);
-        if (!previewResult) return;
-
-        setDocState((prev) =>
-          prev
-            ? {
-                ...prev,
-                previewReady: true,
-                previewError: previewResult.success
-                  ? null
-                  : previewResult.error || "Failed to render document preview.",
-              }
-            : prev
-        );
+        const pdfBlob = await res.blob();
+        const pdfUrl = URL.createObjectURL(pdfBlob);
+        const pdfName = docName.replace(/\.docx$/i, "") + ".pdf";
+        setDocState((prev) => {
+          if (!prev) return prev;
+          revokeBlobUrl(prev.pdfUrl);
+          return { ...prev, pdfBlob, pdfUrl, pdfName };
+        });
+        message.success("Converted to PDF.");
+      } finally {
+        setConvertingPdf(false);
       }
-    })();
-  }, [
-    isResultOpen,
-    docState?.docBlob,
-    docState?.previewReady,
-    renderAccuratePreview,
-  ]);
-
-  // map candidate data into template placeholders
-  const buildTemplateVariables = () => {
-    const candidateName = candidate?.user.name || "";
-    const candidateUser = candidate?.user ?? null;
-    const candidateJob = candidate?.job ?? null;
-    const candidateSchedule = schedules.length ? schedules : null;
-
-    return {
-      candidate_full_name: candidateName,
-      address: candidateUser?.address || "",
-      no_phone: candidateUser?.phone || "",
-      no_identity: candidateUser?.no_identity || "",
-      position: candidateJob?.name || "",
-      start_date: candidate?.createdAt ? formatDate(candidate.createdAt) : "",
-      today: formatDate(new Date().toISOString()),
-      candidate,
-      user: candidateUser,
-      job: candidateJob,
-      schedules: candidateSchedule,
-    };
-  };
+    },
+    []
+  );
 
   // =========================
-  // Step 1: Generate contract from template
+  // Step 1: Generate dari template + auto PDF
   // =========================
   const handleGenerateContract = useCallback(async () => {
     if (!selectedTemplateId) {
@@ -369,155 +343,230 @@ export default function HiredSchedulePage({
     try {
       setGenerating(true);
 
-      // 1. get template .docx as ArrayBuffer
       const buf = await fetchArrayBuffer(selectedTemplate.filePath);
+      const vars = cloneTemplateVariables(templateDefaults);
 
-      // 2. build variables for placeholders
-      const vars = buildTemplateVariables();
-
-      // 3. fill template -> DOCX blob
       const filledBlob = fillTemplateToDocxBlob(buf, vars);
 
-      // 4. convert that DOCX into editable HTML
-      const editableHtml = await docxBlobToEditableHtml(filledBlob);
-
-      // 5. suggest filename
       const cleanedBaseName =
         (selectedTemplate.name || "Contract")
           .replace(/[^\w\- ]+/g, "")
           .trim() || "Contract";
-
       const suggestedDocName = `${cleanedBaseName} - ${
         vars.candidate_full_name || "Candidate"
       }.docx`;
 
-      // 6. store state
       setDocState({
+        templateUrl: selectedTemplate.filePath,
         docBlob: filledBlob,
         docName: suggestedDocName,
-        editedHtml: editableHtml,
-        previewReady: false, // we'll render preview after modal mounts
-        previewError: null,
+        vars,
         pdfBlob: null,
         pdfName: undefined,
         pdfUrl: undefined,
       });
 
-      // open result modal AFTER setting state
+      // isi form awal
+      form.setFieldsValue(mapTemplateVarsToFormValues(vars));
+
       setIsPickerOpen(false);
       setIsResultOpen(true);
-      message.success("Document generated successfully.");
-    } catch (err: any) {
-      console.error(err);
-      message.error(err?.message || "Failed to generate document.");
+
+      // auto convert untuk preview
+      await convertDocxBlobToPdf(filledBlob, suggestedDocName);
+    } catch (error) {
+      console.error(error);
+      message.error(getErrorMessage(error));
     } finally {
       setGenerating(false);
     }
-  }, [selectedTemplateId, selectedTemplate, candidate]);
+  }, [
+    selectedTemplateId,
+    selectedTemplate,
+    convertDocxBlobToPdf,
+    form,
+    templateDefaults,
+  ]);
 
   // =========================
-  // Step 2: Apply edits / rebuild DOCX
+  // Step 2: Apply Edits → re-render + auto PDF
   // =========================
   const handleApplyEdits = useCallback(async () => {
     if (!docState) {
       message.error("No document to update.");
       return;
     }
-
     try {
       setApplyingEdits(true);
 
-      // 1. get updated HTML from editor
-      const latestHtml =
-        editorRef.current?.innerHTML ?? docState.editedHtml ?? "";
+      const v = await form.validateFields();
 
-      // 2. convert that HTML back to DOCX blob
-      const rebuiltBlob = await htmlToDocxBlob(latestHtml);
+      const next: TemplateVariables = { ...docState.vars };
 
-      // 3. clear old PDF url if any (it's outdated now)
-      if (docState.pdfUrl?.startsWith("blob:")) {
-        URL.revokeObjectURL(docState.pdfUrl);
+      // IDENTITAS
+      next.candidate_full_name = v.candidate_full_name ?? "";
+      next.address = v.address ?? "";
+      next.no_phone = v.no_phone ?? "";
+      next.no_identity = v.no_identity ?? "";
+
+      // PASAL 1
+      next.position = v.position ?? "";
+      next.duties = parseMultilineList(v.duties);
+
+      // PASAL 2
+      const monthNum: number = Number(v.month ?? 0);
+      next.month = isNaN(monthNum) ? "" : String(monthNum);
+
+      const sd: Dayjs | undefined = v.start_date
+        ? dayjs(v.start_date)
+        : undefined;
+      next.start_date = sd ? sd.format("YYYY-MM-DD") : "";
+
+      // end_date = start_date + month bulan - 1 hari
+      if (sd && monthNum > 0) {
+        const ed = sd.add(monthNum, "month").subtract(1, "day");
+        next.end_date = ed.format("YYYY-MM-DD");
+      } else {
+        next.end_date = "";
       }
 
-      // 4. update state: new doc blob, new editedHtml, reset previewReady
+      // PASAL 4
+      next.salary = v.salary ?? "";
+      next.sal = next.salary; // alias
+      next.bonus = parseMultilineList(v.bonus);
+
+      // render ulang
+      const buf = await fetchArrayBuffer(docState.templateUrl);
+      const rebuiltBlob = fillTemplateToDocxBlob(buf, next);
+
+      revokeBlobUrl(docState.pdfUrl);
+
       setDocState({
+        ...docState,
         docBlob: rebuiltBlob,
-        docName: docState.docName,
-        editedHtml: latestHtml,
-        previewReady: false, // need rerender preview with new blob
-        previewError: null,
+        vars: next,
         pdfBlob: null,
         pdfName: undefined,
         pdfUrl: undefined,
       });
 
-      message.success("Edits applied.");
-    } catch (err: any) {
-      console.error(err);
-      message.error(err?.message || "Failed to apply edits.");
+      message.success("Edits applied. Regenerating PDF preview...");
+      await convertDocxBlobToPdf(rebuiltBlob, docState.docName);
+    } catch (error) {
+      console.error(error);
+      message.error(getErrorMessage(error));
     } finally {
       setApplyingEdits(false);
     }
-  }, [docState]);
-
-  // After Apply Edits we set previewReady:false,
-  // and our useEffect above will notice that and re-render preview
-  // next render tick (modal is still open, docBlob changed).
+  }, [docState, form, convertDocxBlobToPdf]);
 
   // =========================
-  // Step 3: Convert DOCX -> PDF via backend API
+  // Step 3: Upload ke Supabase lalu create record
+  // =========================
+  const uploadToSupabase = async (file: Blob, fileName: string) => {
+    if (!supabaseUrl || !supabaseKey) {
+      throw new Error(
+        "Supabase env (NEXT_PUBLIC_SUPABASE_URL/KEY) belum diset."
+      );
+    }
+    const safeName = fileName.replace(/\s+/g, "_");
+    const folder = `contracts/${candidate?.id || "general"}`;
+    const path = `${folder}/${Date.now()}-${safeName}`;
+
+    const { error: upErr } = await supabase.storage
+      .from(supabaseBucket)
+      .upload(path, file, {
+        cacheControl: "3600",
+        upsert: false,
+        contentType:
+          "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      });
+    if (upErr) throw upErr;
+
+    const { data: pub } = supabase.storage
+      .from(supabaseBucket)
+      .getPublicUrl(path);
+    if (!pub?.publicUrl) throw new Error("Gagal mendapatkan public URL.");
+    return { path, publicUrl: pub.publicUrl };
+  };
+
+  const uploadPdfToSupabase = async (file: Blob, fileName: string) => {
+    const safeName = fileName.replace(/\s+/g, "_").replace(/\.docx$/i, ".pdf");
+    const folder = `contracts`;
+    const path = `${folder}/${Date.now()}-${safeName}`;
+
+    const { error: upErr } = await supabase.storage
+      .from(supabaseBucket)
+      .upload(path, file, {
+        cacheControl: "3600",
+        upsert: false,
+        contentType: "application/pdf",
+      });
+    if (upErr) throw upErr;
+
+    const { data: pub } = supabase.storage
+      .from(supabaseBucket)
+      .getPublicUrl(path);
+    if (!pub?.publicUrl) throw new Error("Gagal mendapatkan public URL (PDF).");
+    return { path, publicUrl: pub.publicUrl };
+  };
+
+  const handleCreateContract = useCallback(async () => {
+    if (!docState?.docBlob) {
+      message.error("No document to create contract.");
+      return;
+    }
+    try {
+      setCreatingContract(true);
+
+      // 1) Upload DOCX
+      const { publicUrl: docxUrl } = await uploadToSupabase(
+        docState.docBlob,
+        docState.docName
+      );
+
+      // 2) Jika ada PDF, upload juga
+      let pdfUrl: string | null = null;
+      if (docState.pdfBlob) {
+        const up = await uploadPdfToSupabase(
+          docState.pdfBlob,
+          docState.pdfName || docState.docName.replace(/\.docx$/i, ".pdf")
+        );
+        pdfUrl = up.publicUrl;
+      }
+
+      // 3) Create record ke API
+      const payload = {
+        applicant_id: candidate?.id || "",
+        name: docState.pdfName || docState.docName,
+        filePath: pdfUrl ?? docxUrl,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+
+      await onCreateContract(payload);
+
+      message.success("Contract created & uploaded to Supabase.");
+      // opsional: tutup modal atau reset state
+      // closeResult();
+    } catch (error) {
+      console.error(error);
+      message.error(getErrorMessage(error));
+    } finally {
+      setCreatingContract(false);
+    }
+  }, [docState, candidate?.id, onCreateContract]);
+
+  // =========================
+  // Convert manual
   // =========================
   const handleConvertToPdf = useCallback(async () => {
     if (!docState?.docBlob) {
       message.error("No document found to convert.");
       return;
     }
-
-    try {
-      setConvertingPdf(true);
-
-      // make a File we can send via FormData
-      const fileForServer = new File([docState.docBlob], docState.docName, {
-        type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-      });
-
-      const fd = new FormData();
-      fd.append("file", fileForServer);
-
-      const res = await fetch("/api/convert/docs-pdf", {
-        method: "POST",
-        body: fd,
-      });
-
-      if (!res.ok) {
-        const t = await res.text().catch(() => "");
-        throw new Error(t || `Convert error ${res.status}`);
-      }
-
-      const pdfBlob = await res.blob();
-      const pdfUrl = URL.createObjectURL(pdfBlob);
-      const pdfName = docState.docName.replace(/\.docx$/i, "") + ".pdf";
-
-      // cleanup old pdf url if existed
-      if (docState.pdfUrl?.startsWith("blob:")) {
-        URL.revokeObjectURL(docState.pdfUrl);
-      }
-
-      setDocState({
-        ...docState,
-        pdfBlob,
-        pdfUrl,
-        pdfName,
-      });
-
-      message.success("Converted to PDF.");
-    } catch (err: any) {
-      console.error(err);
-      message.error(err?.message || "Convert to PDF failed.");
-    } finally {
-      setConvertingPdf(false);
-    }
-  }, [docState]);
+    await convertDocxBlobToPdf(docState.docBlob, docState.docName);
+  }, [docState, convertDocxBlobToPdf]);
 
   // =========================
   // Download helpers
@@ -533,7 +582,7 @@ export default function HiredSchedulePage({
   }, [docState]);
 
   const handleDownloadPdf = useCallback(() => {
-    if (!docState?.pdfBlob || !docState.pdfUrl) return;
+    if (!docState?.pdfBlob || !docState?.pdfUrl) return;
     const a = document.createElement("a");
     a.href = docState.pdfUrl;
     a.download = docState.pdfName || "Contract.pdf";
@@ -541,151 +590,11 @@ export default function HiredSchedulePage({
   }, [docState]);
 
   // =========================
-  // Tabs content for the result modal
+  // Tabs content
   // =========================
-  const resultTabs = useMemo(() => {
-    if (!docState) return [];
-
-    return [
-      {
-        key: "preview",
-        label: (
-          <Space>
-            <FileSearchOutlined />
-            <span>Preview (Exact Layout)</span>
-          </Space>
-        ),
-        children: (
-          <div
-            style={{
-              maxHeight: "60vh",
-              overflow: "auto",
-              background: "#f5f5f5",
-              border: "1px solid #d9d9d9",
-              borderRadius: 8,
-              padding: 16,
-              position: "relative",
-            }}
-          >
-            {docState.previewError && (
-              <Alert
-                type="error"
-                message="Preview could not be rendered"
-                description={docState.previewError}
-                showIcon
-                style={{ marginBottom: 16 }}
-              />
-            )}
-            <div
-              ref={previewRef}
-              style={{
-                position: "relative",
-                width: "100%",
-              }}
-            />
-            {!docState.previewReady && (
-              <div
-                style={{
-                  position: "absolute",
-                  inset: 0,
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  pointerEvents: "none",
-                }}
-              >
-                <Spin />
-              </div>
-            )}
-          </div>
-        ),
-      },
-      {
-        key: "edit",
-        label: (
-          <Space>
-            <EditOutlined />
-            <span>Editable Content</span>
-          </Space>
-        ),
-        children: (
-          <div
-            style={{
-              maxHeight: "60vh",
-              overflowY: "auto",
-              background: "#f5f5f5",
-              border: "1px solid #d9d9d9",
-              borderRadius: 8,
-              padding: 16,
-            }}
-          >
-            <div
-              ref={editorRef}
-              contentEditable
-              suppressContentEditableWarning
-              style={{
-                background: "#fff",
-                color: "#000",
-                width: 800,
-                maxWidth: "100%",
-                margin: "0 auto",
-                boxShadow:
-                  "0 10px 30px rgba(0,0,0,0.12), 0 2px 6px rgba(0,0,0,0.08)",
-                border: "1px solid #ccc",
-                borderRadius: 4,
-                padding: "32px 40px",
-                lineHeight: 1.5,
-                fontSize: 14,
-                fontFamily:
-                  "Helvetica, Arial, system-ui, -apple-system, BlinkMacSystemFont, sans-serif",
-                whiteSpace: "normal",
-                wordBreak: "break-word",
-                outline: "none",
-              }}
-              dangerouslySetInnerHTML={{
-                __html: docState.editedHtml || "",
-              }}
-            />
-          </div>
-        ),
-      },
-      {
-        key: "info",
-        label: (
-          <Space>
-            <DownloadOutlined />
-            <span>Export Info</span>
-          </Space>
-        ),
-        children: (
-          <Space direction="vertical" size={8} style={{ width: "100%" }}>
-            <div>
-              <Text type="secondary">DOCX file name</Text>
-              <div>
-                <Text strong>{docState.docName}</Text>
-              </div>
-            </div>
-
-            {docState.pdfName && (
-              <div>
-                <Text type="secondary">PDF file name</Text>
-                <div>
-                  <Text strong>{docState.pdfName}</Text>
-                </div>
-              </div>
-            )}
-
-            <Text type="secondary">Preview (Exact Layout)</Text>
-          </Space>
-        ),
-      },
-    ];
-  }, [docState]);
-
   // =========================
   // Render page
   // =========================
-
   if (!candidate) {
     return (
       <div
@@ -725,8 +634,13 @@ export default function HiredSchedulePage({
           style={{ display: "block", width: "100%" }}
           size={12}
         >
-          <Button onClick={openPicker} icon={<FileWordOutlined />}>
-            Create Contract
+          <Button
+            onClick={openPicker}
+            icon={<FileWordOutlined />}
+            style={{ marginBottom: 16 }}
+            disabled={hasExistingContract}
+          >
+            {hasExistingContract ? "Contract Created" : "Create Contract"}
           </Button>
 
           {listLoading ? (
@@ -774,63 +688,25 @@ export default function HiredSchedulePage({
         </Space>
       </Col>
 
-      {/* MODAL: pick template */}
-      <Modal
-        title="Select Contract Template"
+      <TemplatePickerModal
         open={isPickerOpen}
+        generating={generating}
+        templates={templates}
+        selectedTemplateId={selectedTemplateId}
+        onSelectTemplate={setSelectedTemplateId}
+        onGenerate={handleGenerateContract}
         onCancel={closePicker}
-        footer={[
-          <Button key="cancel" onClick={closePicker} disabled={generating}>
-            Cancel
-          </Button>,
-          <Button
-            key="generate"
-            type="primary"
-            loading={generating}
-            disabled={!selectedTemplateId}
-            onClick={handleGenerateContract}
-            icon={<ReloadOutlined />}
-          >
-            Generate
-          </Button>,
-        ]}
-      >
-        <Form layout="vertical">
-          <Form.Item label="Template" required>
-            <Select
-              placeholder="Choose a template"
-              value={selectedTemplateId || undefined}
-              onChange={(val) => setSelectedTemplateId(val)}
-              options={(templates || []).map((t) => ({
-                label: t.name,
-                value: t.id,
-              }))}
-            />
-          </Form.Item>
-
-          {selectedTemplate?.filePath && (
-            <Text type="secondary" style={{ wordBreak: "break-all" }}>
-              Source: {selectedTemplate.filePath}
-            </Text>
-          )}
-        </Form>
-      </Modal>
+        selectedTemplatePath={selectedTemplate?.filePath}
+      />
 
       {/* MODAL: preview / edit / export */}
       <Modal
         open={isResultOpen}
         onCancel={closeResult}
         width={1100}
-        bodyStyle={{
-          maxHeight: "75vh",
-          overflowY: "auto",
-        }}
+        bodyStyle={{ maxHeight: "75vh", overflowY: "auto" }}
         title="Contract Preview & Export"
         footer={[
-          <Button key="close" onClick={closeResult}>
-            Close
-          </Button>,
-
           <Button
             key="apply"
             icon={<SaveOutlined />}
@@ -840,27 +716,34 @@ export default function HiredSchedulePage({
           >
             Apply Edits
           </Button>,
-
+          <Button
+            key="create"
+            type="primary"
+            onClick={handleCreateContract}
+            loading={creatingContract}
+            disabled={!docState?.docBlob}
+          >
+            Create Contract (Upload to Supabase)
+          </Button>,
           <Button
             key="download-docx"
-            type="primary"
             icon={<DownloadOutlined />}
             onClick={handleDownloadDocx}
             disabled={!docState?.docBlob}
           >
             Download DOCX
           </Button>,
-
           <Button
             key="convert"
             icon={<FilePdfOutlined />}
             onClick={handleConvertToPdf}
             loading={convertingPdf}
-            disabled={!docState?.docBlob || !!docState?.pdfBlob}
+            disabled={
+              !docState?.docBlob || (!!docState?.pdfBlob && !convertingPdf)
+            }
           >
-            {docState?.pdfBlob ? "Converted" : "Convert to PDF"}
+            {docState?.pdfBlob ? "Reconvert PDF" : "Convert to PDF"}
           </Button>,
-
           <Button
             key="download-pdf"
             icon={<DownloadOutlined />}
@@ -873,18 +756,432 @@ export default function HiredSchedulePage({
       >
         {!docState ? (
           <div
-            style={{
-              minHeight: "40vh",
-              display: "grid",
-              placeItems: "center",
-            }}
+            style={{ minHeight: "40vh", display: "grid", placeItems: "center" }}
           >
             <Spin />
           </div>
         ) : (
-          <Tabs defaultActiveKey="preview" items={resultTabs} />
+          <ContractResultTabs
+            docState={docState}
+            convertingPdf={convertingPdf}
+            onConvertToPdf={handleConvertToPdf}
+            form={form}
+          />
         )}
       </Modal>
     </Row>
   );
 }
+
+type ContractResultTabsProps = {
+  docState: GeneratedDoc;
+  convertingPdf: boolean;
+  onConvertToPdf: () => Promise<void>;
+  form: FormInstance<ContractFormValues>;
+};
+
+const ContractResultTabs = ({
+  docState,
+  convertingPdf,
+  onConvertToPdf,
+  form,
+}: ContractResultTabsProps) => {
+  const items = useMemo(
+    () => [
+      {
+        key: "preview",
+        label: (
+          <Space>
+            <FileSearchOutlined />
+            <span>Preview Contract</span>
+          </Space>
+        ),
+        children: (
+          <PreviewTabContent
+            docState={docState}
+            convertingPdf={convertingPdf}
+            onConvertToPdf={onConvertToPdf}
+          />
+        ),
+      },
+      {
+        key: "edit",
+        label: (
+          <Space>
+            <EditOutlined />
+            <span>Edit Data Contract</span>
+          </Space>
+        ),
+        children: <EditTabContent form={form} />,
+      },
+      {
+        key: "info",
+        label: (
+          <Space>
+            <DownloadOutlined />
+            <span>Export Info</span>
+          </Space>
+        ),
+        children: <InfoTabContent docState={docState} />,
+      },
+    ],
+    [docState, convertingPdf, onConvertToPdf, form]
+  );
+
+  return <Tabs defaultActiveKey="preview" items={items} />;
+};
+
+type PreviewTabContentProps = {
+  docState: GeneratedDoc;
+  convertingPdf: boolean;
+  onConvertToPdf: () => Promise<void>;
+};
+
+const PreviewTabContent = ({
+  docState,
+  convertingPdf,
+  onConvertToPdf,
+}: PreviewTabContentProps) => (
+  <div
+    style={{
+      maxHeight: "60vh",
+      overflow: "hidden",
+      background: "#f5f5f5",
+      border: "1px solid #d9d9d9",
+      borderRadius: 8,
+      padding: 16,
+      position: "relative",
+    }}
+  >
+    {convertingPdf && (
+      <div
+        style={{
+          position: "absolute",
+          inset: 0,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          background: "rgba(255,255,255,0.6)",
+          zIndex: 1,
+        }}
+      >
+        <Spin />
+      </div>
+    )}
+
+    {docState.pdfUrl ? (
+      <iframe
+        src={docState.pdfUrl}
+        style={{
+          width: "100%",
+          height: "60vh",
+          border: "1px solid #d9d9d9",
+          borderRadius: 8,
+          background: "#fff",
+        }}
+      />
+    ) : (
+      <div
+        style={{
+          minHeight: "40vh",
+          display: "grid",
+          placeItems: "center",
+        }}
+      >
+        <Space direction="vertical" align="center">
+          <Empty description="No PDF yet" />
+          <Button
+            icon={<FilePdfOutlined />}
+            onClick={onConvertToPdf}
+            disabled={!docState.docBlob}
+            loading={convertingPdf}
+          >
+            Convert to PDF for Preview
+          </Button>
+        </Space>
+      </div>
+    )}
+  </div>
+);
+
+const EditTabContent = ({
+  form,
+}: {
+  form: FormInstance<ContractFormValues>;
+}) => (
+  <div
+    style={{
+      maxHeight: "60vh",
+      overflowY: "auto",
+      background: "#f5f5f5",
+      border: "1px solid #d9d9d9",
+      borderRadius: 8,
+      padding: 16,
+    }}
+  >
+    <Form
+      form={form}
+      layout="vertical"
+      style={{
+        background: "#fff",
+        width: 860,
+        maxWidth: "100%",
+        margin: "0 auto",
+        padding: "24px 28px",
+        border: "1px solid #eee",
+        borderRadius: 8,
+      }}
+    >
+      <Alert
+        style={{ margin: "8px 0 16px" }}
+        type="info"
+        message="Personal Information"
+        showIcon
+      />
+      <Row gutter={12}>
+        <Col xs={24} md={12}>
+          <Form.Item name="candidate_full_name" label="Candidate Full Name">
+            <Input />
+          </Form.Item>
+        </Col>
+        <Col xs={24} md={12}>
+          <Form.Item name="no_identity" label="Identity Number">
+            <Input />
+          </Form.Item>
+        </Col>
+        <Col xs={24} md={12}>
+          <Form.Item name="address" label="Address">
+            <Input />
+          </Form.Item>
+        </Col>
+        <Col xs={24} md={12}>
+          <Form.Item name="no_phone" label="Phone">
+            <Input />
+          </Form.Item>
+        </Col>
+      </Row>
+
+      <Alert
+        style={{ margin: "8px 0 16px" }}
+        type="info"
+        message="ARTICLE 1 — Position & Duties"
+        showIcon
+      />
+      <Form.Item name="position" label="Position">
+        <Input />
+      </Form.Item>
+      <Form.List name="duties">
+        {(fields, { add, remove }) => (
+          <>
+            {fields.map((field, idx) => (
+              <Row
+                key={field.key}
+                gutter={8}
+                align="middle"
+                style={{ marginBottom: 8 }}
+              >
+                <Col flex="auto">
+                  <Form.Item
+                    {...field}
+                    label={idx === 0 ? "Job Duties" : undefined}
+                    name={[field.name]}
+                    fieldKey={field.fieldKey}
+                    rules={[
+                      {
+                        required: true,
+                        message: "Fill the duty or remove this line.",
+                      },
+                    ]}
+                  >
+                    <Input.TextArea
+                      autoSize={{ minRows: 1, maxRows: 3 }}
+                      placeholder={`Job Duty ${idx + 1}`}
+                    />
+                  </Form.Item>
+                </Col>
+                <Col>
+                  <Button
+                    danger
+                    icon={<DeleteOutlined />}
+                    onClick={() => remove(field.name)}
+                  />
+                </Col>
+              </Row>
+            ))}
+            <Button type="dashed" icon={<PlusOutlined />} onClick={() => add("")}>
+              Add Duty
+            </Button>
+          </>
+        )}
+      </Form.List>
+
+      <Alert
+        style={{ margin: "8px 0 16px" }}
+        type="info"
+        message="ARTICLE 2 — Employment Period"
+        showIcon
+      />
+      <Row gutter={12}>
+        <Col xs={24} md={12}>
+          <Form.Item name="month" label="Month (duration in months)">
+            <Input placeholder="e.g. 3" />
+          </Form.Item>
+        </Col>
+        <Col xs={24} md={12}>
+          <Form.Item name="start_date" label="Start Date">
+            <DatePicker style={{ width: "100%" }} />
+          </Form.Item>
+        </Col>
+      </Row>
+
+      <Alert
+        style={{ margin: "8px 0 16px" }}
+        type="info"
+        message="ARTICLE 4 — Salary & Bonuses"
+        showIcon
+      />
+      <Form.Item label="Salary Amount" name="salary">
+        <Input placeholder="e.g. Rp 3.000.000" />
+      </Form.Item>
+
+      <Form.List name="bonus">
+        {(fields, { add, remove }) => (
+          <>
+            {fields.map((field, idx) => (
+              <Row
+                key={field.key}
+                gutter={8}
+                align="middle"
+                style={{ marginBottom: 8 }}
+              >
+                <Col flex="auto">
+                  <Form.Item
+                    {...field}
+                    label={idx === 0 ? "Bonuses / Allowances" : undefined}
+                    name={[field.name]}
+                    fieldKey={field.fieldKey}
+                  >
+                    <Input.TextArea
+                      autoSize={{ minRows: 1, maxRows: 3 }}
+                      placeholder={`Bonus/Allowance ${idx + 1}`}
+                    />
+                  </Form.Item>
+                </Col>
+                <Col>
+                  <Button
+                    danger
+                    icon={<DeleteOutlined />}
+                    onClick={() => remove(field.name)}
+                  />
+                </Col>
+              </Row>
+            ))}
+            <Button type="dashed" icon={<PlusOutlined />} onClick={() => add("")}>
+              Add Bonus/Allowance
+            </Button>
+          </>
+        )}
+      </Form.List>
+    </Form>
+
+    <Alert
+      style={{ marginTop: 12 }}
+      type="info"
+      message="Click Apply Edits to re-render the template and refresh the PDF preview."
+      showIcon
+    />
+  </div>
+);
+
+const InfoTabContent = ({ docState }: { docState: GeneratedDoc }) => (
+  <Space direction="vertical" size={8} style={{ width: "100%" }}>
+    <div>
+      <Text type="secondary">DOCX file name</Text>
+      <div>
+        <Text strong>{docState.docName}</Text>
+      </div>
+    </div>
+
+    {docState.pdfName && (
+      <div>
+        <Text type="secondary">PDF file name</Text>
+        <div>
+          <Text strong>{docState.pdfName}</Text>
+        </div>
+      </div>
+    )}
+
+    <Text type="secondary">Preview uses PDF rendering for accuracy.</Text>
+  </Space>
+);
+
+type TemplatePickerModalProps = {
+  open: boolean;
+  generating: boolean;
+  templates?: ContractTemplateDataModel[];
+  selectedTemplateId: string;
+  onSelectTemplate: (value: string) => void;
+  onGenerate: () => void;
+  onCancel: () => void;
+  selectedTemplatePath?: string;
+};
+
+const TemplatePickerModal = ({
+  open,
+  generating,
+  templates,
+  selectedTemplateId,
+  onSelectTemplate,
+  onGenerate,
+  onCancel,
+  selectedTemplatePath,
+}: TemplatePickerModalProps) => {
+  const options = useMemo(
+    () =>
+      (templates || []).map((template) => ({
+        label: template.name,
+        value: template.id,
+      })),
+    [templates]
+  );
+
+  return (
+    <Modal
+      title="Select Contract Template"
+      open={open}
+      onCancel={onCancel}
+      footer={[
+        <Button key="cancel" onClick={onCancel} disabled={generating}>
+          Cancel
+        </Button>,
+        <Button
+          key="generate"
+          type="primary"
+          loading={generating}
+          disabled={!selectedTemplateId}
+          onClick={onGenerate}
+          icon={<ReloadOutlined />}
+        >
+          Generate
+        </Button>,
+      ]}
+    >
+      <Form layout="vertical">
+        <Form.Item label="Template" required>
+          <Select
+            placeholder="Choose a template"
+            value={selectedTemplateId || undefined}
+            onChange={onSelectTemplate}
+            options={options}
+          />
+        </Form.Item>
+
+        {selectedTemplatePath && (
+          <Text type="secondary" style={{ wordBreak: "break-all" }}>
+            Source: {selectedTemplatePath}
+          </Text>
+        )}
+      </Form>
+    </Modal>
+  );
+};
