@@ -52,6 +52,13 @@ enum EvaluationStatus {
   SUBMITTED
 }
 
+enum MessageType {
+  TEXT
+  IMAGE
+  FILE
+  SYSTEM
+}
+
 model Job {
   id           String   @id @default(cuid())
   name         String
@@ -101,9 +108,13 @@ model User {
   job_id              String?
   job                 Job?      @relation(fields: [job_id], references: [id], onDelete: Cascade, onUpdate: Cascade)
 
-  createdAt DateTime    @default(now())
-  updatedAt DateTime    @updatedAt
-  Applicant Applicant[]
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  Applicant    Applicant[]
+  Participant  Participant[]
+  MessageRead  MessageRead[]
+  Message      Message[]     @relation("MessagesByRecipient")
+  messagesSent Message[]     @relation("MessagesBySender")
 
   @@map("user")
 }
@@ -133,6 +144,7 @@ model Applicant {
   evaluatorAssignment EvaluatorAssignment[]
   OfferingContract    OfferingContract[]
   ScheduleHired       ScheduleHired[]
+  Conversation        Conversation[]
 
   @@map("applicant")
 }
@@ -514,4 +526,80 @@ model NoteInterview {
   updatedAt DateTime  @updatedAt
 
   @@map("note_interview")
+}
+
+model Conversation {
+  id            String        @id @default(cuid())
+  title         String?
+  isGroup       Boolean       @default(false)
+  lastMessageAt DateTime?     @default(now())
+  applicantId   String?
+  applicant     Applicant?    @relation(fields: [applicantId], references: [id], onDelete: SetNull)
+  participants  Participant[]
+  messages      Message[]
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  @@index([updatedAt])
+  @@index([lastMessageAt])
+}
+
+model Participant {
+  userId         String
+  conversationId String
+  role           String?
+  lastReadAt     DateTime?
+  unreadCount    Int       @default(0)
+
+  user         User         @relation(fields: [userId], references: [id])
+  conversation Conversation @relation(fields: [conversationId], references: [id])
+
+  @@id([userId, conversationId])
+  @@index([conversationId, userId])
+}
+
+model Message {
+  id             String      @id @default(cuid())
+  conversationId String
+  senderId       String
+  type           MessageType @default(TEXT)
+  content        String?
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+  editedAt       DateTime?
+  deletedAt      DateTime?
+
+  conversation Conversation  @relation(fields: [conversationId], references: [id])
+  sender       User          @relation("MessagesBySender", fields: [senderId], references: [id])
+  attachments  Attachment[]
+  reads        MessageRead[]
+  User         User?         @relation("MessagesByRecipient", fields: [userId], references: [id])
+  userId       String?
+
+  @@index([conversationId, createdAt])
+  @@index([senderId, createdAt])
+}
+
+model Attachment {
+  id        String  @id @default(cuid())
+  messageId String
+  url       String
+  mimeType  String?
+  size      Int?
+
+  message Message @relation(fields: [messageId], references: [id])
+
+  @@index([messageId])
+}
+
+model MessageRead {
+  messageId String
+  userId    String
+  readAt    DateTime @default(now())
+
+  message Message @relation(fields: [messageId], references: [id])
+  user    User    @relation(fields: [userId], references: [id])
+
+  @@id([messageId, userId])
+  @@index([userId, messageId])
 }

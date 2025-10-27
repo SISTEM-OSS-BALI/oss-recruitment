@@ -2,7 +2,16 @@ import { db } from "@/lib/prisma";
 import { OfferingContractPayloadCreateModel } from "../models/offering-contract";
 
 export const GET_OFFERING_CONTRACTS = async () => {
-  const result = await db.offeringContract.findMany({});
+  const result = await db.offeringContract.findMany({
+    include: {
+      applicant: {
+        include: {
+          user: true,
+          job: true,
+        },
+      },
+    },
+  });
   return result;
 };
 
@@ -10,6 +19,14 @@ export const GET_OFFERING_CONTRACT = async (id: string) => {
   const result = await db.offeringContract.findUnique({
     where: {
       id,
+    },
+    include: {
+      applicant: {
+        include: {
+          user: true,
+          job: true,
+        },
+      },
     },
   });
   return result;
@@ -46,11 +63,13 @@ export const DELETE_OFFERING_CONTRACT = async (id: string) => {
   return result;
 };
 
-export const GET_OFFERING_CONTRACT_BY_APPLICATION_ID = async (applicant_id: string) => {
+export const GET_OFFERING_CONTRACT_BY_APPLICATION_ID = async (
+  applicant_id: string
+) => {
   const result = await db.offeringContract.findFirst({
     where: {
       applicant_id,
     },
   });
   return result;
-}
+};

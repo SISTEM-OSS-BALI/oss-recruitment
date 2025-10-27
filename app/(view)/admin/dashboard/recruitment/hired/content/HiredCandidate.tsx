@@ -7,7 +7,6 @@ import {
   Row,
   Space,
   Empty,
-  List,
   Skeleton,
   Button,
   Modal,
@@ -21,9 +20,9 @@ import {
   Input,
   DatePicker,
   FormInstance,
+  Tag,
 } from "antd";
 import {
-  ClockCircleOutlined,
   FileWordOutlined,
   DownloadOutlined,
   FilePdfOutlined,
@@ -33,14 +32,17 @@ import {
   FileSearchOutlined,
   PlusOutlined,
   DeleteOutlined,
+  LinkOutlined,
 } from "@ant-design/icons";
 import dayjs, { Dayjs } from "dayjs";
 
 import type { ApplicantDataModel } from "@/app/models/applicant";
 import { ScheduleHiredDataModel } from "@/app/models/hired";
 
-import ScheduleHiredForm, { ScheduleHiredFormValues } from "@/app/components/common/form/admin/hired";
-import { formatDate, formatTime } from "@/app/utils/date-helper";
+import ScheduleHiredForm, {
+  ScheduleHiredFormValues,
+} from "@/app/components/common/form/admin/hired";
+import { formatDate } from "@/app/utils/date-helper";
 import CandidateInfoPanel from "@/app/components/common/information-panel";
 import {
   useContractTemplate,
@@ -53,8 +55,14 @@ import Docxtemplater from "docxtemplater";
 
 // supabase upload
 import { createClient } from "@supabase/supabase-js";
-import { useOfferingContractByApplicantId, useOfferingContracts } from "@/app/hooks/offering-contract";
+import {
+  useOfferingContractByApplicantId,
+  useOfferingContracts,
+} from "@/app/hooks/offering-contract";
 import type { ContractTemplateDataModel } from "@/app/models/contract-template";
+
+// schedule pretty card (compact timeline)
+import SchedulePretty from "./ScheduleCard";
 
 const { Text } = Typography;
 
@@ -128,10 +136,7 @@ const parseMultilineList = (
     .map((s) => s.trim())
     .filter(Boolean);
 
-const fillTemplateToDocxBlob = (
-  buf: ArrayBuffer,
-  data: TemplateVariables
-) => {
+const fillTemplateToDocxBlob = (buf: ArrayBuffer, data: TemplateVariables) => {
   const zip = new PizZip(buf);
   const doc = new Docxtemplater(zip, {
     paragraphLoop: true,
@@ -205,19 +210,17 @@ const mapTemplateVarsToFormValues = (
   bonus: Array.isArray(vars.bonus) && vars.bonus.length ? vars.bonus : [""],
 });
 
-const cloneTemplateVariables = (vars: TemplateVariables): TemplateVariables => ({
+const cloneTemplateVariables = (
+  vars: TemplateVariables
+): TemplateVariables => ({
   ...vars,
   duties: Array.isArray(vars.duties) ? [...vars.duties] : [],
   bonus: Array.isArray(vars.bonus) ? [...vars.bonus] : [],
 });
 
 const getErrorMessage = (error: unknown): string => {
-  if (error instanceof Error) {
-    return error.message;
-  }
-  if (typeof error === "string") {
-    return error;
-  }
+  if (error instanceof Error) return error.message;
+  if (typeof error === "string") return error;
   return "An unexpected error occurred.";
 };
 
@@ -250,7 +253,9 @@ export default function HiredSchedulePage({
   const { data: contractByApplicant } = useOfferingContractByApplicantId({
     applicant_id: candidate?.id || "",
   });
-  const hasExistingContract = Boolean(contractByApplicant);
+  const hasExistingContract = Boolean(
+    contractByApplicant?.id || contractByApplicant?.filePath
+  );
 
   // ===== Modal: pilih template
   const [isPickerOpen, setIsPickerOpen] = useState(false);
@@ -547,8 +552,7 @@ export default function HiredSchedulePage({
       await onCreateContract(payload);
 
       message.success("Contract created & uploaded to Supabase.");
-      // opsional: tutup modal atau reset state
-      // closeResult();
+      // closeResult(); // opsional
     } catch (error) {
       console.error(error);
       message.error(getErrorMessage(error));
@@ -568,30 +572,6 @@ export default function HiredSchedulePage({
     await convertDocxBlobToPdf(docState.docBlob, docState.docName);
   }, [docState, convertDocxBlobToPdf]);
 
-  // =========================
-  // Download helpers
-  // =========================
-  const handleDownloadDocx = useCallback(() => {
-    if (!docState?.docBlob) return;
-    const url = URL.createObjectURL(docState.docBlob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = docState.docName || "Contract.docx";
-    a.click();
-    URL.revokeObjectURL(url);
-  }, [docState]);
-
-  const handleDownloadPdf = useCallback(() => {
-    if (!docState?.pdfBlob || !docState?.pdfUrl) return;
-    const a = document.createElement("a");
-    a.href = docState.pdfUrl;
-    a.download = docState.pdfName || "Contract.pdf";
-    a.click();
-  }, [docState]);
-
-  // =========================
-  // Tabs content
-  // =========================
   // =========================
   // Render page
   // =========================
@@ -634,48 +614,23 @@ export default function HiredSchedulePage({
           style={{ display: "block", width: "100%" }}
           size={12}
         >
-          <Button
-            onClick={openPicker}
-            icon={<FileWordOutlined />}
-            style={{ marginBottom: 16 }}
-            disabled={hasExistingContract}
-          >
-            {hasExistingContract ? "Contract Created" : "Create Contract"}
-          </Button>
-
+          {/* Schedule */}
           {listLoading ? (
             <Card style={{ borderRadius: 14 }}>
               <Skeleton active />
             </Card>
           ) : hasSchedules ? (
-            <Card
-              style={{ borderRadius: 14 }}
-              title={
-                <Space>
-                  <ClockCircleOutlined />
-                  <span>Schedule</span>
-                </Space>
-              }
-              headStyle={{ borderBottom: "none" }}
-            >
-              <List
-                dataSource={schedules}
-                renderItem={(item) => (
-                  <List.Item>
-                    <List.Item.Meta
-                      title={
-                        <Space size={8} wrap>
-                          <strong>{formatDate(item.date)}</strong>
-                          <span>at</span>
-                          <strong>{formatTime(item.start_time)}</strong>
-                        </Space>
-                      }
-                      description={<span>Location: {item.location.name}</span>}
-                    />
-                  </List.Item>
-                )}
+            schedules.map((schedule, index) => (
+              <SchedulePretty
+                key={schedule.id ?? index}
+                date={schedule.date}
+                time={schedule.start_time}
+                location={{
+                  name: schedule.location?.name ?? "-",
+                  description: schedule.location?.address ?? undefined,
+                }}
               />
-            </Card>
+            ))
           ) : (
             <Card style={{ borderRadius: 14 }}>
               <ScheduleHiredForm
@@ -685,9 +640,98 @@ export default function HiredSchedulePage({
               />
             </Card>
           )}
+
+          {/* Contract Card — SELALU tampil di bawah schedule */}
+          <Card
+            style={{ borderRadius: 14, marginTop: 16 }}
+            title={
+              <Space>
+                <FileWordOutlined />
+                <span>File Contract</span>
+              </Space>
+            }
+            extra={
+              hasExistingContract ? (
+                <Tag color="green">Created</Tag>
+              ) : (
+                <Tag>Not Created</Tag>
+              )
+            }
+          >
+            {hasExistingContract ? (
+              <Space direction="vertical" size={8} style={{ width: "100%" }}>
+                <div>
+                  {/* <Text type="secondary" style={{ marginBottom: 25 }}>File Contract</Text> */}
+                  <div>
+                    <Button
+                      type="primary"
+                      icon={<LinkOutlined />}
+                      href={contractByApplicant?.filePath}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{ marginRight: 8 }}
+                    >
+                      Open
+                    </Button>
+                    <Button
+                      icon={<DownloadOutlined />}
+                      href={contractByApplicant?.filePath}
+                      download
+                    >
+                      Download
+                    </Button>
+                  </div>
+                </div>
+              </Space>
+            ) : (
+              <Space direction="vertical" size={8}>
+                <Text type="secondary">
+                  No contract has been generated for this candidate.
+                </Text>
+                <Space>
+                  <Select
+                    style={{ minWidth: 260 }}
+                    placeholder="Choose a contract template"
+                    value={selectedTemplateId || undefined}
+                    onChange={setSelectedTemplateId}
+                    options={(templates || []).map((t) => ({
+                      label: t.name,
+                      value: t.id,
+                    }))}
+                  />
+                  <Button
+                    type="primary"
+                    icon={<FileWordOutlined />}
+                    onClick={() => {
+                      if (!selectedTemplateId) {
+                        message.info("Please select a template first.");
+                        return;
+                      }
+                      openPicker();
+                    }}
+                  >
+                    Create Contract
+                  </Button>
+                </Space>
+                {selectedTemplateId ? (
+                  <Text type="secondary">
+                    Selected template:{" "}
+                    <Text strong>
+                      {
+                        (templates || []).find(
+                          (t) => t.id === selectedTemplateId
+                        )?.name
+                      }
+                    </Text>
+                  </Text>
+                ) : null}
+              </Space>
+            )}
+          </Card>
         </Space>
       </Col>
 
+      {/* MODAL: pilih template (dipakai saat Create Contract ditekan) */}
       <TemplatePickerModal
         open={isPickerOpen}
         generating={generating}
@@ -728,7 +772,15 @@ export default function HiredSchedulePage({
           <Button
             key="download-docx"
             icon={<DownloadOutlined />}
-            onClick={handleDownloadDocx}
+            onClick={() => {
+              if (!docState?.docBlob) return;
+              const url = URL.createObjectURL(docState.docBlob);
+              const a = document.createElement("a");
+              a.href = url;
+              a.download = docState.docName || "Contract.docx";
+              a.click();
+              URL.revokeObjectURL(url);
+            }}
             disabled={!docState?.docBlob}
           >
             Download DOCX
@@ -747,7 +799,13 @@ export default function HiredSchedulePage({
           <Button
             key="download-pdf"
             icon={<DownloadOutlined />}
-            onClick={handleDownloadPdf}
+            onClick={() => {
+              if (!docState?.pdfBlob || !docState?.pdfUrl) return;
+              const a = document.createElement("a");
+              a.href = docState.pdfUrl;
+              a.download = docState.pdfName || "Contract.pdf";
+              a.click();
+            }}
             disabled={!docState?.pdfBlob}
           >
             Download PDF
@@ -773,6 +831,7 @@ export default function HiredSchedulePage({
   );
 }
 
+/* ====================== SUB COMPONENTS (Modal & Tabs) ====================== */
 type ContractResultTabsProps = {
   docState: GeneratedDoc;
   convertingPdf: boolean;
@@ -1008,7 +1067,11 @@ const EditTabContent = ({
                 </Col>
               </Row>
             ))}
-            <Button type="dashed" icon={<PlusOutlined />} onClick={() => add("")}>
+            <Button
+              type="dashed"
+              icon={<PlusOutlined />}
+              onClick={() => add("")}
+            >
               Add Duty
             </Button>
           </>
@@ -1076,7 +1139,11 @@ const EditTabContent = ({
                 </Col>
               </Row>
             ))}
-            <Button type="dashed" icon={<PlusOutlined />} onClick={() => add("")}>
+            <Button
+              type="dashed"
+              icon={<PlusOutlined />}
+              onClick={() => add("")}
+            >
               Add Bonus/Allowance
             </Button>
           </>

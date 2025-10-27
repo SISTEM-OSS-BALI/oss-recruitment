@@ -50,6 +50,7 @@ export const SiderAdmin = () => {
           padding: "6px 14px",
           color: token.colorTextSecondary,
           fontSize: 12,
+          fontWeight: 700,
           letterSpacing: 0.6,
         }}
       >

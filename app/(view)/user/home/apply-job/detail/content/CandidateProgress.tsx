@@ -33,6 +33,7 @@ import { ApplicantDataModel } from "@/app/models/applicant";
 import ResultMBTIComponent from "./ResultMBTIComponent";
 import KTPWizard from "./UploadIdentityComponent";
 import { useUser } from "@/app/hooks/user";
+import { useOfferingContractByApplicantId } from "@/app/hooks/offering-contract";
 
 const { Title, Text } = Typography;
 
@@ -83,6 +84,10 @@ export default function CandidateProgress({ applicant, meta }: Props) {
   const currentStage = applicant.stage ?? "APPLICATION";
   const nowStageIndex = stageOrder.findIndex((s) => s === currentStage);
   const normalizedStageIndex = nowStageIndex === -1 ? 0 : nowStageIndex;
+
+    const { data: contractByApplicant } = useOfferingContractByApplicantId({
+      applicant_id: applicant.id || "",
+    });
 
   const { onPatchDocument } = useUser({ id: applicant.user_id });
 
@@ -241,8 +246,9 @@ export default function CandidateProgress({ applicant, meta }: Props) {
               key: "upload-identity",
               label: "Upload identity document",
               button: {
-                text: "Upload Now",
+                text: applicant.user?.no_identity_url ? "Document Uploaded" : "Upload Document",
                 onClick: handleOpenModal,
+                disabled: !!applicant.user?.no_identity_url,
               },
             },
             {
@@ -250,9 +256,9 @@ export default function CandidateProgress({ applicant, meta }: Props) {
               label: "Review and sign the offer letter",
               button: {
                 text: "View Offer",
-                onClick: () => m.offerUrl && window.open(m.offerUrl, "_blank"),
-                disabled: !m.offerUrl,
-                tooltip: m.offerUrl ? "Open Offer" : "No offer link",
+                onClick: () => contractByApplicant?.filePath && window.open(contractByApplicant.filePath, "_blank"),
+                disabled: !contractByApplicant?.filePath,
+                tooltip: contractByApplicant?.filePath ? "Open Offer" : "No offer link",
               },
             },
             {
