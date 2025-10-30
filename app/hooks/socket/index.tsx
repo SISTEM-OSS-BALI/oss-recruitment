@@ -1,54 +1,89 @@
 "use client";
 
+import { useEffect, useMemo, useRef, useState } from "react";
 import { io, Socket } from "socket.io-client";
-import { useEffect, useRef, useState } from "react";
-import { ChatPayload } from "@/app/utils/socket-type";
+import type {
+  ClientToServerSocketEvents,
+  ServerToClientSocketEvents,
+} from "@/app/utils/socket-type";
 
-// Event minimal yang kita pakai
-
-
-type ServerToClientEvents = {
-  "chat:message": (msg: ChatPayload) => void;
-  "chat:delivered": (ids: string[]) => void;
-  "chat:read": (ids: string[]) => void;
-  "presence:update": (online: boolean) => void;
-  "typing:update": (p: { room: string; typing: boolean }) => void;
-};
-
-type ClientToServerEvents = {
-  "room:join": (room: string) => void;
-  "chat:send": (msg: ChatPayload) => void;
-  "chat:markDelivered": (
-    ids: string[] | { room: string; ids: string[] }
-  ) => void;
-  "chat:markRead": (ids: string[] | { room: string; ids: string[] }) => void;
-  "presence:ping": () => void;
-  "typing:start": (room: string) => void;
-  "typing:stop": (room: string) => void;
+type SocketAuth = {
+  userId?: string;
+  token?: string;
 };
 
 const SOCKET_URL =
   process.env.NEXT_PUBLIC_SOCKET_URL || "http://localhost:3000";
 
-let socketSingleton: Socket<ServerToClientEvents, ClientToServerEvents> | null =
-  null;
+type SocketCache = {
+  instance: Socket<ServerToClientSocketEvents, ClientToServerSocketEvents>;
+  authKey: string;
+};
 
-export function useSocket() {
+let socketCache: SocketCache | null = null;
+
+const normalizeAuth = (auth?: SocketAuth) => {
+  if (!auth) return null;
+  const userId =
+    typeof auth.userId === "string" ? auth.userId.trim() : undefined;
+  if (!userId) return null;
+  return { ...auth, userId };
+};
+
+export function useSocket(auth?: SocketAuth) {
+  const normalizedAuth = useMemo(() => normalizeAuth(auth), [auth]);
+  const authKey = useMemo(
+    () => JSON.stringify(normalizedAuth ?? {}),
+    [normalizedAuth]
+  );
   const [, force] = useState(0);
-  const ref = useRef(socketSingleton);
+  const ref = useRef<
+    Socket<ServerToClientSocketEvents, ClientToServerSocketEvents> | null
+  >(socketCache?.instance ?? null);
 
   useEffect(() => {
-    if (!ref.current) {
-      ref.current = io(SOCKET_URL, {
-        withCredentials: true,
-        transports: ["websocket"], // boleh dihapus kalau ingin fallback polling
-      });
-      socketSingleton = ref.current;
-
-      ref.current.on("connect", () => force((x) => x + 1));
-      ref.current.on("disconnect", () => force((x) => x + 1));
+    if (!normalizedAuth) {
+      // Jangan buka koneksi saat belum ada identitas pengguna
+      ref.current = null;
+      if (socketCache?.instance && socketCache.authKey !== authKey) {
+        socketCache.instance.disconnect();
+        socketCache = null;
+      }
+      return;
     }
-  }, []);
 
-  return ref.current!;
+    if (socketCache && socketCache.authKey === authKey) {
+      ref.current = socketCache.instance;
+      return;
+    }
+
+    const socket = io(SOCKET_URL, {
+      withCredentials: true,
+      transports: ["websocket"],
+      auth: normalizedAuth,
+    }) as Socket<
+      ServerToClientSocketEvents,
+      ClientToServerSocketEvents
+    >;
+
+    const handleStatusChange = () => force((x) => x + 1);
+
+    socket.on("connect", handleStatusChange);
+    socket.on("disconnect", handleStatusChange);
+
+    if (socketCache?.instance && socketCache.authKey !== authKey) {
+      socketCache.instance.disconnect();
+    }
+
+    socketCache = { instance: socket, authKey };
+    ref.current = socket;
+    force((x) => x + 1);
+
+    return () => {
+      socket.off("connect", handleStatusChange);
+      socket.off("disconnect", handleStatusChange);
+    };
+  }, [authKey, normalizedAuth]);
+
+  return ref.current;
 }

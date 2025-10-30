@@ -173,7 +173,7 @@ export default function Content() {
         <Title level={3} style={{ margin: 0, color: "#111827" }}>
           Matrix Question Base
         </Title>
-        <Text type="secondary">Kelola kumpulan pertanyaan matriks</Text>
+        <Text type="secondary">Manage matrix question base</Text>
 
         <Space
           align="center"
@@ -187,10 +187,10 @@ export default function Content() {
         >
           <Input
             allowClear
-            placeholder="Cari base (nama/desk)…"
+            placeholder="Search base matriks..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            style={{ maxWidth: 520, borderRadius: 10 }}
+            style={{ maxWidth: 600, borderRadius: 10 }}
           />
 
           <Button

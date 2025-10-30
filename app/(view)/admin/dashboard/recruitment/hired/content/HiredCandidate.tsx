@@ -48,6 +48,7 @@ import {
   useContractTemplate,
   useContractTemplates,
 } from "@/app/hooks/contract-template";
+import { useQueryClient } from "@tanstack/react-query";
 
 // templating
 import PizZip from "pizzip";
@@ -280,6 +281,7 @@ export default function HiredSchedulePage({
 
   // form edit variabel
   const [form] = Form.useForm<ContractFormValues>();
+  const queryClient = useQueryClient();
 
   // cleanup blob URL PDF saat unmount/tutup
   useEffect(() => {
@@ -551,15 +553,21 @@ export default function HiredSchedulePage({
 
       await onCreateContract(payload);
 
+      if (candidate?.id) {
+        queryClient.invalidateQueries({
+          queryKey: ["offering-contract", candidate.id],
+        });
+      }
+
       message.success("Contract created & uploaded to Supabase.");
-      // closeResult(); // opsional
+      closeResult();
     } catch (error) {
       console.error(error);
       message.error(getErrorMessage(error));
     } finally {
       setCreatingContract(false);
     }
-  }, [docState, candidate?.id, onCreateContract]);
+  }, [docState, candidate?.id, onCreateContract, queryClient, closeResult]);
 
   // =========================
   // Convert manual
@@ -767,7 +775,7 @@ export default function HiredSchedulePage({
             loading={creatingContract}
             disabled={!docState?.docBlob}
           >
-            Create Contract (Upload to Supabase)
+            Create Contract
           </Button>,
           <Button
             key="download-docx"
@@ -1201,7 +1209,7 @@ const TemplatePickerModal = ({
   onSelectTemplate,
   onGenerate,
   onCancel,
-  selectedTemplatePath,
+  // selectedTemplatePath,
 }: TemplatePickerModalProps) => {
   const options = useMemo(
     () =>
@@ -1243,11 +1251,11 @@ const TemplatePickerModal = ({
           />
         </Form.Item>
 
-        {selectedTemplatePath && (
+        {/* {selectedTemplatePath && (
           <Text type="secondary" style={{ wordBreak: "break-all" }}>
             Source: {selectedTemplatePath}
           </Text>
-        )}
+        )} */}
       </Form>
     </Modal>
   );

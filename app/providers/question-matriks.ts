@@ -205,6 +205,18 @@ export async function GET_QUESTION_MATRIKS(baseId: string) {
   }) as Promise<MatriksQuestionDataModel[]>;
 }
 
+/** Ambil satu pertanyaan matriks beserta option-nya */
+export async function GET_QUESTION_MATRIKS_BY_ID(id: string) {
+  return db.matriksQuestion.findUnique({
+    where: { id },
+    include: {
+      matriksQuestionOption: {
+        orderBy: [{ order: "asc" }, { createdAt: "asc" }],
+      },
+    },
+  }) as Promise<MatriksQuestionDataModel | null>;
+}
+
 /** CREATE satu pertanyaan + (opsional) nested options */
 export async function CREATE_QUESTION_MATRIKS(
   baseId: string,

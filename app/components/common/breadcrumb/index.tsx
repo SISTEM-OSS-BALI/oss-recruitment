@@ -3,10 +3,11 @@
 import { useMemo } from "react";
 import { Breadcrumb } from "antd";
 import { RightOutlined } from "@ant-design/icons";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { useQueries } from "@tanstack/react-query";
 import axios from "axios";
 import { toCapitalized } from "@/app/utils/capitalized";
+import Link from "next/link";
 
 /** ===== 1) ID detector (cuid/uuid/hex/angka) ===== */
 const looksLikeId = (s: string) =>
@@ -34,31 +35,36 @@ type Resolver = (
   ctx: { segments: string[]; index: number }
 ) => Promise<string | undefined>;
 
+async function fetchName(url: string) {
+  const res = await axios.get(url);
+  const result = res.data?.result ?? {};
+  return (
+    result?.name ??
+    result?.title ??
+    result?.label ??
+    result?.text ??
+    undefined
+  );
+}
+
 const resolvers: Record<string, Resolver> = {
-  // Paling spesifik
-  "admin/dashboard/evaluator/matriks-question": async (id) => {
-    const res = await axios.get(`/api/admin/dashboard/matriks-base/${id}`);
-    return res.data?.result?.name;
-  },
-  // Turunan yang lebih umum
-  "dashboard/evaluator/matriks-question": async (id) => {
-    const res = await axios.get(`/api/admin/dashboard/matriks-base/${id}`);
-    return res.data?.result?.name;
-  },
-  // Konteks 1 segmen (umum)
-  "matriks-question": async (id) => {
-    const res = await axios.get(`/api/admin/dashboard/matriks-base/${id}`);
-    return res.data?.result?.name;
-  },
+  "admin/dashboard/evaluator/matriks-question": (id) =>
+    fetchName(`/api/admin/dashboard/base-question-matriks/${id}`),
+  "dashboard/evaluator/matriks-question": (id) =>
+    fetchName(`/api/admin/dashboard/base-question-matriks/${id}`),
+  "evaluator/matriks-question": (id) =>
+    fetchName(`/api/admin/dashboard/base-question-matriks/${id}`),
+  "matriks-question": (id) =>
+    fetchName(`/api/admin/dashboard/base-question-matriks/${id}`),
 
-  "contract-template": async (id) => {
-    const res = await axios.get(`/api/admin/dashboard/contract-template/${id}`);
-    return res.data?.result?.name;
-  }
+  "contract-template": (id) =>
+    fetchName(`/api/admin/dashboard/contract-template/${id}`),
 
-  // Contoh lain bila nanti dibutuhkan:
-  // "users": async (id) => (await axios.get(`/api/users/${id}`)).data?.result?.fullName,
-  // "projects": async (id) => (await axios.get(`/api/projects/${id}`)).data?.result?.title,
+  "screening-question": (id) =>
+    fetchName(`/api/admin/dashboard/base-question-screening/${id}`),
+
+  "question-screening": (id) =>
+    fetchName(`/api/admin/dashboard/question-screening/${id}`),
 };
 
 /** ===== 3) Default resolver (fallback) =====
@@ -70,12 +76,13 @@ const defaultResolver: Resolver = async (id) => {
     `/api/admin/dashboard/base-question-matriks/${id}`,
     `/api/admin/dashboard/question-matriks/${id}`,
     `/api/admin/dashboard/contract-template/${id}`,
+    `/api/admin/dashboard/question-screening/${id}`,
+    `/api/admin/dashboard/base-question-screening/${id}`,
     // Tambahkan kandidat lain sesuai kebutuhanmu
   ];
   for (const url of candidates) {
     try {
-      const res = await axios.get(url);
-      const name = res.data?.result?.name || res.data?.result?.title;
+      const name = await fetchName(url);
       if (name) return name;
     } catch {
       // lanjut kandidat berikutnya
@@ -155,9 +162,16 @@ function useResolvedLabels(segments: string[]) {
 }
 
 /** ===== 6) Komponen Breadcrumb ===== */
+const PATH_REDIRECTS: Record<string, string> = {
+  "/admin": "/admin/dashboard/recruitment",
+  "/admin/dashboard": "/admin/dashboard/recruitment",
+  "/admin/dashboard/evaluator": "/admin/dashboard/evaluator/list",
+  "/admin/dashboard/assignment-setting":
+    "/admin/dashboard/assignment-setting/screening-question",
+};
+
 export const MainBreadcrumb = () => {
   const pathname = usePathname();
-  const router = useRouter();
 
   const segments = useMemo(
     () => pathname.split("/").filter(Boolean),
@@ -169,16 +183,17 @@ export const MainBreadcrumb = () => {
     const arr = [
       {
         title: (
-          <span style={{ cursor: "pointer" }} onClick={() => router.push("/")}>
+          <Link href="/" style={{ cursor: "pointer" }}>
             Home
-          </span>
+          </Link>
         ),
       },
     ];
 
     segments.forEach((seg, idx) => {
       const isLast = idx === segments.length - 1;
-      const href = "/" + segments.slice(0, idx + 1).join("/");
+      const rawHref = "/" + segments.slice(0, idx + 1).join("/");
+      const href = PATH_REDIRECTS[rawHref] ?? rawHref;
 
       const label =
         resolved.get(seg) ?? (looksLikeId(seg) ? seg : toCapitalized(seg));
@@ -187,15 +202,15 @@ export const MainBreadcrumb = () => {
         title: isLast ? (
           label
         ) : (
-          <span style={{ cursor: "pointer" }} onClick={() => router.push(href)}>
+          <Link href={href} style={{ cursor: "pointer" }}>
             {label}
-          </span>
+          </Link>
         ),
       });
     });
 
     return arr;
-  }, [segments, resolved, router]);
+  }, [segments, resolved]);
 
   return (
     <Breadcrumb

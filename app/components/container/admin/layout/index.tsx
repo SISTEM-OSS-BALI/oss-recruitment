@@ -1,8 +1,23 @@
-import { Avatar, Button, Dropdown, Layout, Menu, Typography } from "antd";
+"use client";
+
+import {
+  Avatar,
+  Badge,
+  Button,
+  Dropdown,
+  Layout,
+  Menu,
+  Typography,
+} from "antd";
+import type { MenuProps } from "antd";
 import { MainBreadcrumb } from "@/app/components/common/breadcrumb";
-import { LogoutOutlined, NotificationFilled } from "@ant-design/icons";
+import { LogoutOutlined } from "@ant-design/icons";
 import getInitials from "@/app/utils/initials-username";
 import { SiderAdmin } from "../sider/admin";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faBell } from "@fortawesome/free-solid-svg-icons";
+import { useChatUnread } from "@/app/hooks/chat";
+import { useRouter } from "next/navigation";
 
 const { Header, Content, Footer } = Layout;
 
@@ -52,6 +67,67 @@ export default function AdminLayout({
   username: string;
   userProfilePic?: string;
 }) {
+  const router = useRouter();
+  const { unreadCount, conversations, isFetching } = useChatUnread();
+
+  const notificationItems: MenuProps["items"] =
+    conversations.length > 0
+      ? conversations.map((item) => {
+          const title =
+            item.conversation?.applicant?.user?.name ??
+            item.conversation?.title ??
+            "Percakapan";
+          const updatedAt = item.conversation?.updatedAt
+            ? new Date(item.conversation.updatedAt).toLocaleString()
+            : "";
+          return {
+            key: item.conversationId,
+            label: (
+              <div
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: 4,
+                  maxWidth: 280,
+                }}
+              >
+                <div style={{ fontWeight: 600 }}>{title}</div>
+                <div style={{ fontSize: 12, color: "#8c8c8c" }}>
+                  {item.unreadCount} messages unread
+                </div>
+                {updatedAt && (
+                  <div style={{ fontSize: 11, color: "#bfbfbf" }}>
+                    {updatedAt}
+                  </div>
+                )}
+              </div>
+            ),
+          };
+        })
+      : [
+          {
+            key: "empty",
+            disabled: true,
+            label: (
+              <div style={{ padding: "8px 12px", fontSize: 13, color: "#999" }}>
+                No new messages
+              </div>
+            ),
+          },
+        ];
+
+  const handleNotificationClick: MenuProps["onClick"] = ({ key }) => {
+    const target = conversations.find((item) => item.conversationId === key);
+    if (!target) return;
+    const applicantId =
+      target.conversation?.applicant?.id ?? target.conversation?.applicantId;
+    if (applicantId) {
+      router.push(`/admin/dashboard/chat?applicant_id=${applicantId}`);
+    } else {
+      router.push(`/admin/dashboard/chat`);
+    }
+  };
+
   return (
     <Layout style={{ minHeight: "100vh" }}>
       <SiderAdmin />
@@ -69,7 +145,28 @@ export default function AdminLayout({
               justifyContent: "flex-end",
             }}
           >
-            <Button icon={<NotificationFilled />}></Button>
+            <Dropdown
+              trigger={["click"]}
+              placement="bottomRight"
+              menu={{
+                items: notificationItems,
+                onClick: handleNotificationClick,
+              }}
+            >
+              <Badge
+                count={unreadCount}
+                overflowCount={99}
+                style={{ backgroundColor: "#ff4d4f" }}
+                offset={[-2, 6]}
+                showZero={false}
+              >
+                <Button
+                  type="text"
+                  loading={isFetching && unreadCount === 0}
+                  icon={<FontAwesomeIcon icon={faBell} />}
+                />
+              </Badge>
+            </Dropdown>
             <Dropdown
               overlay={menu}
               placement="bottomRight"

@@ -100,10 +100,9 @@ export default function Content() {
       candidatesData.filter(
         (c) => c.stage?.toLowerCase() === st.toLowerCase()
       ).length;
-    const screeningCount = total - by("Interview");
     return {
       all: total,
-      screening: screeningCount,
+      screening: by("Screening"),
       interview: by("Interview"),
       hired: by("Hired"),
       rejected: by("Rejected"),

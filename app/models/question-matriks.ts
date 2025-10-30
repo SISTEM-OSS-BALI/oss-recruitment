@@ -15,7 +15,12 @@ export type MatriksBaseQuestionDataModel =
   }>;
 
 export type MatriksColumnDataModel = Prisma.MatriksColumnGetPayload<{}>;
-export type MatriksQuestionDataModel = Prisma.MatriksQuestionGetPayload<{}>;
+export type MatriksQuestionDataModel =
+  Prisma.MatriksQuestionGetPayload<{
+    include: {
+      matriksQuestionOption: true;
+    };
+  }>;
 
 /* =========================================================
  * DTOs: payload dari client (tanpa Zod)
@@ -54,6 +59,7 @@ export type MatriksQuestionUpdateDTO = {
   order?: number;
   helpText?: string | null;
   placeholder?: string | null;
+  options?: MatriksColumnUpsertDTO[];
 };
 
 // ===== Optional: mapper kecil untuk single-row update =====

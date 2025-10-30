@@ -133,12 +133,26 @@ export async function GET_QUESTIONS_SCREENING(base_id: string) {
   });
 }
 
+export async function GET_QUESTION_SCREENING_BY_ID(id: string) {
+  return db.questionScreening.findUnique({
+    where: { id },
+    include: {
+      options: {
+        orderBy: [{ order: "asc" }, { createdAt: "asc" }],
+      },
+    },
+  });
+}
+
 // SINGLE create — aman untuk TEXT/CHOICE (tanpa options: [])
 export async function CREATE_QUESTION_SCREENING(
   dto: QuestionScreeningCreateDTO
 ) {
   const data = toPrismaCreate(dto);
-  return db.questionScreening.create({ data });
+  return db.questionScreening.create({
+    data,
+    include: { options: true },
+  });
 }
 
 // BULK create — bikin banyak sekaligus dengan Promise.allSettled

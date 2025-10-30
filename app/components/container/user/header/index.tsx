@@ -12,7 +12,9 @@ import {
   Avatar,
   Dropdown,
   Space,
+  Badge,
 } from "antd";
+import type { MenuProps } from "antd";
 import {
   LoginOutlined,
   ArrowLeftOutlined,
@@ -22,6 +24,9 @@ import {
 } from "@ant-design/icons";
 import { signOut } from "next-auth/react";
 import { useAuth } from "@/app/utils/useAuth";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faBell } from "@fortawesome/free-solid-svg-icons";
+import { useChatUnread } from "@/app/hooks/chat";
 
 const { Header } = Layout;
 const { useBreakpoint } = Grid;
@@ -48,6 +53,62 @@ export default function MainHeader({
 
   // ---- Auth state dari hook kamu ----
   const { isAuthenticated, user_name, loading } = useAuth();
+  const { unreadCount, conversations, isFetching } = useChatUnread();
+
+  const notificationItems: MenuProps["items"] =
+    conversations.length > 0
+      ? conversations.map((item) => {
+          const title = "OSS Recruitment";
+          const updatedAt = item.conversation?.updatedAt
+            ? new Date(item.conversation.updatedAt).toLocaleString()
+            : "";
+          return {
+            key: item.conversationId,
+            label: (
+              <div
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: 4,
+                  maxWidth: 280,
+                }}
+              >
+                <div style={{ fontWeight: 600 }}>{title}</div>
+                <div style={{ fontSize: 12, color: "#8c8c8c" }}>
+                  {item.unreadCount} messages unread
+                </div>
+                {updatedAt && (
+                  <div style={{ fontSize: 11, color: "#bfbfbf" }}>
+                    {updatedAt}
+                  </div>
+                )}
+              </div>
+            ),
+          };
+        })
+      : [
+          {
+            key: "empty",
+            disabled: true,
+            label: (
+              <div style={{ padding: "8px 12px", fontSize: 13, color: "#999" }}>
+                Tidak ada pesan baru
+              </div>
+            ),
+          },
+        ];
+
+  const handleNotificationClick: MenuProps["onClick"] = ({ key }) => {
+    const target = conversations.find((item) => item.conversationId === key);
+    if (!target) return;
+    const applicantId =
+      target.conversation?.applicant?.id ?? target.conversation?.applicantId;
+    if (applicantId) {
+      router.push(`/user/home/apply-job/${applicantId}/chat`);
+    } else {
+      router.push("/user/home");
+    }
+  };
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 6);
@@ -137,16 +198,40 @@ export default function MainHeader({
       .toUpperCase();
 
     return (
-      <Dropdown menu={{ items: menuItems }} trigger={["click"]}>
-        <Space style={{ cursor: "pointer" }}>
-          <Avatar style={{ backgroundColor: "#2467e7" }}>
-            {initials || <UserOutlined />}
-          </Avatar>
-          <span style={{ fontWeight: 500, color: "#222" }}>
-            {user_name ?? "User"}
-          </span>
-        </Space>
-      </Dropdown>
+      <Space size={12} align="center">
+        <Dropdown
+          trigger={["click"]}
+          placement="bottomRight"
+          menu={{
+            items: notificationItems,
+            onClick: handleNotificationClick,
+          }}
+        >
+          <Badge
+            count={unreadCount}
+            overflowCount={99}
+            style={{ backgroundColor: "#ff4d4f" }}
+            offset={[-2, 6]}
+            showZero={false}
+          >
+            <Button
+              type="text"
+              loading={isFetching && unreadCount === 0}
+              icon={<FontAwesomeIcon icon={faBell} />}
+            />
+          </Badge>
+        </Dropdown>
+        <Dropdown menu={{ items: menuItems }} trigger={["click"]}>
+          <Space style={{ cursor: "pointer" }}>
+            <Avatar style={{ backgroundColor: "#2467e7" }}>
+              {initials || <UserOutlined />}
+            </Avatar>
+            <span style={{ fontWeight: 500, color: "#222" }}>
+              {user_name ?? "User"}
+            </span>
+          </Space>
+        </Dropdown>
+      </Space>
     );
   };
 

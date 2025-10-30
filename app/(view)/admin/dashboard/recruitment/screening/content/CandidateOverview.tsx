@@ -53,7 +53,11 @@ export default function CandidateOverview({
         children: <AnswerScreening applicantId={candidate?.id} />,
       }
     ],
-    [candidate?.user?.curiculum_vitae_url, candidate?.user?.portfolio_url]
+    [
+      candidate?.id,
+      candidate?.user?.curiculum_vitae_url,
+      candidate?.user?.portfolio_url,
+    ]
   );
 
   if (!candidate) {

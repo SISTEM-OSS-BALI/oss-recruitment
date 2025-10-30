@@ -424,7 +424,7 @@ export default function Content(): JSX.Element {
                     </div>
 
                     <div className="q-toolbar">
-                      <Tooltip title="Edit">
+                      {/* <Tooltip title="Edit">
                         <Button
                           size="small"
                           type="text"
@@ -441,7 +441,7 @@ export default function Content(): JSX.Element {
                             message.info("Preview coming soon (mock).")
                           }
                         />
-                      </Tooltip>
+                      </Tooltip> */}
                       <Tooltip title="Duplicate">
                         <Button
                           size="small"

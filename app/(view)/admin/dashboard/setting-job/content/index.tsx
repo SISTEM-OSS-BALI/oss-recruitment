@@ -1,11 +1,15 @@
 import { useState, useMemo } from "react";
-import { Flex, Form, Input, Tabs, Typography, Empty } from "antd";
+import { Flex, Form, Input, Tabs, Typography, Empty, message } from "antd";
 import Title from "antd/es/typography/Title";
 import { PlusOutlined, SearchOutlined } from "@ant-design/icons";
 import dayjs from "dayjs";
 
 import { useJob, useJobs } from "@/app/hooks/job";
-import { JobDataModel } from "@/app/models/job";
+import {
+  JobDataModel,
+  JobPayloadCreateModel,
+  JobPayloadUpdateModel,
+} from "@/app/models/job";
 
 import CustomButton from "@/app/components/common/custom-buttom";
 import JobModal from "@/app/components/common/modal/admin/job";
@@ -72,31 +76,60 @@ export default function SettingJobContent() {
     });
   };
 
-  const handleFinish = async (values: JobDataModel) => {
-    const payload = {
-      ...values,
-      until_at: dayjs(values.until_at).toDate(),
-    } as JobDataModel;
-
-    if (modalType === "create") {
-      await jobCreate(payload);
-    } else if (selectedJob?.id) {
-      await jobUpdate({ id: selectedJob.id, payload });
+  const buildPayload = (
+    values: JobDataModel
+  ): JobPayloadCreateModel & JobPayloadUpdateModel => {
+    const until = values.until_at ? dayjs(values.until_at).toISOString() : null;
+    if (!until) {
+      throw new Error("Date is required");
     }
+    return {
+      name: values.name,
+      description: values.description,
+      location_id: values.location_id,
+      is_published: Boolean(values.is_published),
+      until_at: until,
+    } as JobPayloadCreateModel & JobPayloadUpdateModel;
+  };
 
-    form.resetFields();
-    setSelectedJob(null);
-    setModalOpen(false);
-    setModalType("create");
+  const handleFinish = async (values: JobDataModel) => {
+    try {
+      const payload = buildPayload(values);
+
+      if (modalType === "create") {
+        await jobCreate(payload);
+      } else if (selectedJob?.id) {
+        await jobUpdate({ id: selectedJob.id, payload });
+      }
+
+      form.resetFields();
+      setSelectedJob(null);
+      setModalOpen(false);
+      setModalType("create");
+    } catch (error) {
+      message.error(
+        error instanceof Error
+          ? error.message
+          : "Failed to save job. Please try again."
+      );
+    }
   };
 
   const handleTogglePublish = async (id: string, next: boolean) => {
     const current = jobsData.find((j) => j.id === id);
     if (!current) return;
-    await jobUpdate({
-      id,
-      payload: { ...current, is_published: next, until_at: current.until_at },
-    });
+    try {
+      const payload: JobPayloadUpdateModel = {
+        is_published: next,
+      };
+      await jobUpdate({ id, payload });
+    } catch (error) {
+      message.error(
+        error instanceof Error
+          ? error.message
+          : "Failed to update job status."
+      );
+    }
   };
 
   return (

@@ -45,7 +45,7 @@ type OptionItem = {
   value: string;
   order?: number | null;
   active?: boolean | null;
-  // id?: string // (uncomment if your update API supports option IDs)
+  id?: string;
 };
 
 type CreateFormValues = {
@@ -112,13 +112,13 @@ export default function Content() {
     if (!editingRow) return;
 
     const mappedOptions: OptionItem[] = (
-      ((editingRow as any)?.matriksQuestionOption as any[]) || []
-    ).map((o: any) => ({
+      editingRow.matriksQuestionOption ?? []
+    ).map((o) => ({
       label: o.label,
       value: o.value,
       order: o.order ?? 0,
       active: o.active ?? true,
-      // id: o.id,
+      id: o.id,
     }));
 
     editForm.setFieldsValue({
@@ -196,17 +196,21 @@ export default function Content() {
     if (!editingId) return;
 
     const shouldSendOptions = values.inputType === "SINGLE_CHOICE";
-    const payloadOptions =
-      shouldSendOptions &&
-      Array.isArray(values.options) &&
-      values.options.length > 0
-        ? values.options.map((o, i) => ({
-            label: o.label.trim(),
-            value: o.value.trim(),
+    const optionSource = Array.isArray(values.options) ? values.options : [];
+    const payloadOptions = shouldSendOptions
+      ? optionSource
+          .map((o, i) => ({
+            id:
+              typeof o.id === "string" && o.id.trim().length > 0
+                ? o.id.trim()
+                : undefined,
+            label: (o.label ?? "").trim(),
+            value: (o.value ?? "").trim(),
             order: o.order ?? i + 1,
             active: o.active ?? true,
           }))
-        : undefined;
+          .filter((o) => o.label.length > 0 && o.value.length > 0)
+      : [];
 
     try {
       await onUpdate({
@@ -216,8 +220,8 @@ export default function Content() {
         order: values.order,
         helpText: values.helpText ?? null,
         placeholder: values.placeholder ?? null,
-        options: payloadOptions as any, // keep if your DTO supports options update
-      } as any);
+        options: payloadOptions,
+      });
       setEditOpen(false);
       setEditingId("");
     } catch (e: any) {
@@ -521,6 +525,9 @@ export default function Content() {
                             wrap
                             style={{ width: "100%" }}
                           >
+                            <Form.Item {...rest} name={[name, "id"]} hidden>
+                              <Input type="hidden" />
+                            </Form.Item>
                             <Form.Item
                               {...rest}
                               name={[name, "label"]}
@@ -691,6 +698,9 @@ export default function Content() {
                             wrap
                             style={{ width: "100%" }}
                           >
+                            <Form.Item {...rest} name={[name, "id"]} hidden>
+                              <Input type="hidden" />
+                            </Form.Item>
                             <Form.Item
                               {...rest}
                               name={[name, "label"]}

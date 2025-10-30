@@ -18,6 +18,7 @@ import {
   PaperClipOutlined,
   CheckOutlined,
   CheckCircleOutlined,
+  DownloadOutlined,
 } from "@ant-design/icons";
 import { ApplicantDataModel } from "@/app/models/applicant";
 
@@ -116,40 +117,78 @@ function AttachmentPreview({
   align?: "left" | "right";
 }) {
   const isImage = (a.type || "").startsWith("image/");
+  const displayName =
+    a?.name || a.url?.split("/").pop()?.split("?")[0] || "Lampiran";
+  const downloadName = displayName.replace(/\s+/g, "_");
+
+  const downloadUrl = useMemo(() => {
+    try {
+      const parsed = new URL(
+        a.url,
+        typeof window !== "undefined" ? window.location.href : undefined
+      );
+      parsed.searchParams.set("download", downloadName);
+      return parsed.toString();
+    } catch {
+      return a.url;
+    }
+  }, [a.url, downloadName]);
+
   return (
-    <a
-      href={a.url}
-      target="_blank"
-      rel="noreferrer"
+    <div
       style={{
-        display: "inline-block",
+        display: "inline-flex",
+        flexDirection: "column",
+        alignItems: align === "right" ? "flex-end" : "flex-start",
+        gap: 6,
         maxWidth: 260,
-        borderRadius: 10,
-        overflow: "hidden",
-        border: "1px solid #f0f0f0",
       }}
     >
-      {isImage ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          src={a.url}
-          alt={a.name}
-          style={{ display: "block", width: "100%", height: "auto" }}
-        />
-      ) : (
-        <Flex
-          align="center"
-          gap={8}
-          style={{
-            padding: "8px 10px",
-            background: align === "right" ? "#F5F5F5" : "#fff",
-          }}
-        >
-          <PaperClipOutlined />
-          <span style={{ fontSize: 12 }}>{a.name}</span>
-        </Flex>
-      )}
-    </a>
+      <a
+        href={a.url}
+        target="_blank"
+        rel="noreferrer"
+        download={downloadName}
+        style={{
+          display: "inline-block",
+          maxWidth: "100%",
+          borderRadius: 10,
+          overflow: "hidden",
+          border: "1px solid #f0f0f0",
+        }}
+      >
+        {isImage ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={a.url}
+            alt={displayName}
+            style={{ display: "block", width: "100%", height: "auto" }}
+          />
+        ) : (
+          <Flex
+            align="center"
+            gap={8}
+            style={{
+              padding: "8px 10px",
+              background: align === "right" ? "#F5F5F5" : "#fff",
+            }}
+          >
+            <PaperClipOutlined />
+            <span style={{ fontSize: 12 }}>{displayName}</span>
+          </Flex>
+        )}
+      </a>
+      <Button
+        size="small"
+        icon={<DownloadOutlined />}
+        href={a.url}
+        target="_blank"
+        rel="noreferrer"
+        download={downloadName}
+      >
+        Download
+      </Button>
+    </div>
   );
 }
 
@@ -230,6 +269,8 @@ const ChatWidget: React.FC<ChatWidgetProps> = ({
   const [text, setText] = useState("");
   const [files, setFiles] = useState<File[]>([]);
   const listRef = useRef<HTMLDivElement>(null);
+  const autoScrollRef = useRef(true);
+  const markedReadRef = useRef<Set<string>>(new Set());
 
   // Group by day untuk divider
   const grouped = useMemo(() => {
@@ -255,23 +296,65 @@ const ChatWidget: React.FC<ChatWidgetProps> = ({
   useEffect(() => {
     const el = listRef.current;
     if (!el) return;
-    el.scrollTop = el.scrollHeight + 1000;
+    if (autoScrollRef.current) {
+      el.scrollTop = el.scrollHeight + 1000;
+    }
   }, [messages, loading]);
+
+  useEffect(() => {
+    const el = listRef.current;
+    if (!el) return;
+
+    const handleScroll = () => {
+      const distanceFromBottom =
+        el.scrollHeight - el.scrollTop - el.clientHeight;
+      autoScrollRef.current = distanceFromBottom < 80;
+    };
+
+    el.addEventListener("scroll", handleScroll);
+    return () => {
+      el.removeEventListener("scroll", handleScroll);
+    };
+  }, []);
 
   // Tandai read ketika ada pesan peer yang terbaru
   useEffect(() => {
+    if (!onMarkRead) return;
+
+    // bersihkan cache untuk pesan yang sudah tidak ada di list
+    const existingIds = new Set(messages.map((m) => m.id));
+    for (const cachedId of markedReadRef.current) {
+      if (!existingIds.has(cachedId)) {
+        markedReadRef.current.delete(cachedId);
+      }
+    }
+
     const unreadIds = messages
-      .filter((m) => m.senderId !== currentUser.id && m.status !== "read")
+      .filter(
+        (m) =>
+          m.senderId !== currentUser.id &&
+          !markedReadRef.current.has(m.id) &&
+          m.status !== "read"
+      )
       .map((m) => m.id);
-    if (unreadIds.length && onMarkRead) onMarkRead(unreadIds);
+
+    if (unreadIds.length) {
+      onMarkRead(unreadIds);
+      unreadIds.forEach((id) => markedReadRef.current.add(id));
+    }
   }, [messages, currentUser.id, onMarkRead]);
 
   async function handleSend() {
     const trimmed = text.trim();
     if (!trimmed && files.length === 0) return;
-    await onSend({ text: trimmed, files });
-    setText("");
-    setFiles([]);
+    try {
+      await onSend({ text: trimmed, files });
+      setText("");
+      setFiles([]);
+    } catch (error) {
+      // Biarkan komponen pemanggil menampilkan notifikasi error
+      // Form tetap mempertahankan input & file agar user bisa retry
+    }
   }
 
   return (
@@ -302,7 +385,7 @@ const ChatWidget: React.FC<ChatWidgetProps> = ({
                 {applicant ? applicant?.user.name : "OSS Recruitment"}
               </div>
               <div style={{ fontSize: 12, color: token.colorTextTertiary }}>
-                {peer.typing ? "Mengetik…" : peer.online ? "Online" : "Offline"}
+                {peer.typing ? "Typing" : peer.online ? "Online" : "Offline"}
               </div>
             </div>
           </Flex>
@@ -319,6 +402,8 @@ const ChatWidget: React.FC<ChatWidgetProps> = ({
           background:
             "linear-gradient(180deg, rgba(250,250,250,1) 0%, rgba(255,255,255,1) 100%)",
         }}
+        onMouseEnter={() => (autoScrollRef.current = false)}
+        onMouseLeave={() => (autoScrollRef.current = true)}
       >
         {grouped.map((g) => (
           <div key={g.date.toISOString()}>

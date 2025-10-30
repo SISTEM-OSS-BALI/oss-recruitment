@@ -516,6 +516,8 @@ model MatriksAnswer {
   applicantId String?
 
   @@index([questionId])
+
+  @@map("matriks_answer")
 }
 
 model NoteInterview {
@@ -544,6 +546,8 @@ model Conversation {
 
   @@index([updatedAt])
   @@index([lastMessageAt])
+
+  @@map("conversation")
 }
 
 model Participant {
@@ -558,6 +562,8 @@ model Participant {
 
   @@id([userId, conversationId])
   @@index([conversationId, userId])
+
+  @@map("participant")
 }
 
 model Message {
@@ -580,6 +586,8 @@ model Message {
 
   @@index([conversationId, createdAt])
   @@index([senderId, createdAt])
+
+  @@map("message")
 }
 
 model Attachment {
@@ -592,6 +600,8 @@ model Attachment {
   message Message @relation(fields: [messageId], references: [id])
 
   @@index([messageId])
+
+  @@map("attachment")
 }
 
 model MessageRead {
@@ -604,4 +614,6 @@ model MessageRead {
 
   @@id([messageId, userId])
   @@index([userId, messageId])
+
+  @@map("message_read")
 }

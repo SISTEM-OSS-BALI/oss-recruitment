@@ -11,7 +11,7 @@ import dayjs from "dayjs";
 const { Title, Text } = Typography;
 
 export default function JobList() {
-  const { data: jobData } = useJobs({});
+  const { data: jobData } = useJobs({ queryString: "status=active" });
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState<string[]>([]);
   const [client, setClient] = useState<string[]>([]);

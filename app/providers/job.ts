@@ -1,11 +1,20 @@
 import { db } from "@/lib/prisma";
 import { JobPayloadCreateModel, JobPayloadUpdateModel } from "../models/job";
 
-export const GET_JOBS = async () => {
+type JobFilter = {
+  is_published?: boolean;
+};
+
+export const GET_JOBS = async (filter?: JobFilter) => {
   const result = await db.job.findMany({
+    where:
+      filter?.is_published === undefined
+        ? undefined
+        : { is_published: filter.is_published },
     include: {
       location: true,
     },
+    orderBy: { createdAt: "desc" },
   });
   return result;
 };
@@ -24,6 +33,7 @@ export const GET_JOB = async (id: string) => {
 export const CREATE_JOB = async (payload: JobPayloadCreateModel) => {
   const result = await db.job.create({
     data: payload,
+    include: { location: true },
   });
 
   return result;
@@ -38,6 +48,7 @@ export const UPDATE_JOB = async (
       id,
     },
     data: payload,
+    include: { location: true },
   });
   return result;
 };

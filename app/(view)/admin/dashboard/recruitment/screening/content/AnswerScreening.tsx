@@ -88,6 +88,19 @@ function extractSelectedLabels(row: AnswerRow): string[] {
   return Array.from(new Set(labels));
 }
 
+const humanizeType = (type: string) => {
+  switch (type) {
+    case "SINGLE_CHOICE":
+      return "Single Choice";
+    case "MULTIPLE_CHOICE":
+      return "Multiple Choice";
+    case "TEXT":
+      return "Text";
+    default:
+      return type;
+  }
+};
+
 function renderAnswerContent(row: AnswerRow) {
   const type = (row?.question?.inputType || "").toUpperCase();
   const isChoice =
@@ -241,7 +254,7 @@ export default function AnswerScreening({
                       </Text>
                       {q?.required ? <Tag color="red">Required</Tag> : null}
                       {q?.inputType ? (
-                        <Tag>{(q.inputType || "").toUpperCase()}</Tag>
+                        <Tag>{(humanizeType(q.inputType) || "").toUpperCase()}</Tag>
                       ) : null}
                     </Space>
                   }
