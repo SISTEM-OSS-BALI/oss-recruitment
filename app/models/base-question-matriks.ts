@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-empty-object-type */
 
-import { Prisma } from "@prisma/client";
-import { GeneralOmitModel } from "./general-omit";
+import type { Prisma } from "@prisma/client";
+import type { GeneralOmitModel } from "./general-omit";
 
 export type MatriksBaseQuestionDataModel =
   Prisma.MatriksBaseQuestionGetPayload<{

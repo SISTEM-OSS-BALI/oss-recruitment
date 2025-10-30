@@ -1,51 +1,85 @@
-import { AnswerQuestionScreeningDataModel } from "@/app/models/answer-question-screening";
+import MainNotification from "@/app/components/common/notifications";
+import {
+  AnswerQuestionScreeningDataModel,
+  AnswerQuestionScreeningPayloadCreateModel,
+} from "@/app/models/answer-question-screening";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import axios from "axios";
 
-const baseUrl = "/api/admin/dashboard/applicant";
-const entity = "applicant";
-const queryKey = "applicants";
+const baseUrl = "/api/admin/dashboard/answer-question-screening";
+const entity = "answer-question-screening";
+const queryKey = "answer-question-screenings";
 
-export const useAnswerScreening = ({ id }: { id?: string }) => {
+
+type UseAnswerQuestionScreeningsParams = {
+  queryString?: string;
+  fetchEnabled?: boolean;
+};
+
+export const useAnswerQuestionScreenings = (
+  params: UseAnswerQuestionScreeningsParams = {}
+) => {
+  const { queryString, fetchEnabled = true } = params;
   const queryClient = useQueryClient();
 
   const { data, isLoading: fetchLoading } = useQuery({
-    queryKey: [entity, id],
+    queryKey: [queryKey, queryString],
     queryFn: async () => {
-      const result = await axios.get(`${baseUrl}/${id}`);
-      return result.data.result as AnswerQuestionScreeningDataModel;
+      const url = queryString ? `${baseUrl}?${queryString}` : baseUrl;
+      const result = await axios.get(url);
+      return result.data.result as AnswerQuestionScreeningDataModel[];
     },
-    enabled: Boolean(id),
+    enabled: fetchEnabled,
   });
 
-  const { mutateAsync: onUpdateStatus, isPending: onUpdateStatusLoading } =
-    useMutation({
-      mutationFn: async ({
-        id,
-        stage,
-      }: {
-        id: string;
-        stage: RecruitmentStage;
-      }) => {
-        return axios.patch(`${baseUrl}/${id}`, { stage });
-      },
-      onSuccess: (_, variables) => {
-        queryClient.invalidateQueries({ queryKey: [queryKey] });
-        queryClient.invalidateQueries({ queryKey: [entity, variables.id] });
-        MainNotification({
-          type: "success",
-          entity,
-          action: "updated status",
-        });
-      },
-      onError: () => {
-        MainNotification({ type: "error", entity, action: "updated status" });
-      },
-    });
+  const { mutateAsync: onCreate, isPending: onCreateLoading } = useMutation({
+    mutationFn: async (payload: AnswerQuestionScreeningPayloadCreateModel) =>
+      axios.post(baseUrl, payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [queryKey] });
+      MainNotification({ type: "success", entity, action: "created" });
+    },
+    onError: () => {
+      MainNotification({ type: "error", entity, action: "created" });
+    },
+  });
+
+  const { mutateAsync: onDelete, isPending: onDeleteLoading } = useMutation({
+    mutationFn: async (id: string) => axios.delete(`${baseUrl}/${id}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [queryKey] });
+      MainNotification({ type: "success", entity, action: "deleted" });
+    },
+    onError: () => {
+      MainNotification({ type: "error", entity, action: "deleted" });
+    },
+  });
 
   return {
-    onUpdateStatus,
-    onUpdateStatusLoading,
+    data,
+    fetchLoading,
+    onCreate,
+    onCreateLoading,
+    onDelete,
+    onDeleteLoading,
+  };
+};
+
+export const useAnswerQuestionScreeningByApplicantId = ({
+  applicantId,
+}: {
+  applicantId: string;
+}) => {
+  const { data, isLoading: fetchLoading } = useQuery({
+    queryKey: [queryKey, applicantId],
+    queryFn: async () => {
+      const url = `${baseUrl}/by-candidate/${applicantId}`;
+      const result = await axios.get(url);
+      return result.data.result as AnswerQuestionScreeningDataModel[];
+    },
+  });
+
+  return {
     data,
     fetchLoading,
   };

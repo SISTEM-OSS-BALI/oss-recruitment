@@ -1,5 +1,4 @@
 import { ApplicantPayloadCreateModel } from "@/app/models/applicant";
-import { CREATE_ANSWER_SCREENING_QUESTION } from "@/app/providers/answer-question-screening";
 import {
   CREATE_APPLICANT,
   GET_APPLICANT,
@@ -15,12 +14,6 @@ export const POST = async (req: NextRequest) => {
     const payload: ApplicantPayloadCreateModel = await req.json();
 
     const data = await CREATE_APPLICANT(payload);
-
-
-    await CREATE_ANSWER_SCREENING_QUESTION({
-     applicantId: data.id,
-      
-    })
 
     const getDetailJob = await GET_JOB(payload.job_id);
     const getDetailCandidate = await GET_APPLICANT(payload.user_id);

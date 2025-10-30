@@ -9,6 +9,7 @@ import utc from "dayjs/plugin/utc";
 import timezone from "dayjs/plugin/timezone";
 import CandidateInfoPanel from "@/app/components/common/information-panel";
 import { PDFViewer } from "@/app/utils/pdf-viewer";
+import AnswerScreening from "./AnswerScreening";
 dayjs.extend(utc);
 dayjs.extend(timezone);
 
@@ -41,6 +42,16 @@ export default function CandidateOverview({
         ),
         children: <PDFViewer src={candidate?.user.portfolio_url} />,
       },
+      {
+        key:"screening",
+        label: (
+          <Space>
+            <FilePdfOutlined />
+            Screening Answers
+          </Space>
+        ),
+        children: <AnswerScreening applicantId={candidate?.id} />,
+      }
     ],
     [candidate?.user?.curiculum_vitae_url, candidate?.user?.portfolio_url]
   );

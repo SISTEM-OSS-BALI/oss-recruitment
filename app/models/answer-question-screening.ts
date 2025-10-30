@@ -9,13 +9,25 @@ export type AnswerQuestionScreeningDataModel =
       question: {
         include: {
           options: true;
+          base: true;
         };
       };
+      selectedOptions: true;
     };
   }>;
 
-export interface AnswerQuestionScreeningPayloadCreateModel
-  extends Prisma.AnswerQuestionScreeningUncheckedCreateInput {}
+export interface AnswerQuestionScreeningAnswerPayload {
+  questionId: string;
+  answerText?: string | null;
+  optionIds?: string[];
+}
+
+export interface AnswerQuestionScreeningPayloadCreateModel {
+  job_id: string;
+  user_id: string;
+  base_id: string;
+  answers: AnswerQuestionScreeningAnswerPayload[];
+}
 
 export interface AnswerQuestionScreeningPayloadUpdateModel
   extends Omit<

@@ -416,6 +416,8 @@ model AnswerQuestionScreening {
   applicantId String?
 
   @@index([questionId])
+
+  @@map("answer_question_screening")
 }
 
 model AnswerSelectedOption {

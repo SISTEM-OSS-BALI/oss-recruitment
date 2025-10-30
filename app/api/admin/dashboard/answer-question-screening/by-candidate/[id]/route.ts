@@ -1,19 +1,19 @@
-import { CREATE_ANSWER_SCREENING_QUESTION } from "@/app/providers/answer-question-screening";
+import { GET_ANSWER_SCREENING_QUESTIONS_BY_APPLICANT_ID } from "@/app/providers/answer-question-screening";
 import { GeneralError } from "@/app/utils/general-error";
-import { AnswerQuestionScreeningPayloadCreateModel } from "@/app/models/answer-question-screening";
 import { NextRequest, NextResponse } from "next/server";
 
-export const POST = async (req: NextRequest) => {
+export const GET = async (
+  req: NextRequest,
+  { params }: { params: { id: string } }
+) => {
   try {
-    const payload =
-      (await req.json()) as AnswerQuestionScreeningPayloadCreateModel;
-
-    const data = await CREATE_ANSWER_SCREENING_QUESTION(payload);
-
+    const data = await GET_ANSWER_SCREENING_QUESTIONS_BY_APPLICANT_ID(
+      params.id
+    );
     return NextResponse.json(
       {
         success: true,
-        message: "Successfully created data!",
+        message: "Successfully get data!",
         result: data,
       },
       { status: 200 }
@@ -34,7 +34,7 @@ export const POST = async (req: NextRequest) => {
     return NextResponse.json(
       {
         success: false,
-        message: "Failed to create screening answers",
+        message: "Failed to get data",
         error:
           error instanceof Error ? error.message : "Internal server error",
       },

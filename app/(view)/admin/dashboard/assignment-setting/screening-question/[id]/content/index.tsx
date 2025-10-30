@@ -751,14 +751,14 @@ function BulkCreateForm({ baseId, form, onSubmit }: BulkCreateFormProps) {
                     <Select
                       style={{ width: 240 }}
                       options={[
-                        { value: "TEXT", label: "TEXT (free text)" },
+                        { value: "TEXT", label: "Text" },
                         {
                           value: "SINGLE_CHOICE",
-                          label: "SINGLE_CHOICE (one answer)",
+                          label: "Single Choice",
                         },
                         {
                           value: "MULTIPLE_CHOICE",
-                          label: "MULTIPLE_CHOICE (many answers)",
+                          label: "Multiple Choice",
                         },
                       ]}
                     />

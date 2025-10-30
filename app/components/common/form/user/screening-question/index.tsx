@@ -25,7 +25,7 @@ import type {
   QuestionScreening,
   QuestionScreeningType,
 } from "@prisma/client";
-import axios from "axios";
+import { useAnswerQuestionScreenings } from "@/app/hooks/answer-question-screening";
 
 const { Title, Text } = Typography;
 const { useBreakpoint } = Grid;
@@ -70,6 +70,8 @@ export default function FormScreeningQuestion({
   const [activeTab, setActiveTab] = useState<string | undefined>(undefined);
   const [submitting, setSubmitting] = useState(false);
 
+  const { onCreate } = useAnswerQuestionScreenings({ fetchEnabled: false });
+
   /** Submit handler yang dipanggil dari tiap tab (BaseAnswerForm) */
   async function handleSubmitAll(values: {
     /** baseId yang sedang disubmit */
@@ -104,12 +106,21 @@ export default function FormScreeningQuestion({
 
     setSubmitting(true);
     try {
-      await axios.post("/api/applicant", {
+      const payload: {
+        job_id: string;
+        user_id: string;
+        base_id: string;
+        answers: Array<
+          | { questionId: string; answerText: string }
+          | { questionId: string; optionIds: string[] }
+        >;
+      } = {
         job_id,
         user_id,
         base_id: baseId,
         answers,
-      });
+      }
+      await onCreate(payload);
 
       Modal.success({
         title: "Thank you!",
