@@ -26,6 +26,7 @@ import type {
   QuestionScreeningType,
 } from "@prisma/client";
 import { useAnswerQuestionScreenings } from "@/app/hooks/answer-question-screening";
+import { useRouter } from "next/navigation";
 
 const { Title, Text } = Typography;
 const { useBreakpoint } = Grid;
@@ -35,7 +36,6 @@ type QuestionBaseScreeningWithQuestions = {
   id: string;
   name: string;
   desc: string | null;
-  /** NEW: flag dari backend */
   allowMultipleSubmissions?: boolean;
   createdAt: string | Date;
   updatedAt: string | Date;
@@ -56,8 +56,8 @@ function coerceBases(data: any): QuestionBaseScreeningWithQuestions[] {
   return [];
 }
 
-/* ================= Component ================= */
-export default function FormScreeningQuestion({
+/* ================= Komponen Utama ================= */
+export default function FormScreeningQuestionAll({
   job_id,
   user_id,
 }: {
@@ -65,29 +65,30 @@ export default function FormScreeningQuestion({
   user_id: string;
 }) {
   const screens = useBreakpoint();
-  const { data } = useQuestionBaseScreenings({});
+  const { data, fetchLoading } = useQuestionBaseScreenings({});
   const bases = useMemo(() => coerceBases(data), [data]);
+
+  // form global untuk SEMUA base
+  const [form] = Form.useForm();
   const [activeTab, setActiveTab] = useState<string | undefined>(undefined);
   const [submitting, setSubmitting] = useState(false);
+  const router = useRouter();
 
-  const { onCreate } = useAnswerQuestionScreenings({ fetchEnabled: false });
+  const { onCreate } = useAnswerQuestionScreenings({
+    fetchEnabled: false,
+    showNotification: false,
+  });
 
-  /** Submit handler yang dipanggil dari tiap tab (BaseAnswerForm) */
-  async function handleSubmitAll(values: {
-    /** baseId yang sedang disubmit */
-    baseId: string;
-    /** entries: array dari sekumpulan jawaban (satu atau lebih set) */
-    entries: Array<Record<string, any>>;
-    /** map tipe pertanyaan untuk mapping */
-    qTypeMap: Record<string, QuestionScreeningType>;
-  }) {
-    const { baseId, entries, qTypeMap } = values;
+  const firstBaseId = bases[0]?.id;
+  const lastBaseId = bases[bases.length - 1]?.id;
+  const isLastTab = (activeTab || firstBaseId) === lastBaseId;
 
-    // Bentuk answers array:
-    // Untuk TEXT: { questionId, answerText }
-    // Untuk SINGLE_CHOICE: { questionId, optionIds: [<optionId>] }
-    // Untuk MULTIPLE_CHOICE: { questionId, optionIds: [<optionId>, ...] }
-    const answers = entries.flatMap((entry) =>
+  // mapping entries -> answers (per base)
+  function mapEntriesToAnswers(
+    entries: Array<Record<string, any>>,
+    qTypeMap: Record<string, QuestionScreeningType>
+  ) {
+    return entries.flatMap((entry) =>
       Object.entries(entry).map(([questionId, val]) => {
         const t = qTypeMap[questionId];
         if (t === "TEXT") {
@@ -103,10 +104,35 @@ export default function FormScreeningQuestion({
         };
       })
     );
+  }
 
-    setSubmitting(true);
+  // SUBMIT: validasi semua tab + kirim semua base
+  async function handleSubmitAll() {
     try {
-      const payload: {
+      setSubmitting(true);
+      // validasi semua field dari seluruh base
+      const raw = await form.validateFields();
+      // Struktur yang kita pakai: { bases: { [baseId]: { entries: [...] } } }
+      const all = (raw?.bases || {}) as Record<
+        string,
+        { entries?: Array<Record<string, any>> }
+      >;
+
+      // Bangun qTypeMap untuk setiap base
+      const baseTypeMaps: Record<
+        string,
+        Record<string, QuestionScreeningType>
+      > = Object.fromEntries(
+        bases.map((b) => [
+          b.id,
+          Object.fromEntries(
+            (b.questions || []).map((q) => [q.id, q.inputType as any])
+          ),
+        ])
+      );
+
+      // Kirim per base (hanya kalau ada jawaban)
+      const payloads: Array<{
         job_id: string;
         user_id: string;
         base_id: string;
@@ -114,23 +140,40 @@ export default function FormScreeningQuestion({
           | { questionId: string; answerText: string }
           | { questionId: string; optionIds: string[] }
         >;
-      } = {
-        job_id,
-        user_id,
-        base_id: baseId,
-        answers,
+      }> = [];
+
+      for (const b of bases) {
+        const entries = all?.[b.id]?.entries ?? [];
+        const answers = mapEntriesToAnswers(entries, baseTypeMaps[b.id] || {});
+        // buang base tanpa jawaban sama sekali (semua kosong)
+        const hasAny =
+          answers.find((a: any) =>
+            "answerText" in a
+              ? (a.answerText || "").trim().length > 0
+              : Array.isArray(a.optionIds) && a.optionIds.length > 0
+          ) != null;
+
+        if (!hasAny) continue;
+
+        payloads.push({ job_id, user_id, base_id: b.id, answers });
       }
-      await onCreate(payload);
+
+      for (const payload of payloads) {
+        await onCreate(payload);
+      }
 
       Modal.success({
         title: "Thank you!",
         content: (
           <div>
-            <p>Your application has been submitted successfully.</p>
-            <p>We will review your application and get back to you soon.</p>
+            <p>Your screening question answers have been submitted.</p>
+            <p>We will review your answers and get back to you soon.</p>
           </div>
         ),
         centered: true,
+        onOk: () => {
+          router.push("/user/home/apply-job")
+        },
       });
     } catch (e: any) {
       Modal.error({
@@ -155,35 +198,61 @@ export default function FormScreeningQuestion({
         </Title>
       </Space>
 
-      {/* Tabs per base */}
-      <div className="sqb-tabs-wrap">
-        {data == null ? (
-          <div style={{ padding: 16 }}>
-            <Skeleton active paragraph={{ rows: 2 }} />
-          </div>
-        ) : bases.length === 0 ? (
-          <Empty style={{ padding: 24 }} description="No bases found." />
-        ) : (
-          <Tabs
-            activeKey={activeTab || bases[0]?.id}
-            onChange={(k) => setActiveTab(k)}
-            items={bases.map((b) => ({
-              key: b.id,
-              label: b.name,
-              children: (
-                <BaseAnswerForm
-                  base={b}
-                  onSubmitAll={handleSubmitAll}
-                  submitting={submitting}
-                />
+      {fetchLoading ? (
+        <div style={{ padding: 16 }}>
+          <Skeleton active paragraph={{ rows: 3 }} />
+        </div>
+      ) : bases.length === 0 ? (
+        <Empty style={{ padding: 24 }} description="No bases found." />
+      ) : (
+        <>
+          {/* Form GLOBAL membungkus semua tab */}
+          <Form
+            form={form}
+            layout="vertical"
+            // siapkan object untuk setiap base → { bases: { [id]: { entries: [{}] } } }
+            initialValues={{
+              bases: Object.fromEntries(
+                bases.map((b) => [b.id, { entries: [{}] }])
               ),
-            }))}
-          />
-        )}
-      </div>
+            }}
+            style={{ maxWidth: 920 }}
+          >
+            <Tabs
+              activeKey={activeTab || firstBaseId}
+              onChange={(k) => setActiveTab(k)}
+              destroyInactiveTabPane={false} // penting: jangan hancurkan state tab lain
+              items={bases.map((b) => ({
+                key: b.id,
+                label: b.name,
+                children: (
+                  <BaseAnswerFields
+                    base={b}
+                    // path ke form global → ['bases', base.id]
+                    basePath={["bases", b.id]}
+                  />
+                ),
+              }))}
+            />
+          </Form>
+
+          {/* Tombol submit hanya muncul di TAB TERAKHIR */}
+          {isLastTab ? (
+            <Space style={{ marginTop: 16 }}>
+              <Button
+                type="primary"
+                onClick={handleSubmitAll}
+                loading={submitting}
+              >
+                Submit Answers
+              </Button>
+            </Space>
+          ) : null}
+        </>
+      )}
 
       <style jsx global>{`
-        .sqb-tabs-wrap .ant-tabs-nav {
+        .ant-tabs-nav {
           margin: 12px 0 8px;
           background: #fff;
           border: 1px solid #eef2f7;
@@ -195,30 +264,18 @@ export default function FormScreeningQuestion({
   );
 }
 
-/* ================= Base Answer Form ================= */
-function BaseAnswerForm({
+/* =============== Field per Base (pakai form global) =============== */
+function BaseAnswerFields({
   base,
-  onSubmitAll,
-  submitting,
+  basePath,
 }: {
   base: QuestionBaseScreeningWithQuestions;
-  onSubmitAll: (values: {
-    baseId: string;
-    entries: Array<Record<string, any>>;
-    qTypeMap: Record<string, QuestionScreeningType>;
-  }) => Promise<void>;
-  submitting: boolean;
+  /** contoh: ['bases', base.id] */
+  basePath: (string | number)[];
 }) {
-  const [form] = Form.useForm();
   const questions = (base.questions || [])
     .slice()
     .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
-
-  // peta tipe pertanyaan
-  const qTypeMap = useMemo<Record<string, QuestionScreeningType>>(
-    () => Object.fromEntries(questions.map((q) => [q.id, q.inputType as any])),
-    [questions]
-  );
 
   const allowMultiple = !!base.allowMultipleSubmissions;
 
@@ -236,94 +293,69 @@ function BaseAnswerForm({
           description="No questions in this base."
         />
       ) : (
-        <Form
-          form={form}
-          layout="vertical"
-          onFinish={(raw) =>
-            onSubmitAll({
-              baseId: base.id,
-              entries: raw.entries ?? [],
-              qTypeMap,
-            })
-          }
-          style={{ maxWidth: 880 }}
-          initialValues={{
-            // default: satu set (entry) kosong
-            entries: [{}],
-          }}
-        >
-          <Form.List name="entries">
-            {(fields, { add, remove }) => (
-              <div
-                style={{ display: "flex", flexDirection: "column", gap: 16 }}
-              >
-                {fields.map((field, idx) => (
+        <Form.List name={[...basePath, "entries"]}>
+          {(fields, { add, remove }) => (
+            <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+              {fields.map((field, idx) => (
+                <div
+                  key={field.key}
+                  style={{
+                    background: "#fff",
+                    border: "1px solid #edf1f5",
+                    borderRadius: 12,
+                    padding: 16,
+                  }}
+                >
+                  {/* Header tiap entry */}
                   <div
-                    key={field.key}
                     style={{
-                      background: "#fff",
-                      border: "1px solid #edf1f5",
-                      borderRadius: 12,
-                      padding: 16,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      marginBottom: 8,
                     }}
                   >
-                    {/* Header tiap entry */}
-                    <div
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "space-between",
-                        marginBottom: 8,
-                      }}
-                    >
-                      <Text strong>{`Entry #${idx + 1}`}</Text>
-                      {allowMultiple && fields.length > 1 ? (
-                        <Button
-                          danger
-                          type="link"
-                          onClick={() => remove(field.name)}
-                        >
-                          Remove
-                        </Button>
-                      ) : null}
-                    </div>
-
-                    <div className="q-stack">
-                      {questions.map((q) => (
-                        <QuestionInput
-                          key={q.id}
-                          q={q}
-                          /** path ke field: entries[idx][q.id] */
-                          namePath={[field.name, q.id]}
-                        />
-                      ))}
-                    </div>
+                    <Text strong>{`Entry #${idx + 1}`}</Text>
+                    {allowMultiple && fields.length > 1 ? (
+                      <Button
+                        danger
+                        type="link"
+                        onClick={() => remove(field.name)}
+                      >
+                        Remove
+                      </Button>
+                    ) : null}
                   </div>
-                ))}
 
-                {/* Tombol tambah jika base memperbolehkan multiple submissions */}
-                {allowMultiple ? (
-                  <>
-                    <Button
-                      onClick={() => add({})}
-                      type="dashed"
-                      style={{ width: "100%" }}
-                    >
-                      + Add another
-                    </Button>
-                    <Text type="secondary">Click + to add another entry</Text>
-                  </>
-                ) : null}
-              </div>
-            )}
-          </Form.List>
+                  <div className="q-stack">
+                    {questions.map((q) => (
+                      <QuestionInput
+                        key={q.id}
+                        q={q}
+                        // relative path → [fieldIndex, questionId]
+                        namePath={[field.name, q.id]}
+                        fieldKey={[field.fieldKey, q.id]}
+                      />
+                    ))}
+                  </div>
+                </div>
+              ))}
 
-          <Space style={{ marginTop: 16 }}>
-            <Button type="primary" htmlType="submit" loading={submitting}>
-              Submit Answers
-            </Button>
-          </Space>
-        </Form>
+              {allowMultiple ? (
+                <>
+                  <Button
+                    onClick={() => add({})}
+                    type="dashed"
+                    style={{ width: "100%" }}
+                  >
+                    + Add another
+                  </Button>
+                  <Text type="secondary">Klik + untuk menambah entri baru</Text>
+                </>
+              ) : null}
+            </div>
+          )}
+        </Form.List>
       )}
 
       <style jsx>{`
@@ -341,10 +373,12 @@ function BaseAnswerForm({
 function QuestionInput({
   q,
   namePath,
+  fieldKey,
 }: {
   q: QuestionScreening & { options: QuestionOption[] };
-  /** contoh: ['entries', 0, q.id] – tetapi kita kirim dari parent sebagai [field.name, q.id] */
+  /** contoh: [fieldIndex, q.id] – relative terhadap Form.List */
   namePath: (string | number)[];
+  fieldKey?: (string | number)[];
 }) {
   const isSingle = q.inputType === "SINGLE_CHOICE";
   const isMulti = q.inputType === "MULTIPLE_CHOICE";
@@ -369,6 +403,7 @@ function QuestionInput({
         {isText && (
           <Form.Item
             name={namePath}
+            fieldKey={fieldKey}
             rules={[
               { required: q.required, message: "This field is required." },
             ]}
@@ -384,6 +419,7 @@ function QuestionInput({
         {isSingle && (
           <Form.Item
             name={namePath}
+            fieldKey={fieldKey}
             rules={[
               { required: q.required, message: "Please select one option." },
             ]}
@@ -393,7 +429,7 @@ function QuestionInput({
                 ?.slice()
                 .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
                 .map((op) => (
-                  <Radio key={op.id} value={op.id /* pakai option.id */}>
+                  <Radio key={op.id} value={op.id /* gunakan option.id */}>
                     {op.label}
                   </Radio>
                 ))}
@@ -404,6 +440,7 @@ function QuestionInput({
         {isMulti && (
           <Form.Item
             name={namePath}
+            fieldKey={fieldKey}
             rules={[
               {
                 validator: (_, value: string[]) => {
@@ -422,7 +459,7 @@ function QuestionInput({
                 ?.slice()
                 .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
                 .map((op) => (
-                  <Checkbox key={op.id} value={op.id /* pakai option.id */}>
+                  <Checkbox key={op.id} value={op.id /* gunakan option.id */}>
                     {op.label}
                   </Checkbox>
                 ))}

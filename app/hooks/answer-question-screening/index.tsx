@@ -14,12 +14,17 @@ const queryKey = "answer-question-screenings";
 type UseAnswerQuestionScreeningsParams = {
   queryString?: string;
   fetchEnabled?: boolean;
+  showNotification?: boolean;
 };
 
 export const useAnswerQuestionScreenings = (
   params: UseAnswerQuestionScreeningsParams = {}
 ) => {
-  const { queryString, fetchEnabled = true } = params;
+  const {
+    queryString,
+    fetchEnabled = true,
+    showNotification = true,
+  } = params;
   const queryClient = useQueryClient();
 
   const { data, isLoading: fetchLoading } = useQuery({
@@ -37,10 +42,14 @@ export const useAnswerQuestionScreenings = (
       axios.post(baseUrl, payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [queryKey] });
-      MainNotification({ type: "success", entity, action: "created" });
+      if (showNotification) {
+        MainNotification({ type: "success", entity, action: "created" });
+      }
     },
     onError: () => {
-      MainNotification({ type: "error", entity, action: "created" });
+      if (showNotification) {
+        MainNotification({ type: "error", entity, action: "created" });
+      }
     },
   });
 

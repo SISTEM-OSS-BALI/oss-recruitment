@@ -120,11 +120,6 @@ export default function CandidateProgress({ applicant, meta }: Props) {
     meta?: Props["meta"]
   ) {
     const m = meta || {};
-    const startedOn =
-      m.screeningStartedOn || applicant.updatedAt || applicant.createdAt;
-    const deadline =
-      m.screeningDeadline ||
-      dayjs(applicant.createdAt).add(7, "day").toISOString();
 
     const mbtiUrl = applicant.mbti_test?.link_url || undefined;
     const mbtiDone = applicant.mbti_test?.is_complete === true;
@@ -165,15 +160,15 @@ export default function CandidateProgress({ applicant, meta }: Props) {
           title: "Screening Stage Details",
           info: [
             { label: "STATUS", value: mbtiDone ? "Completed" : "In Progress" },
-            {
-              label: "DEADLINE",
-              value: dayjs(deadline).format("MMMM D, YYYY"),
-            },
-            {
-              label: "STARTED ON",
-              value: dayjs(startedOn).format("MMMM D, YYYY"),
-            },
-            { label: "ASSIGNED TO", value: m.assignedTo || "Recruitment Team" },
+            // {
+            //   label: "DEADLINE",
+            //   value: dayjs(deadline).format("MMMM D, YYYY"),
+            // },
+            // {
+            //   label: "STARTED ON",
+            //   value: dayjs(startedOn).format("MMMM D, YYYY"),
+            // },
+            // { label: "ASSIGNED TO", value: m.assignedTo || "Recruitment Team" },
           ],
           actions: [
             {
