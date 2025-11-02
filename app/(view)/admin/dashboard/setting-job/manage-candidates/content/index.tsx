@@ -45,6 +45,7 @@ import {
   Tooltip as RTooltip,
   ReferenceLine,
 } from "recharts";
+import { getStageLabel, stageMatches } from "@/app/utils/recruitment-stage";
 
 dayjs.extend(utc);
 dayjs.extend(isSameOrAfter);
@@ -55,6 +56,27 @@ const { RangePicker } = DatePicker;
 
 // Bandingkan tanggal dalam waktu lokal
 const USE_LOCAL_COMPARE = true;
+
+const CHART_STAGE_ORDER = [
+  "APPLIED",
+  "SCREENING",
+  "INTERVIEW",
+  "OFFERING",
+  "HIRING",
+  "REJECTED",
+  "WAITING",
+] as const;
+
+const STAGE_FILTER_OPTIONS = [
+  { value: "ALL", label: "All" },
+  { value: "NEW_APLICANT", label: getStageLabel("NEW_APLICANT") },
+  { value: "SCREENING", label: getStageLabel("SCREENING") },
+  { value: "INTERVIEW", label: getStageLabel("INTERVIEW") },
+  { value: "OFFERING", label: getStageLabel("OFFERING") },
+  { value: "HIRING", label: getStageLabel("HIRING") },
+  { value: "REJECTED", label: getStageLabel("REJECTED") },
+  { value: "WAITING", label: getStageLabel("WAITING") },
+];
 
 type LiveValues = {
   search?: string;
@@ -127,7 +149,7 @@ export default function Content() {
     let out = list.slice();
     if (!out.length) return [];
 
-    const stage = normalize(tableFilters.stage || "ALL");
+    const stage = tableFilters.stage;
     const range = tableFilters.range || null;
 
     // Search
@@ -147,8 +169,8 @@ export default function Content() {
     }
 
     // Stage
-    if (stage !== "ALL") {
-      out = out.filter((r) => normalize(r?.stage) === stage);
+    if (stage && normalize(stage) !== "ALL") {
+      out = out.filter((r) => stageMatches(r?.stage, stage));
     }
 
     // Date Range (pakai createdAt)
@@ -219,19 +241,29 @@ export default function Content() {
 
   // ---------- DATA: CHART STAGE DISTRIBUTION (atas) ----------
   const stageChartData = useMemo(() => {
-    const order = ["APPLIED", "SCREENING", "INTERVIEW", "HIRED", "REJECTED"];
     const counts = new Map<string, number>();
-    order.forEach((k) => counts.set(k, 0));
+    CHART_STAGE_ORDER.forEach((key) => counts.set(key, 0));
     chartFiltered.forEach((r: ApplicantDataModel) => {
-      const s = normalize(r?.stage);
-      if (counts.has(s)) counts.set(s, (counts.get(s) || 0) + 1);
+      const normalizedStage = normalize(r?.stage);
+      const bucket =
+        normalizedStage === "NEW_APLICANT"
+          ? "APPLIED"
+          : normalizedStage === "HIRED"
+          ? "HIRING"
+          : normalizedStage;
+      if (counts.has(bucket)) {
+        counts.set(bucket, (counts.get(bucket) || 0) + 1);
+      }
     });
-    return order.map((s) => ({ stage: s, total: counts.get(s) || 0 }));
+    return CHART_STAGE_ORDER.map((key) => ({
+      stage: key === "APPLIED" ? "Applied" : getStageLabel(key),
+      total: counts.get(key) || 0,
+    }));
   }, [chartFiltered]);
 
   // ---------- DATA: TOP CANDIDATE (overall score per applicant, hanya INTERVIEW) ----------
   const interviewFilteredForTop = useMemo(() => {
-    let out = list.filter((r) => normalize(r.stage) === "INTERVIEW");
+    let out = list.filter((r) => stageMatches(r.stage, "INTERVIEW"));
     if (!out.length) return [];
     // ikuti range yang sama dengan chart atas:
     if (Array.isArray(chartRange) && chartRange[0] && chartRange[1]) {
@@ -347,18 +379,20 @@ export default function Content() {
       dataIndex: "stage",
       key: "stage",
       render: (stage: string) => {
-        const s = (stage || "").toUpperCase();
+        const normalized = normalize(stage);
         const color =
-          s === "INTERVIEW"
+          normalized === "INTERVIEW"
             ? "geekblue"
-            : s === "SCREENING"
+            : normalized === "SCREENING"
             ? "orange"
-            : s === "HIRED"
+            : normalized === "OFFERING"
+            ? "gold"
+            : normalized === "HIRING" || normalized === "HIRED"
             ? "green"
-            : s === "REJECTED"
+            : normalized === "REJECTED"
             ? "red"
             : "default";
-        return <Tag color={color}>{s || "-"}</Tag>;
+        return <Tag color={color}>{getStageLabel(stage)}</Tag>;
       },
     },
     {
@@ -542,14 +576,7 @@ export default function Content() {
                 <Col xs={12} md={6}>
                   <Form.Item name="stage" label="Stage">
                     <Select
-                      options={[
-                        { value: "ALL", label: "All" },
-                        { value: "APPLIED", label: "APPLIED" },
-                        { value: "SCREENING", label: "SCREENING" },
-                        { value: "INTERVIEW", label: "INTERVIEW" },
-                        { value: "HIRED", label: "HIRED" },
-                        { value: "REJECTED", label: "REJECTED" },
-                      ]}
+                      options={STAGE_FILTER_OPTIONS}
                     />
                   </Form.Item>
                 </Col>

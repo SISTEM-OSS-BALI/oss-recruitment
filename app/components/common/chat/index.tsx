@@ -11,7 +11,6 @@ import {
   Input,
   Tooltip,
   Upload,
-  theme,
 } from "antd";
 import {
   SendOutlined,
@@ -55,6 +54,7 @@ export type ChatWidgetProps = {
   onSend: (payload: { text: string; files: File[] }) => Promise<void> | void;
   onUpload?: (file: File) => Promise<void> | void;
   onMarkRead?: (messageIds: string[]) => void;
+  onTypingChange?: (typing: boolean) => void;
   placeholder?: string;
   height?: number | string;
   allowUpload?: boolean;
@@ -107,6 +107,113 @@ function ReadReceipt({ status }: { status?: ChatMessage["status"] }) {
       </Tooltip>
     );
   return null;
+}
+
+function PresenceBadge({
+  online,
+  typing,
+}: {
+  online?: boolean;
+  typing?: boolean;
+}) {
+  const color = typing ? "#faad14" : online ? "#52c41a" : "#bfbfbf";
+  const label = typing ? "Typing..." : online ? "Online" : "Offline";
+
+  return (
+    <span
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        gap: 6,
+        fontSize: 12,
+        fontWeight: 500,
+        color,
+        background: "rgba(255,255,255,0.15)",
+        padding: "4px 10px",
+        borderRadius: 999,
+      }}
+    >
+      <span
+        style={{
+          width: 8,
+          height: 8,
+          borderRadius: "50%",
+          background: color,
+          display: "inline-block",
+        }}
+      />
+      {label}
+    </span>
+  );
+}
+
+const typingStyleId = "chat-widget-typing-style";
+
+function ensureTypingAnimation() {
+  if (typeof document === "undefined") return;
+  if (document.getElementById(typingStyleId)) return;
+  const style = document.createElement("style");
+  style.id = typingStyleId;
+  style.innerHTML =
+    "@keyframes chatTypingDots{0%,60%,100%{transform:translateY(0);opacity:.4;}30%{transform:translateY(-4px);opacity:1;}}";
+  document.head.appendChild(style);
+}
+
+function TypingIndicator({
+  align = "left",
+  name,
+}: {
+  align?: "left" | "right";
+  name?: string;
+}) {
+  useEffect(() => {
+    ensureTypingAnimation();
+  }, []);
+
+  const base = align === "right" ? "flex-end" : "flex-start";
+
+  return (
+    <div
+      style={{
+        display: "flex",
+        justifyContent: base,
+        marginTop: 8,
+      }}
+    >
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 10,
+          padding: "10px 14px",
+          borderRadius: 12,
+          background: "rgba(24, 144, 255, 0.12)",
+          border: "1px solid rgba(24, 144, 255, 0.2)",
+          color: "#1677ff",
+          fontSize: 12,
+          maxWidth: 220,
+        }}
+      >
+        <span>{name ? `${name} is typing` : "Typing"}</span>
+        <span style={{ display: "inline-flex", gap: 4 }}>
+          {[0, 1, 2].map((idx) => (
+            <span
+              key={idx}
+              style={{
+                width: 6,
+                height: 6,
+                borderRadius: "50%",
+                background: "currentColor",
+                opacity: 0.4,
+                animation: "chatTypingDots 1.2s ease-in-out infinite",
+                animationDelay: `${idx * 0.15}s`,
+              }}
+            />
+          ))}
+        </span>
+      </div>
+    </div>
+  );
 }
 
 function AttachmentPreview({
@@ -205,7 +312,7 @@ function MessageBubble({
   return (
     <Flex
       justify={isMine ? "flex-end" : "flex-start"}
-      style={{ marginBottom: 8 }}
+      style={{ marginBottom: 10 }}
     >
       {!isMine && (
         <Avatar
@@ -219,19 +326,28 @@ function MessageBubble({
       <div
         style={{
           maxWidth: 520,
-          background: isMine ? "#1677ff" : "#F5F5F5",
-          color: isMine ? "#fff" : "#000",
-          padding: "8px 12px",
-          borderRadius: 14,
-          borderTopRightRadius: isMine ? 4 : 14,
-          borderTopLeftRadius: isMine ? 14 : 4,
-          boxShadow: "0 1px 4px rgba(0,0,0,.06)",
+          background: isMine
+            ? "linear-gradient(135deg,#1677ff 0%,#62a1ff 100%)"
+            : "#ffffff",
+          color: isMine ? "#fff" : "#1f1f1f",
+          padding: "10px 14px",
+          borderRadius: 16,
+          borderTopRightRadius: isMine ? 6 : 16,
+          borderTopLeftRadius: isMine ? 16 : 6,
+          boxShadow: isMine
+            ? "0 6px 18px rgba(22,119,255,0.22)"
+            : "0 4px 16px rgba(15,23,42,0.08)",
+          border: isMine
+            ? "1px solid rgba(255,255,255,0.25)"
+            : "1px solid #f0f0f0",
         }}
       >
-        {m.text && <div style={{ whiteSpace: "pre-wrap" }}>{m.text}</div>}
+        {m.text && (
+          <div style={{ whiteSpace: "pre-wrap", fontSize: 14 }}>{m.text}</div>
+        )}
 
         {m.attachments?.length ? (
-          <Flex gap={8} wrap style={{ marginTop: m.text ? 8 : 0 }}>
+          <Flex gap={8} wrap style={{ marginTop: m.text ? 10 : 0 }}>
             {m.attachments.map((a) => (
               <AttachmentPreview
                 key={a.id}
@@ -242,8 +358,12 @@ function MessageBubble({
           </Flex>
         ) : null}
 
-        <Flex gap={8} align="center" style={{ marginTop: 6, opacity: 0.8 }}>
-          <small>{time}</small>
+        <Flex
+          gap={8}
+          align="center"
+          style={{ marginTop: 8, opacity: isMine ? 0.9 : 0.7 }}
+        >
+          <small style={{ fontSize: 11 }}>{time}</small>
           {isMine && <ReadReceipt status={m.status} />}
         </Flex>
       </div>
@@ -261,16 +381,19 @@ const ChatWidget: React.FC<ChatWidgetProps> = ({
   onSend,
   onUpload,
   onMarkRead,
+  onTypingChange,
   placeholder = "Tulis pesan…",
   height = 560,
   allowUpload = true,
 }) => {
-  const { token } = theme.useToken();
   const [text, setText] = useState("");
   const [files, setFiles] = useState<File[]>([]);
   const listRef = useRef<HTMLDivElement>(null);
   const autoScrollRef = useRef(true);
   const markedReadRef = useRef<Set<string>>(new Set());
+  const typingActiveRef = useRef(false);
+  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const [composerFocused, setComposerFocused] = useState(false);
 
   // Group by day untuk divider
   const grouped = useMemo(() => {
@@ -344,6 +467,39 @@ const ChatWidget: React.FC<ChatWidgetProps> = ({
     }
   }, [messages, currentUser.id, onMarkRead]);
 
+  const emitTyping = (next: boolean) => {
+    if (!onTypingChange) return;
+    if (typingActiveRef.current === next) return;
+    typingActiveRef.current = next;
+    onTypingChange(next);
+  };
+
+  const scheduleStopTyping = () => {
+    if (!onTypingChange) return;
+    if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+    typingTimeoutRef.current = setTimeout(() => emitTyping(false), 1200);
+  };
+
+  const handleTextChange = (value: string) => {
+    setText(value);
+    if (!onTypingChange) return;
+    const hasContent = value.trim().length > 0 || files.length > 0;
+    if (hasContent) {
+      emitTyping(true);
+      scheduleStopTyping();
+    } else {
+      emitTyping(false);
+    }
+  };
+
+  useEffect(() => {
+    return () => {
+      if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+      if (typingActiveRef.current) emitTyping(false);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   async function handleSend() {
     const trimmed = text.trim();
     if (!trimmed && files.length === 0) return;
@@ -351,6 +507,7 @@ const ChatWidget: React.FC<ChatWidgetProps> = ({
       await onSend({ text: trimmed, files });
       setText("");
       setFiles([]);
+      emitTyping(false);
     } catch (error) {
       // Biarkan komponen pemanggil menampilkan notifikasi error
       // Form tetap mempertahankan input & file agar user bisa retry
@@ -363,32 +520,71 @@ const ChatWidget: React.FC<ChatWidgetProps> = ({
         width: "100%",
         borderRadius: 16,
         overflow: "hidden",
-        border: "1px solid #f0f0f0",
+        border: "1px solid #e6f4ff",
+        boxShadow: "0 18px 40px rgba(15,23,42,0.08)",
       }}
       bodyStyle={{ padding: 0 }}
     >
       {/* Header */}
       <div
         style={{
-          padding: "12px 16px",
-          borderBottom: "1px solid #f0f0f0",
-          background: "#fff",
+          position: "relative",
+          padding: "18px 22px",
+          borderBottom: "1px solid rgba(255,255,255,0.2)",
+          background: "linear-gradient(135deg,#031b4f 0%,#14448a 68%,#1677ff 100%)",
+          color: "#fff",
         }}
       >
-        <Flex align="center" gap={10} justify="space-between">
-          <Flex align="center" gap={10}>
-            <Badge dot={peer.online} color="green" offset={[-4, 4]}>
-              <Avatar src={applicant ? applicant?.user.photo_url : ""}></Avatar>
+        <Flex align="center" gap={16} justify="space-between">
+          <Flex align="center" gap={16}>
+            <Badge
+              dot={Boolean(peer.online || peer.typing)}
+              color={peer.typing ? "#faad14" : peer.online ? "#52c41a" : "#bfbfbf"}
+              offset={[-4, 4]}
+            >
+              <Avatar
+                src={applicant ? applicant?.user.photo_url : peer.avatarUrl}
+                size={54}
+                style={{ border: "2px solid rgba(255,255,255,0.25)" }}
+              >
+                {(applicant ? applicant.user?.name : peer.name)?.[0]}
+              </Avatar>
             </Badge>
-            <div>
-              <div style={{ fontWeight: 700 }}>
-                {applicant ? applicant?.user.name : "OSS Recruitment"}
+            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+              <div style={{ fontWeight: 700, fontSize: 18 }}>
+                {applicant ? applicant?.user.name : peer.name}
               </div>
-              <div style={{ fontSize: 12, color: token.colorTextTertiary }}>
-                {peer.typing ? "Typing" : peer.online ? "Online" : "Offline"}
+              <div
+                style={{
+                  fontSize: 13,
+                  color: "rgba(255,255,255,0.75)",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 12,
+                  flexWrap: "wrap",
+                }}
+              >
+                {applicant?.job?.name && <span>{applicant.job.name}</span>}
+                <PresenceBadge online={peer.online} typing={peer.typing} />
               </div>
             </div>
           </Flex>
+          <div style={{ textAlign: "right", fontSize: 12, opacity: 0.75 }}>
+            {applicant?.stage && (
+              <div
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  padding: "4px 12px",
+                  borderRadius: 999,
+                  background: "rgba(255,255,255,0.15)",
+                  fontWeight: 600,
+                }}
+              >
+                Tahap: {applicant.stage.replace(/_/g, " ")}
+              </div>
+            )}
+          </div>
         </Flex>
       </div>
 
@@ -398,9 +594,8 @@ const ChatWidget: React.FC<ChatWidgetProps> = ({
         style={{
           height,
           overflowY: "auto",
-          padding: "14px 16px",
-          background:
-            "linear-gradient(180deg, rgba(250,250,250,1) 0%, rgba(255,255,255,1) 100%)",
+          padding: "18px 20px 12px 20px",
+          background: "linear-gradient(180deg,#f6f8fb 0%,#fff 60%)",
         }}
         onMouseEnter={() => (autoScrollRef.current = false)}
         onMouseLeave={() => (autoScrollRef.current = true)}
@@ -426,13 +621,16 @@ const ChatWidget: React.FC<ChatWidgetProps> = ({
             Memuat…
           </Divider>
         )}
+        {peer.typing && (
+          <TypingIndicator align="left" name={peer.name} />
+        )}
       </div>
 
       {/* Composer */}
       <div
         style={{
           borderTop: "1px solid #f0f0f0",
-          padding: 12,
+          padding: 14,
           background: "#fff",
         }}
       >
@@ -444,6 +642,10 @@ const ChatWidget: React.FC<ChatWidgetProps> = ({
               beforeUpload={(file) => {
                 setFiles((f) => [...f, file]);
                 onUpload?.(file);
+                if (onTypingChange) {
+                  emitTyping(true);
+                  scheduleStopTyping();
+                }
                 return false; // jangan upload otomatis
               }}
             >
@@ -451,17 +653,36 @@ const ChatWidget: React.FC<ChatWidgetProps> = ({
             </Upload>
           )}
 
-          <div style={{ flex: 1 }}>
+          <div
+            style={{
+              flex: 1,
+              border: composerFocused
+                ? "1px solid #1677ff"
+                : "1px solid #f0f0f0",
+              borderRadius: 12,
+              padding: 6,
+              transition: "border 0.2s ease",
+            }}
+          >
             <TextArea
               autoSize={{ minRows: 1, maxRows: 5 }}
               value={text}
-              onChange={(e) => setText(e.target.value)}
+              onChange={(e) => handleTextChange(e.target.value)}
               placeholder={placeholder}
               onPressEnter={(e) => {
                 if (!e.shiftKey) {
                   e.preventDefault();
                   handleSend();
                 }
+              }}
+              onFocus={() => setComposerFocused(true)}
+              onBlur={() => setComposerFocused(false)}
+              style={{
+                border: "none",
+                boxShadow: "none",
+                background: "transparent",
+                paddingLeft: 4,
+                paddingRight: 4,
               }}
             />
             {/* Preview file sederhana */}

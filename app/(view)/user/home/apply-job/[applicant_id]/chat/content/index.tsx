@@ -6,9 +6,10 @@ import { useSocket } from "@/app/hooks/socket";
 import { ChatPayload } from "@/app/utils/socket-type";
 import { useAuth } from "@/app/utils/useAuth";
 import { useParams } from "next/navigation";
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { uploadChatFiles } from "@/app/utils/chat-upload";
 import { message } from "antd";
+import { getStageLabel } from "@/app/utils/recruitment-stage";
 
 const generateId = () =>
   typeof window !== "undefined" &&
@@ -38,6 +39,7 @@ export default function ChatPage() {
   const [isLoadingHistory, setIsLoadingHistory] = useState(false);
   const [conversationId, setConversationId] = useState<string | null>(null);
   const greetedRef = React.useRef(false);
+  const typingStateRef = useRef(false);
   const mapAttachments = (
     messageId: string,
     attachments?:
@@ -61,17 +63,7 @@ export default function ChatPage() {
 
   useEffect(() => {
     if (userDetailData?.stage && !greetedRef.current) {
-      const stageLabel =
-        (
-          {
-            SCREENING: "Screening",
-            INTERVIEW: "Interview",
-            HIRED: "HIRED",
-            NEW_APLICANT: "New Applicant",
-            REJECTED: "Rejected",
-            WAITING: "Waiting",
-          } as const
-        )[userDetailData.stage] ?? userDetailData.stage; // fallback pakai raw value
+      const stageLabel = getStageLabel(userDetailData.stage);
 
       setMessages((prev) => [
         {
@@ -195,6 +187,9 @@ export default function ChatPage() {
 
       // Kirim ACK delivered ke pengirim
       socket.emit("chat:markDelivered", { room: msg.room, ids: [msg.id] });
+      if (msg.senderId !== currentUser?.id) {
+        setPeerTyping(false);
+      }
     };
 
     const onDelivered = (ids: string[]) => {
@@ -213,6 +208,7 @@ export default function ChatPage() {
 
     const onPresence = (online: boolean) => {
       setPeerOnline(online);
+      if (!online) setPeerTyping(false);
     };
 
     const onTyping = (p: { room: string; typing: boolean }) => {
@@ -236,7 +232,7 @@ export default function ChatPage() {
       socket.off("typing:update", onTyping);
       socket.off("room:joined", onRoomJoined);
     };
-  }, [socket, roomId]);
+  }, [socket, roomId, currentUser?.id]);
 
   // --- JOIN ROOM & presence ping saat siap
   useEffect(() => {
@@ -317,20 +313,29 @@ export default function ChatPage() {
     // Status "read" untuk pesan kita akan di-update oleh event "chat:read" dari server.
   }
 
-  // --- (Opsional) Typing indicator sederhana
-  // Kamu bisa panggil ini dari event onChange textarea kalau mau (ChatWidget sekarang tidak expose onTyping).
-  const typingTimer = useRef<NodeJS.Timeout | null>(null);
-  function notifyTypingStart() {
-    if (!socket || !currentUser) return;
-    socket.emit("typing:start", roomId);
-    if (typingTimer.current) clearTimeout(typingTimer.current);
-    typingTimer.current = setTimeout(() => {
-      if (socket) {
-        socket.emit("typing:stop", roomId);
+  const handleTypingChange = useCallback(
+    (typing: boolean) => {
+      if (!socket) return;
+      if (typing && !typingStateRef.current) {
+        socket.emit("typing:start", roomId);
+        typingStateRef.current = true;
       }
-    }, 800);
-  }
-  // Contoh: panggil notifyTypingStart() di handler onChange TextArea → butuh sedikit modif di ChatWidget untuk meneruskan callback.
+      if (!typing && typingStateRef.current) {
+        socket.emit("typing:stop", roomId);
+        typingStateRef.current = false;
+      }
+    },
+    [socket, roomId]
+  );
+
+  useEffect(() => {
+    return () => {
+      if (typingStateRef.current && socket) {
+        socket.emit("typing:stop", roomId);
+        typingStateRef.current = false;
+      }
+    };
+  }, [socket, roomId]);
 
   if (!currentUser) return null;
 
@@ -340,13 +345,14 @@ export default function ChatPage() {
         currentUser={currentUser}
         peer={{
           id: "agent-1",
-          name: "Care Agent",
+          name: "OSS Recruitment",
           online: peerOnline,
           typing: peerTyping,
         }}
         messages={messages}
         onSend={handleSend}
         onMarkRead={handleMarkRead}
+        onTypingChange={handleTypingChange}
         loading={isLoadingHistory}
         // placeholder="Tulis pesan…" // opsional
       />

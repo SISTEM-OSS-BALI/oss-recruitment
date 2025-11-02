@@ -18,11 +18,10 @@ import { SearchOutlined } from "@ant-design/icons";
 import { reorderImmutable } from "@/app/utils/reoder";
 import DraggableCandidateItem from "@/app/utils/dnd-helper";
 import { useCandidate, useCandidates } from "@/app/hooks/applicant";
-import { RecruitmentStage } from "@prisma/client";
-import InterviewCandidate from "./InterviewCandidate";
 import { useRecruitment } from "../../context";
-import { useScheduleInterview } from "@/app/hooks/interview";
+import { RecruitmentStage } from "@prisma/client";
 import { ApplicantDataModel } from "@/app/models/applicant";
+import OfferingCandidate from "./OfferingCandidate";
 import {
   SUMMARY_STAGE_CONFIG,
   stageMatches,
@@ -50,20 +49,14 @@ export default function CandidatesPage() {
   const { setSummary, setSectionTitle, setSectionSubtitle, setOnUpdateStatus } =
     useRecruitment();
 
-  const [selectedScheduleId, setSelectedScheduleId] = useState<string | null>(
-    null
-  );
-
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
   const { data: candidatesData = [] } = useCandidates({});
-  const { onUpdateStatus: updateStatus } = useCandidate({id: selectedId!});
-
-  // const { onCreate: createInterview } = useScheduleInterviews();
+  const { onUpdateStatus: updateStatus } = useCandidate({ id: selectedId! });
 
   // hanya tampilkan kandidat di stage NEW_APLICANT (halaman Screening)
   const screening = useMemo(
-    () => candidatesData.filter((c) => stageMatches(c.stage, "INTERVIEW")),
+    () => candidatesData.filter((c) => stageMatches(c.stage, "OFFERING")),
     [candidatesData]
   );
 
@@ -81,15 +74,12 @@ export default function CandidatesPage() {
   // Summary (tampilan header di layout)
   const counts = useMemo<StageCounts>(() => {
     const total = candidatesData.length;
-    const detail = SUMMARY_STAGE_CONFIG.reduce(
-      (acc, item) => {
-        acc[item.key] = candidatesData.filter((c) =>
-          stageMatches(c.stage, ...item.stages)
-        ).length;
-        return acc;
-      },
-      {} as Record<SummaryStageKey, number>
-    );
+    const detail = SUMMARY_STAGE_CONFIG.reduce((acc, item) => {
+      acc[item.key] = candidatesData.filter((c) =>
+        stageMatches(c.stage, ...item.stages)
+      ).length;
+      return acc;
+    }, {} as Record<SummaryStageKey, number>);
     return { all: total, ...detail };
   }, [candidatesData]);
 
@@ -111,6 +101,10 @@ export default function CandidatesPage() {
 
   // Search, selection, pagination (berbasis list lokal)
   const [query, setQuery] = useState("");
+
+  //   const [selectedScheduleId, setSelectedScheduleId] = useState<string | null>(
+  //     null
+  //   );
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -135,6 +129,11 @@ export default function CandidatesPage() {
     [filtered, selectedId]
   );
 
+  //   const selected = useMemo(
+  //     () => filtered.find((c) => c.id === selectedId) ?? null,
+  //     [filtered, selectedId]
+  //   );
+
   // Reorder saat hover item lain
   const onHoverMove = useCallback((dragId: string, overId: string) => {
     setList((prev) => {
@@ -152,9 +151,12 @@ export default function CandidatesPage() {
       if (!targetStage) return; // "all" atau key tak dikenal → no-op
 
       try {
+        // Optimistic: hilangkan dari list lokal (karena bukan NEW_APLICANT lagi)
         setList((prev) => prev.filter((c) => c.id !== candidateId));
 
         await updateStatus({ id: candidateId, stage: targetStage });
+        console.log("Status updated:", candidateId, targetStage);
+        // invalidate sudah dilakukan oleh hook-mu → data akan fresh
         message.success("Status updated");
       } catch (e: unknown) {
         if (e instanceof Error) {
@@ -167,56 +169,8 @@ export default function CandidatesPage() {
 
     setOnUpdateStatus(() => handler);
     return () => setOnUpdateStatus(undefined);
+    // setOnUpdateStatus stabil dari context; updateStatus stabil dari react-query
   }, [setOnUpdateStatus, updateStatus]);
-
-  const {
-    listData = [],
-    listLoading,
-    // onUpdate: onUpdateInterview,
-    // refetchList,
-  } = useScheduleInterview({
-    id: selectedScheduleId ?? "",
-    applicant_id: selected?.id,
-  });
-  console.log("listData", listData);
-
-  // const handleCreateInterview = async (
-  //   values: ScheduleInterviewPayloadCreateModel
-  // ) => {
-  //   // must have a selected candidate
-  //   if (!selected?.id) {
-  //     message.error("Please select a candidate first.");
-  //     return;
-  //   }
-
-  //   // support either job.location_id or job.locationId depending on your model
-  //   const locationId =
-  //     selected.job?.location_id ?? selected.job?.location_id ?? null;
-
-  //   if (!locationId) {
-  //     message.error("This candidate's job is missing a location.");
-  //     return;
-  //   }
-
-  //   // build a strongly-typed payload
-  //   const payload: ScheduleInterviewPayloadCreateModel = {
-  //     ...values,
-  //     applicant_id: selected.id, // definitely a string now
-  //     locationId: locationId, // guaranteed string due to guard
-  //   };
-
-  //   try {
-  //     const result = await createInterview(payload);
-  //     await refetchList();
-  //     // keep selected schedule for the right-side panel if API returns id
-  //     setSelectedScheduleId(result.data?.result?.id ?? null);
-  //     message.success("Interview scheduled successfully.");
-  //   } catch (e) {
-  //     message.error(
-  //       e instanceof Error ? e.message : "Failed to create interview"
-  //     );
-  //   }
-  // };
 
   return (
     <Row gutter={[16, 16]}>
@@ -258,11 +212,11 @@ export default function CandidatesPage() {
               <DraggableCandidateItem
                 key={item.id}
                 id={item.id}
-                stage={item.stage || ""}
-                name={item.user.name || "No Name"}
+                name={item.user.name}
+                stage={item.stage}
                 image_url={item.user.photo_url || undefined}
-                email={item.user.email || ""}
-                status={item.stage || ""}
+                email={item.user.email}
+                status={item.stage ?? "all"} // tampilkan stage sekarang
                 active={item.id === selectedId}
                 onClick={() => setSelectedId(item.id)}
                 visibleIndex={(page - 1) * pageSize + idx}
@@ -292,14 +246,7 @@ export default function CandidatesPage() {
 
       {/* RIGHT */}
       <Col xs={24} md={16}>
-        <Card style={{ height: "100%" }}>
-          <InterviewCandidate
-            candidate={selected}
-            selectedScheduleId={selectedScheduleId}
-            listData={listData}
-            listLoading={listLoading}
-          />
-        </Card>
+        <OfferingCandidate candidate={selected} />
       </Col>
     </Row>
   );

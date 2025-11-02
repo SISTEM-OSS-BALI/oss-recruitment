@@ -14,9 +14,10 @@ import {
   List,
   Button,
   Tooltip,
-  Descriptions,
   Divider,
   Modal,
+  Progress,
+  Badge,
 } from "antd";
 import {
   CheckCircleTwoTone,
@@ -34,6 +35,14 @@ import ResultMBTIComponent from "./ResultMBTIComponent";
 import KTPWizard from "./UploadIdentityComponent";
 import { useUser } from "@/app/hooks/user";
 import { useOfferingContractByApplicantId } from "@/app/hooks/offering-contract";
+import Link from "next/link";
+import { useLocations } from "@/app/hooks/location";
+import { humanizeType } from "@/app/utils/humanize";
+import {
+  PROGRESS_STAGE_ORDER,
+  getStageLabel,
+  toProgressStage,
+} from "@/app/utils/recruitment-stage";
 
 const { Title, Text } = Typography;
 
@@ -49,21 +58,7 @@ type Props = {
   };
 };
 
-const stageOrder = [
-  "APPLICATION",
-  "SCREENING",
-  "INTERVIEW",
-  "HIRED",
-  "REJECTED",
-] as const;
-
-const stageLabel: Record<string, string> = {
-  APPLICATION: "Application",
-  SCREENING: "Screening",
-  INTERVIEW: "Interview",
-  HIRED: "Hired",
-  REJECTED: "Rejected",
-};
+const stageOrder = PROGRESS_STAGE_ORDER;
 
 // ---------------- Stage Config ----------------
 type ActionItem = {
@@ -81,13 +76,14 @@ type ActionItem = {
 export default function CandidateProgress({ applicant, meta }: Props) {
   const [isOpenModal, setIsOpenModal] = useState(false);
   const router = useRouter();
-  const currentStage = applicant.stage ?? "APPLICATION";
+  const currentStage = toProgressStage(applicant.stage);
   const nowStageIndex = stageOrder.findIndex((s) => s === currentStage);
   const normalizedStageIndex = nowStageIndex === -1 ? 0 : nowStageIndex;
+  const { data: locations } = useLocations({});
 
-    const { data: contractByApplicant } = useOfferingContractByApplicantId({
-      applicant_id: applicant.id || "",
-    });
+  const { data: contractByApplicant } = useOfferingContractByApplicantId({
+    applicant_id: applicant.id || "",
+  });
 
   const { onPatchDocument } = useUser({ id: applicant.user_id });
 
@@ -111,6 +107,22 @@ export default function CandidateProgress({ applicant, meta }: Props) {
 
   const handleCancelModal = () => {
     setIsOpenModal(false);
+  };
+
+  const locationHeadOffice = () => {
+    if (!Array.isArray(locations)) return null;
+
+    const headOffice = locations.find(
+      (item) => item.type === "HEAD_OFFICE"
+    );
+
+    if (!headOffice) return null;
+
+    return {
+      name: headOffice.name,
+      type: headOffice.type,
+      mapsUrl: headOffice.maps_url,
+    };
   };
 
   function getStageConfig(
@@ -188,28 +200,97 @@ export default function CandidateProgress({ applicant, meta }: Props) {
           ] as ActionItem[],
         };
 
-      case "INTERVIEW":
+      case "INTERVIEW": {
+        const interviews = [...(applicant.scheduleInterview ?? [])]
+          .filter((it) => dayjs(it.start_time ?? it.date).isValid())
+          .sort((a, b) => {
+            const aTime = dayjs(a.start_time ?? a.date).valueOf();
+            const bTime = dayjs(b.start_time ?? b.date).valueOf();
+            return aTime - bTime;
+          });
+
+        const now = Date.now();
+        const upcomingInterview =
+          interviews.find(
+            (item) => dayjs(item.start_time ?? item.date).valueOf() >= now
+          ) ?? null;
+        const latestInterview =
+          interviews.length > 0 ? interviews[interviews.length - 1] : null;
+
+        const selectedInterview = upcomingInterview ?? latestInterview ?? null;
+
+        const rawInterviewDate =
+          m.interviewDate ??
+          selectedInterview?.start_time ??
+          selectedInterview?.date ??
+          null;
+
+        const hasInterviewDate = Boolean(rawInterviewDate);
+        const hasSelectedInterview =
+          Boolean(selectedInterview) && hasInterviewDate;
+
+        const interviewStatus = hasInterviewDate
+          ? dayjs(rawInterviewDate).valueOf() < now
+            ? "Completed"
+            : "Scheduled"
+          : "Awaiting schedule";
+
+        const interviewDateDisplay = hasInterviewDate
+          ? dayjs(rawInterviewDate).format("HH:mm, MMMM D, YYYY")
+          : "-";
+
+        const scheduleLabel = hasInterviewDate
+          ? "Review or reschedule your interview"
+          : "Schedule interview with recruiter";
+
+        // —— HANYA HITUNG METHOD JIKA SUDAH ADA JADWAL ——
+        let methodValue: React.ReactNode = "-";
+        if (hasSelectedInterview) {
+          const isOnline = selectedInterview!.is_online === true;
+          if (isOnline) {
+            const link = selectedInterview!.meeting_link;
+            methodValue = link ? (
+              <Link href={link} target="_blank" rel="noreferrer">
+                Online Meeting (open link)
+              </Link>
+            ) : (
+              "Online (link pending)"
+            );
+          } else {
+            // offline — boleh fallback ke Head Office *hanya setelah ada jadwal*
+            const hq = locationHeadOffice();
+            methodValue = hq ? (
+              <Space direction="vertical" size={2}>
+                <Text strong>{hq.name} (Offline)</Text>
+                {hq.type && <Tag color="blue">{humanizeType(hq.type)}</Tag>}
+                {hq.mapsUrl && (
+                  <Link href={hq.mapsUrl} target="_blank" rel="noreferrer">
+                    View on Maps
+                  </Link>
+                )}
+              </Space>
+            ) : (
+              "Offline (location pending)"
+            );
+          }
+        }
+
         return {
           title: "Interview Stage Details",
           info: [
-            {
-              label: "STATUS",
-              value: m.interviewDate ? "Scheduled" : "Awaiting schedule",
-            },
-            {
-              label: "INTERVIEW DATE",
-              value: m.interviewDate
-                ? dayjs(m.interviewDate).format("MMMM D, YYYY • HH:mm")
-                : "-",
-            },
+            { label: "Status", value: interviewStatus },
+            { label: "Interview Date", value: interviewDateDisplay },
+            { label: "Method", value: methodValue }, // <- saat belum ada jadwal, pasti "-"
           ],
           actions: [
             {
               key: "schedule",
-              label: "Schedule interview with recruiter",
+              label: scheduleLabel,
               button: {
-                text: m.interviewDate ? "Reschedule" : "Schedule",
-                tooltip: "Pick interview time",
+                text: hasInterviewDate ? "Reschedule" : "Schedule",
+                tooltip: hasInterviewDate
+                  ? "Update interview time"
+                  : "Pick interview time",
                 onClick: () =>
                   window.open(
                     `/evaluator/schedule?applicant_id=${applicant.id}`,
@@ -226,46 +307,75 @@ export default function CandidateProgress({ applicant, meta }: Props) {
                 onClick: () => window.open("/guide/interview", "_blank"),
               },
             },
+            {
+              key: "doc",
+              label: "Upload Documents",
+              button: {
+                text: "Upload Documents",
+                // onClick: handleOpenModal,
+              },
+            },
           ] as ActionItem[],
         };
+      }
 
-      case "HIRED":
+      case "OFFERING":
+      case "HIRING":
+      case "HIRED": {
+        const isHiringStage = stage === "HIRING" || stage === "HIRED";
+        const actions: ActionItem[] = [
+          {
+            key: "offer",
+            label: "Review and sign the offer letter",
+            button: {
+              text: contractByApplicant?.filePath
+                ? "View Offer"
+                : "Offer Pending",
+              onClick: () =>
+                contractByApplicant?.filePath &&
+                window.open(contractByApplicant.filePath, "_blank"),
+              disabled: !contractByApplicant?.filePath,
+              tooltip: contractByApplicant?.filePath
+                ? "Open Offer"
+                : "No offer link",
+            },
+          },
+          {
+            key: "upload-identity",
+            label: "Upload identity document",
+            button: {
+              text: applicant.user?.no_identity_url
+                ? "Document Uploaded"
+                : "Upload Document",
+              onClick: handleOpenModal,
+              disabled: !!applicant.user?.no_identity_url,
+            },
+          },
+        ];
+
+        if (isHiringStage) {
+          actions.push({
+            key: "onboarding",
+            label: "Complete onboarding documents",
+            button: {
+              text: "Open Onboarding",
+              onClick: () => window.open("/onboarding", "_blank"),
+            },
+          });
+        }
+
         return {
-          title: "Offer & Onboarding",
+          title: isHiringStage ? "Hiring & Onboarding" : "Offer Stage",
           info: [
-            { label: "STATUS", value: "Hired" },
+            {
+              label: "STATUS",
+              value: isHiringStage ? "Hiring" : "Offer Sent",
+            },
             { label: "POSITION", value: applicant.job?.name ?? "-" },
           ],
-          actions: [
-            {
-              key: "upload-identity",
-              label: "Upload identity document",
-              button: {
-                text: applicant.user?.no_identity_url ? "Document Uploaded" : "Upload Document",
-                onClick: handleOpenModal,
-                disabled: !!applicant.user?.no_identity_url,
-              },
-            },
-            {
-              key: "offer",
-              label: "Review and sign the offer letter",
-              button: {
-                text: "View Offer",
-                onClick: () => contractByApplicant?.filePath && window.open(contractByApplicant.filePath, "_blank"),
-                disabled: !contractByApplicant?.filePath,
-                tooltip: contractByApplicant?.filePath ? "Open Offer" : "No offer link",
-              },
-            },
-            {
-              key: "onboarding",
-              label: "Complete onboarding documents",
-              button: {
-                text: "Open Onboarding",
-                onClick: () => window.open("/onboarding", "_blank"),
-              },
-            },
-          ] as ActionItem[],
+          actions,
         };
+      }
 
       case "REJECTED":
         return {
@@ -305,211 +415,378 @@ export default function CandidateProgress({ applicant, meta }: Props) {
 
   const cfg = getStageConfig(currentStage, applicant, router, meta);
 
+  const progressTotal =
+    currentStage === "REJECTED"
+      ? stageOrder.length
+      : Math.max(stageOrder.length - 1, 1);
+  const progressPosition = Math.min(normalizedStageIndex + 1, progressTotal);
+  const stageProgressPercent = Math.round(
+    (progressPosition / progressTotal) * 100
+  );
+  const nextStageKey =
+    normalizedStageIndex < stageOrder.length - 1
+      ? stageOrder[normalizedStageIndex + 1]
+      : null;
+  const nextStageLabel =
+    nextStageKey != null
+      ? getStageLabel(nextStageKey)
+      : currentStage === "REJECTED"
+      ? "Process Closed"
+      : "Journey Complete";
+  const statusInfo = cfg.info.find(
+    (item) => item.label?.toUpperCase?.() === "STATUS"
+  );
+const statusValue =
+  typeof statusInfo?.value === "string"
+    ? statusInfo.value
+    : getStageLabel(currentStage);
+  const primaryAction = cfg.actions[0];
+  const summaryMetrics = [
+    {
+      key: "submitted",
+      label: "Submitted",
+      value: dayjs(applicant.createdAt).format("MMM D, YYYY"),
+      caption: "Application received",
+    },
+    {
+      key: "status",
+      label: "Status",
+      value: statusValue,
+      caption: `Current stage • ${getStageLabel(currentStage)}`,
+    },
+    {
+      key: "next",
+      label: nextStageKey ? "Next Milestone" : "Pipeline Status",
+      value: nextStageLabel,
+      caption: primaryAction?.label || "No outstanding actions",
+    },
+  ];
+
+  const stepsItems = stageOrder.map((stageKey, index) => {
+    const isCompleted = normalizedStageIndex > index;
+    const isCurrent = normalizedStageIndex === index;
+    const status = isCompleted ? "finish" : isCurrent ? "process" : "wait";
+    let descriptor: string;
+    if (isCompleted) {
+      descriptor = "Completed";
+    } else if (isCurrent) {
+      descriptor = stageKey === "REJECTED" ? "Closed" : "In progress";
+    } else {
+      descriptor = stageKey === "REJECTED" ? "N/A" : "Pending";
+    }
+
+    return {
+      title: getStageLabel(stageKey),
+      description: descriptor,
+      icon:
+        stageKey === "APPLICATION"
+          ? <FileTextOutlined />
+          : stageKey === "SCREENING"
+          ? <SearchOutlined />
+          : stageKey === "INTERVIEW"
+          ? <MessageOutlined />
+          : stageKey === "OFFERING"
+          ? <FileDoneOutlined />
+          : stageKey === "HIRING"
+          ? <LaptopOutlined />
+          : <CloseCircleOutlined />,
+      status,
+    };
+  });
+
   return (
-    <Space direction="vertical" size={16} style={{ display: "flex" }}>
-      {/* Title */}
-      <Space align="center" size={8}>
-        <Title level={2} style={{ margin: 0 }}>
-          Apply Job Progress Tracking
-        </Title>
-      </Space>
-      <Text type="secondary">
-        Monitor candidate journey through recruitment stages
-      </Text>
-
-      {/* Header */}
-      <Card style={{ borderRadius: 16 }} bodyStyle={{ padding: 20 }}>
-        <Row align="middle" gutter={[16, 16]} justify="space-between">
-          <Col flex="auto">
-            <Space align="center" size={16}>
-              <Avatar
-                size={56}
-                src={applicant.user?.photo_url || undefined}
-                style={{ background: "#7C4DFF" }}
-              >
-                {initials}
-              </Avatar>
-              <Space direction="vertical" size={0}>
-                <Title level={4} style={{ margin: 0 }}>
-                  {applicant.job?.name || "Candidate"}
-                </Title>
-                <Text type="secondary">
-                  {applicant.user?.name ? `${applicant.user.name}` : "—"} •
-                  Application ID:{" "}
-                  <b>#{applicant.id.toUpperCase().slice(0, 8)}</b>
-                </Text>
-              </Space>
-            </Space>
-          </Col>
-          <Col>
-            <Space>
-              <Button
-                size="large"
-                onClick={() =>
-                  router.push(`/user/home/apply-job/${applicant.id}/chat`)
-                }
-              >
-                <Tooltip title="Chat">
-                  <MessageOutlined />
-                </Tooltip>
-              </Button>
-              <Tag
-                color="green"
-                style={{ padding: "6px 12px", fontWeight: 600 }}
-              >
-                Current Stage:{" "}
-                {stageLabel[currentStage] ?? stageLabel.APPLICATION}
-              </Tag>
-            </Space>
-          </Col>
-        </Row>
-      </Card>
-
-      {/* Steps */}
-      <Card style={{ borderRadius: 16 }} bodyStyle={{ padding: 20 }}>
-        <Steps
-          current={normalizedStageIndex}
-          responsive
-          items={[
-            {
-              title: "Application",
-              description: dayjs(applicant.createdAt).format("MMM DD, YYYY"),
-              icon: <CheckCircleTwoTone twoToneColor="#52c41a" />,
-              status: normalizedStageIndex >= 0 ? "finish" : "wait",
-            },
-            {
-              title: "Screening",
-              description:
-                normalizedStageIndex === 1
-                  ? "In Progress"
-                  : normalizedStageIndex > 1
-                  ? "Done"
-                  : "Pending",
-              icon: <SearchOutlined />,
-              status:
-                normalizedStageIndex >= 1
-                  ? normalizedStageIndex === 1
-                    ? "process"
-                    : "finish"
-                  : "wait",
-            },
-            {
-              title: "Interview",
-              description:
-                normalizedStageIndex >= 2
-                  ? normalizedStageIndex === 2
-                    ? "In Progress"
-                    : "Done"
-                  : "Pending",
-              icon: <MessageOutlined />,
-              status:
-                normalizedStageIndex >= 2
-                  ? normalizedStageIndex === 2
-                    ? "process"
-                    : "finish"
-                  : "wait",
-            },
-            {
-              title: "Hired",
-              description:
-                normalizedStageIndex === 3 ? "In Progress" : "Pending",
-              icon: <LaptopOutlined />,
-              status: normalizedStageIndex >= 3 ? "process" : "wait",
-            },
-            {
-              title: "Rejected",
-              description:
-                normalizedStageIndex === 4 ? "In Progress" : "Pending",
-              icon: <CloseCircleOutlined />,
-              status: normalizedStageIndex >= 4 ? "process" : "wait",
-            },
-          ]}
-        />
-      </Card>
-
-      {/* Stage info */}
-      <Card
-        title={
-          <Space>
-            <FileTextOutlined />
-            <span>{cfg.title}</span>
-          </Space>
-        }
-        style={{ borderRadius: 16 }}
-        bodyStyle={{ paddingTop: 8 }}
+    <div
+      style={{
+        padding: "48px clamp(16px, 5vw, 72px)",
+      }}
+    >
+      <div
+        style={{
+          margin: "0 auto",
+        }}
       >
-        {cfg.info.length > 0 && (
-          <>
-            <Descriptions bordered size="middle" column={1}>
-              {cfg.info.map((i) => (
-                <Descriptions.Item key={i.label} label={i.label}>
-                  {i.value}
-                </Descriptions.Item>
-              ))}
-            </Descriptions>
-            <Divider />
-          </>
+        <Space direction="vertical" size={24} style={{ display: "flex" }}>
+          <Card
+            bordered={false}
+          style={{
+            borderRadius: 24,
+            background:
+              "linear-gradient(130deg, rgba(44,62,180,1) 0%, rgba(100,71,229,1) 55%, rgba(137,107,255,1) 100%)",
+            color: "#fff",
+            boxShadow: "0 24px 60px rgba(60,51,153,0.35)",
+          }}
+          bodyStyle={{ padding: 32 }}
+        >
+          <Row gutter={[24, 24]} align="middle" justify="space-between">
+            <Col flex="auto">
+              <Space direction="vertical" size={18}>
+                <Badge
+                  status="processing"
+                  text={
+                    <span style={{ color: "rgba(255,255,255,0.8)" }}>
+                      Apply Job Progress Tracking
+                    </span>
+                  }
+                />
+                <Space align="center" size={20}>
+                  <Avatar
+                    size={72}
+                    src={applicant.user?.photo_url || undefined}
+                    style={{
+                      background: "rgba(255,255,255,0.25)",
+                      color: "#fff",
+                      fontSize: 28,
+                      fontWeight: 600,
+                      border: "2px solid rgba(255,255,255,0.35)",
+                    }}
+                  >
+                    {initials}
+                  </Avatar>
+                  <Space direction="vertical" size={4}>
+                    <Title level={3} style={{ margin: 0, color: "#fff" }}>
+                      {applicant.user?.name || "Candidate"} ·{" "}
+                      {applicant.job?.name || "—"}
+                    </Title>
+                    <Text style={{ color: "rgba(255,255,255,0.75)" }}>
+                      Application ID: #{applicant.id.toUpperCase().slice(0, 8)}
+                    </Text>
+                    <Tag
+                      color="success"
+                      style={{
+                        borderRadius: 999,
+                        padding: "2px 12px",
+                        width: "fit-content",
+                      }}
+                    >
+                      Current Stage — {getStageLabel(currentStage)}
+                    </Tag>
+                  </Space>
+                </Space>
+              </Space>
+            </Col>
+            <Col>
+              <Space direction="vertical" align="center">
+                <Progress
+                  type="circle"
+                  percent={stageProgressPercent}
+                  size={120}
+                  strokeColor="#ffce73"
+                  trailColor="rgba(255,255,255,0.25)"
+                  format={(percent) => (
+                    <span style={{ color: "#fff", fontWeight: 600 }}>
+                      {percent}%
+                    </span>
+                  )}
+                />
+                <Button
+                  size="large"
+                  style={{
+                    background: "#ffce73",
+                    borderColor: "#ffce73",
+                    color: "#1e2b5c",
+                    fontWeight: 600,
+                    boxShadow: "0 12px 24px rgba(255,206,115,0.35)",
+                  }}
+                  onClick={() =>
+                    router.push(`/user/home/apply-job/${applicant.id}/chat`)
+                  }
+                  icon={<MessageOutlined />}
+                >
+                  Contact Recruiter
+                </Button>
+              </Space>
+            </Col>
+          </Row>
+        </Card>
+
+        <Row gutter={[20, 20]}>
+          {summaryMetrics.map((metric) => (
+            <Col xs={24} md={8} key={metric.key}>
+              <Card
+                bordered={false}
+                style={{
+                  borderRadius: 18,
+                  background: "#ffffff",
+                  boxShadow: "0 16px 40px rgba(15, 23, 42, 0.08)",
+                  height: "100%",
+                }}
+                bodyStyle={{ padding: 20, height: "100%" }}
+              >
+                <Space direction="vertical" size={8} style={{ display: "flex" }}>
+                  <Text
+                    type="secondary"
+                    style={{
+                      textTransform: "uppercase",
+                      letterSpacing: 0.6,
+                      fontSize: 12,
+                    }}
+                  >
+                    {metric.label}
+                  </Text>
+                  <Title level={4} style={{ margin: 0 }}>
+                    {metric.value}
+                  </Title>
+                  <Text type="secondary">{metric.caption}</Text>
+                </Space>
+              </Card>
+            </Col>
+          ))}
+        </Row>
+
+        <Card
+          bordered={false}
+          style={{
+            borderRadius: 20,
+            background: "#ffffff",
+            boxShadow: "0 20px 56px rgba(15,23,42,0.12)",
+          }}
+          title={
+            <Space align="center">
+              <CheckCircleTwoTone twoToneColor="#52c41a" />
+              <span>Pipeline Timeline</span>
+            </Space>
+          }
+          bodyStyle={{ paddingTop: 12 }}
+        >
+          <Steps current={normalizedStageIndex} responsive items={stepsItems} />
+        </Card>
+
+        <Card
+          bordered={false}
+          style={{
+            borderRadius: 20,
+            background: "#ffffff",
+            boxShadow: "0 20px 56px rgba(15,23,42,0.1)",
+          }}
+          title={
+            <Space align="center">
+              <FileTextOutlined />
+              <span>{cfg.title}</span>
+            </Space>
+          }
+          bodyStyle={{ paddingTop: 16 }}
+        >
+          {cfg.info.length > 0 && (
+            <>
+              <Space
+                direction="vertical"
+                size={12}
+                style={{ width: "100%" }}
+              >
+                {cfg.info.map((info) => (
+                  <div
+                    key={info.label}
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      gap: 16,
+                      padding: "12px 16px",
+                      background: "#f5f7ff",
+                      borderRadius: 14,
+                    }}
+                  >
+                    <Text
+                      type="secondary"
+                      style={{ fontSize: 12, textTransform: "uppercase" }}
+                    >
+                      {info.label}
+                    </Text>
+                    <div style={{ textAlign: "right" }}>
+                      {typeof info.value === "string" ? (
+                        <Text strong>{info.value}</Text>
+                      ) : (
+                        info.value
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </Space>
+              <Divider />
+            </>
+          )}
+
+          <Title level={5} style={{ marginBottom: 12 }}>
+            Required Actions
+          </Title>
+          {cfg.actions.length > 0 ? (
+            <List
+              split={false}
+              dataSource={cfg.actions}
+              renderItem={(act) => (
+                <List.Item
+                  key={act.key}
+                  style={{
+                    padding: "12px 16px",
+                    background: "#f9fafc",
+                    borderRadius: 14,
+                    marginBottom: 12,
+                  }}
+                  actions={
+                    act.button
+                      ? [
+                          <Tooltip
+                            key={`${act.key}-tt`}
+                            title={act.button.tooltip || act.button.text}
+                          >
+                            <Button
+                              type="primary"
+                              disabled={act.button.disabled}
+                              onClick={act.button.onClick}
+                              icon={
+                                act.key === "schedule" ? (
+                                  <CalendarOutlined />
+                                ) : act.key === "offer" ? (
+                                  <FileDoneOutlined />
+                                ) : undefined
+                              }
+                            >
+                              {act.button.text}
+                            </Button>
+                          </Tooltip>,
+                        ]
+                      : undefined
+                  }
+                >
+                  <List.Item.Meta
+                    title={
+                      <Text strong style={{ fontSize: 14 }}>
+                        {act.label}
+                      </Text>
+                    }
+                  />
+                </List.Item>
+              )}
+            />
+          ) : (
+            <Text type="secondary">No outstanding actions at this stage.</Text>
+          )}
+        </Card>
+
+        {currentStage === "SCREENING" && applicant.mbti_test?.result && (
+          <Card
+            bordered={false}
+            style={{
+              borderRadius: 20,
+              background: "#ffffff",
+              boxShadow: "0 20px 56px rgba(15,23,42,0.1)",
+            }}
+          >
+            <ResultMBTIComponent result={applicant.mbti_test.result} />
+          </Card>
         )}
 
-        <Title level={5} style={{ marginTop: 0 }}>
-          Required Actions
-        </Title>
-        <List
-          size="small"
-          dataSource={cfg.actions}
-          renderItem={(act) => (
-            <List.Item
-              key={act.key}
-              actions={
-                act.button
-                  ? [
-                      <Tooltip
-                        key={`${act.key}-tt`}
-                        title={act.button.tooltip || act.button.text}
-                      >
-                        <Button
-                          type="primary"
-                          disabled={act.button.disabled}
-                          onClick={act.button.onClick}
-                          icon={
-                            act.key === "schedule" ? (
-                              <CalendarOutlined />
-                            ) : act.key === "offer" ? (
-                              <FileDoneOutlined />
-                            ) : undefined
-                          }
-                        >
-                          {act.button.text}
-                        </Button>
-                      </Tooltip>,
-                    ]
-                  : undefined
-              }
-              style={{ paddingLeft: 0 }}
-            >
-              <span>• {act.label}</span>
-            </List.Item>
-          )}
-        />
-      </Card>
-
-      {/* Hanya tampilkan hasil MBTI di SCREENING bila sudah ada */}
-      {currentStage === "SCREENING" && applicant.mbti_test?.result && (
-        <Card style={{ borderRadius: 16 }}>
-          <ResultMBTIComponent result={applicant.mbti_test.result} />
-        </Card>
-      )}
-
-      <Modal
-        open={isOpenModal}
-        onCancel={handleCancelModal}
-        onOk={handleCancelModal}
-        title="Upload Identity Document"
-        width={1000}
-        footer={null}
-      >
-        <KTPWizard onPatchDocument={handlePatchDocument} />
-      </Modal>
-    </Space>
+          <Modal
+            open={isOpenModal}
+            onCancel={handleCancelModal}
+            onOk={handleCancelModal}
+            title="Upload Identity Document"
+            width={1000}
+            footer={null}
+          >
+            <KTPWizard onPatchDocument={handlePatchDocument} />
+          </Modal>
+        </Space>
+      </div>
+    </div>
   );
 }

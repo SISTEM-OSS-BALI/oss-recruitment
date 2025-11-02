@@ -23,23 +23,32 @@ import CandidateOverview from "./CandidateOverview";
 import { useRecruitment } from "../../context";
 import { RecruitmentStage } from "@prisma/client";
 import { useMbtiTests } from "@/app/hooks/mbti-test";
-
+import {
+  SUMMARY_STAGE_CONFIG,
+  stageMatches,
+  toRecruitmentStage,
+} from "@/app/utils/recruitment-stage";
+import type { SummaryStageKey } from "@/app/utils/recruitment-stage";
 
 const { Title, Text } = Typography;
 
 interface Payload {
-  user_id: string,
-  applicant_id: string
+  user_id: string;
+  applicant_id: string;
 }
+
+type StageCounts = Record<SummaryStageKey, number> & { all: number };
 
 // Summary key -> Enum stage backend
 const STAGE_MAP: Record<string, RecruitmentStage | undefined> = {
-  new_aplicant: RecruitmentStage.NEW_APLICANT,
-  screening: RecruitmentStage.SCREENING,
-  interview: RecruitmentStage.INTERVIEW,
-  hired: RecruitmentStage.HIRED,
-  rejected: RecruitmentStage.REJECTED,
-  waiting: RecruitmentStage.WAITING,
+  new_aplicant: toRecruitmentStage("NEW_APLICANT"),
+  screening: toRecruitmentStage("SCREENING"),
+  interview: toRecruitmentStage("INTERVIEW"),
+  offering: toRecruitmentStage("OFFERING"),
+  hired: toRecruitmentStage("HIRING"),
+  hiring: toRecruitmentStage("HIRING"),
+  rejected: toRecruitmentStage("REJECTED"),
+  waiting: toRecruitmentStage("WAITING"),
 };
 
 export default function CandidatesPage() {
@@ -47,7 +56,8 @@ export default function CandidatesPage() {
     useRecruitment();
     const [selectedId, setSelectedId] = useState<string | null>(null);
 
-  const { onCreate: onCreateTestMbti } = useMbtiTests({});
+  const { onCreate: onCreateTestMbti, onCreateLoading: onCreateMbtiLoading } =
+    useMbtiTests({});
 
   const { data: candidatesData = [] } = useCandidates({});
   const { onUpdateStatus: updateStatus } = useCandidate({id: selectedId!});
@@ -69,19 +79,18 @@ export default function CandidatesPage() {
   }, [screening]);
 
   // Summary (tampilan header di layout)
-  const counts = useMemo(() => {
+  const counts = useMemo<StageCounts>(() => {
     const total = candidatesData.length;
-    const by = (st: string) =>
-      candidatesData.filter((c) => c.stage?.toLowerCase() === st.toLowerCase())
-        .length;
-    return {
-      all: total,
-      screening: by("Screening"),
-      interview: by("Interview"),
-      hired: by("Hired"),
-      rejected: by("Rejected"),
-      waiting: by("Waiting"),
-    };
+    const detail = SUMMARY_STAGE_CONFIG.reduce(
+      (acc, item) => {
+        acc[item.key] = candidatesData.filter((c) =>
+          stageMatches(c.stage, ...item.stages)
+        ).length;
+        return acc;
+      },
+      {} as Record<SummaryStageKey, number>
+    );
+    return { all: total, ...detail };
   }, [candidatesData]);
 
   useEffect(() => {
@@ -91,11 +100,11 @@ export default function CandidatesPage() {
     );
     setSummary([
       { key: "all", label: "Total Applicants", count: counts.all },
-      { key: "screening", label: "Screening", count: counts.screening },
-      { key: "interview", label: "Interview", count: counts.interview },
-      { key: "hired", label: "Hired", count: counts.hired },
-      { key: "rejected", label: "Rejected", count: counts.rejected },
-      { key: "waiting", label: "Waiting", count: counts.waiting },
+      ...SUMMARY_STAGE_CONFIG.map((item) => ({
+        key: item.key,
+        label: item.label,
+        count: counts[item.key],
+      })),
     ]);
     // hanya bergantung pada counts object
   }, [counts, setSummary, setSectionTitle, setSectionSubtitle]);
@@ -104,12 +113,21 @@ export default function CandidatesPage() {
   const [query, setQuery] = useState("");
 
   const handleCreateTestMbti = async () => {
-    const payload : Payload = {
-      user_id: selected?.user_id ?? "",
-      applicant_id : selectedId ?? ""
-    };
-    await onCreateTestMbti(payload);
+    if (!selected || !selectedId) {
+      message.warning("Please select a candidate first.");
+      return;
+    }
 
+    const payload: Payload = {
+      user_id: selected.user_id,
+      applicant_id: selectedId,
+    };
+
+    try {
+      await onCreateTestMbti(payload);
+    } catch (error) {
+      // notification already handled inside the hook
+    }
   };
 
   const filtered = useMemo(() => {
@@ -250,6 +268,7 @@ export default function CandidatesPage() {
           <CandidateOverview
             candidate={selected}
             onCreateMbtiTest={handleCreateTestMbti}
+            isCreatingMbtiTest={onCreateMbtiLoading}
           />
         </Card>
       </Col>

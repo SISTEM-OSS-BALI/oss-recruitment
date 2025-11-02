@@ -1,5 +1,9 @@
-import { GET_APPLICANT, UPDATE_STATUS_CANDIDATE } from "@/app/providers/applicant";
+import {
+  GET_APPLICANT,
+  UPDATE_STATUS_CANDIDATE,
+} from "@/app/providers/applicant";
 import { CREATE_HISTORY_CANDIDATE } from "@/app/providers/history-candidate";
+import { toRecruitmentStage } from "@/app/utils/recruitment-stage";
 import { NextRequest, NextResponse } from "next/server";
 
 export const GET = async (
@@ -36,7 +40,9 @@ export const PATCH = async (
   try {
     const id = params.id;
     const body = await req.json();
-    const stage = body.stage;
+    // Normalize stage string to a valid RecruitmentStage enum value
+    const stageRaw = body.stage as string | undefined;
+    const stage = toRecruitmentStage(stageRaw ?? "");
 
     const data = await UPDATE_STATUS_CANDIDATE(id, stage);
 

@@ -40,6 +40,7 @@ import {
   useEvaluatorAssignment,
   useEvaluatorAssignments,
 } from "@/app/hooks/evaluatorAssignment";
+import Link from "next/link";
 
 const { Title, Text } = Typography;
 
@@ -303,9 +304,20 @@ export default function ScheduleTimeline({
                 <Text
                   style={{ display: "block", marginTop: 8, color: "#556070" }}
                 >
-                  {isOnline
-                    ? "Online interview via meeting link."
-                    : "Face-to-face interview at the company location"}
+                  {isOnline ? (
+                    <span>
+                      Online interview{" "}
+                      <Link
+                        href={item.meeting_link || "#"}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        {item.meeting_link}.
+                      </Link>
+                    </span>
+                  ) : (
+                    <span>Face-to-face interview at the company location</span>
+                  )}
                 </Text>
                 <Space size={10} style={{ marginTop: 14 }}>
                   <Text strong style={{ fontSize: 18, color: accent }}>

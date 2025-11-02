@@ -10,16 +10,25 @@ import CandidateInfoPanel from "@/app/components/common/information-panel";
 import { PDFViewer } from "@/app/utils/pdf-viewer";
 import AnswerScreening from "./AnswerScreening";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faBrain, faFilePdf, faFolderOpen, faListCheck } from "@fortawesome/free-solid-svg-icons";
+import {
+  faBrain,
+  faFilePdf,
+  faFolderOpen,
+  faListCheck,
+} from "@fortawesome/free-solid-svg-icons";
+import MBTITestComponent from "./MBTITest";
+import DISCTest from "./DSICTest";
 dayjs.extend(utc);
 dayjs.extend(timezone);
 
 export default function CandidateOverview({
   candidate,
   onCreateMbtiTest,
+  isCreatingMbtiTest = false,
 }: {
   candidate: ApplicantDataModel | null;
   onCreateMbtiTest: () => void;
+  isCreatingMbtiTest?: boolean;
 }) {
   const tabs = useMemo(
     () => [
@@ -62,15 +71,38 @@ export default function CandidateOverview({
           </Space>
         ),
         children: (
-          <PDFViewer src={candidate?.mbti_test?.link_url || undefined} />
+          <MBTITestComponent
+            stage={candidate?.stage ?? null}
+            mbtiTest={candidate?.mbti_test ?? null}
+            onCreateMbtiTest={onCreateMbtiTest}
+            isCreating={isCreatingMbtiTest}
+          />
         ),
+      },
+      {
+        key: "dsic",
+        label: (
+          <Space>
+            <FontAwesomeIcon icon={faBrain} />
+            DISC Test
+          </Space>
+        ),
+        children: <DISCTest></DISCTest>,
       },
     ],
     [
       candidate?.id,
       candidate?.user?.curiculum_vitae_url,
       candidate?.user?.portfolio_url,
+      candidate?.mbti_test,
       candidate?.mbti_test?.link_url,
+      candidate?.mbti_test?.id,
+      candidate?.mbti_test?.is_complete,
+      candidate?.mbti_test?.createdAt,
+      candidate?.mbti_test?.updatedAt,
+      candidate?.stage,
+      onCreateMbtiTest,
+      isCreatingMbtiTest,
     ]
   );
 
@@ -104,7 +136,6 @@ export default function CandidateOverview({
           appliedAt={candidate?.createdAt}
           updatedAt={candidate?.updatedAt}
           link_test_mbti={candidate.mbti_test?.link_url}
-          onCreateMbtiTest={onCreateMbtiTest}
           stage={candidate.stage}
         />
       </Col>

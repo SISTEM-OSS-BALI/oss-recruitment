@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { Card, Typography, Space, Divider, Button, Tag } from "antd";
+import { Card, Typography, Space, Divider, Tag } from "antd";
 import {
   MailOutlined,
   PhoneOutlined,
@@ -28,7 +28,6 @@ type LeftPanelProps = {
   updatedAt?: string | Date | null;
   cvUrl?: string | null;
   portfolioUrl?: string | null;
-  onCreateMbtiTest?: () => void;
 };
 
 function RowItem({
@@ -81,7 +80,6 @@ export default function CandidateInfoPanel({
   updatedAt,
   cvUrl,
   portfolioUrl,
-  onCreateMbtiTest,
   link_test_mbti,
   stage,
 }: LeftPanelProps) {
@@ -191,19 +189,11 @@ export default function CandidateInfoPanel({
           )}
         </Space>
       </div>
-      {stage === "SCREENING" && (
-        <>
-          {link_test_mbti ? (
-            <div style={{ padding: "16px 20px 20px" }}>
-              <Tag color="green">Done Create Test MBTI</Tag>
-            </div>
-          ) : (
-            <div style={{ padding: "16px 20px 20px" }}>
-              <Button onClick={onCreateMbtiTest}>Create MBTI Test</Button>
-            </div>
-          )}
-        </>
-      )}
+      {stage === "SCREENING" && link_test_mbti ? (
+        <div style={{ padding: "16px 20px 20px" }}>
+          <Tag color="green">MBTI test link created</Tag>
+        </div>
+      ) : null}
     </Card>
   );
 }

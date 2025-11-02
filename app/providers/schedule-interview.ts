@@ -3,6 +3,7 @@ import dayjs, { Dayjs } from "dayjs";
 import db from "@/lib/prisma";
 import { sendRecruitmentEmail } from "../utils/send-email";
 import { sendWhatsAppMessage } from "../utils/send-message-helper";
+import { createZoomMeeting } from "../utils/meeting-helper";
 
 /* =========================
    Types
@@ -14,7 +15,6 @@ type RawPayload = {
   start_time: Dayjs | string | Date; // jam mulai (nempel ke date)
   is_online: boolean; // sesuai schema
   note?: string | null; // opsional (aktifkan di DB kalau mau simpan)
-  meeting_link?: string | null; // wajib bila is_online = true
 };
 
 type CreateData = {
@@ -47,18 +47,13 @@ function normalizePayload(input: RawPayload): CreateData {
     .millisecond(0);
 
   const is_online = Boolean(input.is_online);
-  const link = (input.meeting_link ?? "").trim();
-  if (is_online && !link) {
-    throw new Error("Meeting link is required for an online interview.");
-  }
-
   return {
     applicant_id: String(input.applicant_id),
     schedule_id: String(input.schedule_id),
     date: dateOnly.toDate(),
     start_time: startAt.toDate(),
     is_online,
-    meeting_link: is_online ? link : null,
+    meeting_link: null,
   };
 }
 
@@ -108,6 +103,19 @@ export const CREATE_SCHEDULE_INTERVIEW = async (payload: RawPayload) => {
     start_time: data.start_time,
   });
 
+  const username = await db.user.findFirst({
+    where: { Applicant: { some: { id: data.applicant_id } } },
+    select: { name: true },
+  });
+
+  if (data.is_online) {
+    const meetingLink = await createZoomMeeting(
+      `Interview Meeting ${username?.name ?? "Candidate"}`,
+      dayjs(data.start_time).toDate()
+    );
+    data.meeting_link = meetingLink;
+  }
+
   const result = await db.scheduleInterview.create({
     data: {
       applicant: { connect: { id: data.applicant_id } },
@@ -115,7 +123,8 @@ export const CREATE_SCHEDULE_INTERVIEW = async (payload: RawPayload) => {
       date: data.date,
       start_time: data.start_time,
       is_online: data.is_online,
-      meeting_link: data.meeting_link,
+      meeting_link: data.meeting_link || null,
+
       // note: data.note, // aktifkan kalau kamu tambahkan kolom di schema
     },
     include: {

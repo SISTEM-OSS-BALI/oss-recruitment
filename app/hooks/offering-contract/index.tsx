@@ -3,13 +3,18 @@ import axios from "axios";
 
 import MainNotification from "../../components/common/notifications";
 
-import { OfferingContractDataModel, OfferingContractPayloadCreateModel, OfferingContractPayloadUpdateModel } from "@/app/models/offering-contract";
+import {
+  OfferingContractDataModel,
+  OfferingContractPayloadCreateModel,
+  OfferingContractPayloadUpdateModel,
+} from "@/app/models/offering-contract";
 
 const baseUrl = "/api/admin/dashboard/offering-contract";
 const entity = "offering-contract";
 const queryKey = "offering-contracts";
 
-export const useOfferingContracts = ({ queryString }: { queryString?: string }) => {
+export const useOfferingContracts = (params?: { queryString?: string }) => {
+  const queryString = params?.queryString;
   const queryClient = useQueryClient();
 
   const { data, isLoading: fetchLoading } = useQuery({
@@ -94,8 +99,11 @@ export const useJob = ({ id }: { id: string }) => {
   };
 };
 
-
-export const useOfferingContractByApplicantId = ({ applicant_id }: { applicant_id: string }) => {
+export const useOfferingContractByApplicantId = ({
+  applicant_id,
+}: {
+  applicant_id: string;
+}) => {
   // Query data berdasarkan ID
   const { data, isLoading: fetchLoading } = useQuery({
     queryKey: [entity, applicant_id],
@@ -110,4 +118,4 @@ export const useOfferingContractByApplicantId = ({ applicant_id }: { applicant_i
     data,
     fetchLoading,
   };
-}
+};

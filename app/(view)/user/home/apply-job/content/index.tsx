@@ -21,22 +21,33 @@ import {
 import Loading from "@/app/components/common/custom-loading";
 import { useCandidateByUserId } from "@/app/hooks/applicant";
 import { useAuth } from "@/app/utils/useAuth";
+import {
+  PROGRESS_STAGE_ORDER,
+  getStageLabel,
+  toProgressStage,
+} from "@/app/utils/recruitment-stage";
 
 dayjs.extend(relativeTime);
 
 const { Title, Text } = Typography;
 
-const STAGES = ["APPLICATION", "SCREENING", "INTERVIEW", "HIRED"] as const;
+const STAGES = PROGRESS_STAGE_ORDER;
 
 function stageIndex(stage?: string) {
-  const idx = STAGES.findIndex((s) => s === stage);
+  const progressStage = toProgressStage(stage);
+  const idx = STAGES.findIndex((s) => s === progressStage);
   return idx >= 0 ? idx : 0;
 }
 
 function stagePercent(stage?: string) {
+  const progressStage = toProgressStage(stage);
   const idx = stageIndex(stage);
-  const total = STAGES.length - 1; // 0..3
-  return Math.round((idx / total) * 100);
+  const total =
+    progressStage === "REJECTED"
+      ? STAGES.length
+      : Math.max(STAGES.length - 1, 1);
+  const position = Math.min(idx + 1, total);
+  return Math.round((position / total) * 100);
 }
 
 export default function Content() {
@@ -80,6 +91,16 @@ export default function Content() {
           const created = app?.createdAt ? dayjs(app.createdAt) : null;
           const since = created ? dayjs().to(created) : "—";
           const pct = stagePercent(app?.stage ?? "");
+          const progressStage = toProgressStage(app?.stage);
+          const stageLabelText = getStageLabel(progressStage);
+          const stageDisplayCount =
+            progressStage === "REJECTED"
+              ? STAGES.length
+              : Math.max(STAGES.length - 1, 1);
+          const stageDisplayNumber = Math.min(
+            stageIndex(progressStage) + 1,
+            stageDisplayCount
+          );
 
           return (
             <Col xs={24} key={app.id}>
@@ -163,7 +184,7 @@ export default function Content() {
                           color: "#E53935",
                         }}
                       >
-                        {app?.stage || "APPLICATION"}
+                        {stageLabelText}
                       </Tag>
                     </Col>
 
@@ -176,7 +197,7 @@ export default function Content() {
                         }}
                       >
                         <Text type="secondary" style={{ whiteSpace: "nowrap" }}>
-                          Stage {stageIndex(app?.stage ?? "") + 1} of {STAGES.length}
+                          Stage {stageDisplayNumber} of {stageDisplayCount}
                         </Text>
                         <div style={{ flex: 1 }}>
                           <Progress

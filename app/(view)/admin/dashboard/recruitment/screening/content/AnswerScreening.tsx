@@ -160,7 +160,7 @@ export default function AnswerScreening({
 }: {
   applicantId: string;
 }) {
-  const { data, isLoading, error } = useAnswerQuestionScreeningByApplicantId({
+  const { data, fetchLoading} = useAnswerQuestionScreeningByApplicantId({
     applicantId,
   });
 
@@ -295,14 +295,14 @@ export default function AnswerScreening({
       headStyle={{ borderBottom: "none" }}
       style={{ borderRadius: 14 }}
     >
-      {error ? (
+      {!data ? (
         <Alert
           type="error"
           message="Gagal memuat jawaban"
           description="Terjadi kesalahan saat mengambil data screening."
           showIcon
         />
-      ) : isLoading ? (
+      ) : fetchLoading ? (
         <Skeleton active paragraph={{ rows: 6 }} />
       ) : rows.length === 0 ? (
         <Empty description="No responses found" />

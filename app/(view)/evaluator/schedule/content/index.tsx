@@ -14,8 +14,6 @@ import {
   Badge,
   Modal,
   Radio,
-  Input,
-  Form,
   message,
 } from "antd";
 import type { Dayjs } from "dayjs";
@@ -225,7 +223,7 @@ export default function Page() {
   const [meetingType, setMeetingType] = useState<"online" | "offline">(
     "online"
   );
-  const [meetingLink, setMeetingLink] = useState<string>("");
+  // const [meetingLink, setMeetingLink] = useState<string>("");
   const [submitting, setSubmitting] = useState(false);
 
   const onContinue = () => {
@@ -235,11 +233,6 @@ export default function Page() {
 
   const onSubmitSchedule = async () => {
     if (selectedIndex == null) return;
-
-    if (meetingType === "online" && !meetingLink.trim()) {
-      message.warning("Meeting link wajib diisi untuk interview online.");
-      return;
-    }
 
     try {
       setSubmitting(true);
@@ -251,12 +244,11 @@ export default function Page() {
         date: selectedDateISO, // kirim ISO yg sama
         start_time: slot.startISO,
         is_online: meetingType === "online",
-        meeting_link: meetingType === "online" ? meetingLink.trim() : null,
       });
 
       message.success("Interview berhasil dijadwalkan 🎉");
       setOpenModal(false);
-      setMeetingLink("");
+      // setMeetingLink("");
       setSelectedIndex(null);
     } catch (err: any) {
       console.error(err);
@@ -517,7 +509,7 @@ export default function Page() {
             </Space>
           </Radio.Group>
 
-          {meetingType === "online" && (
+          {/* {meetingType === "online" && (
             <Form layout="vertical">
               <Form.Item
                 label="Meeting link"
@@ -536,7 +528,7 @@ export default function Page() {
                 />
               </Form.Item>
             </Form>
-          )}
+          )} */}
         </Space>
       </Modal>
 

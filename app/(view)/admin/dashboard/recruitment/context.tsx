@@ -1,6 +1,13 @@
 // context.tsx
 "use client";
-import { createContext, useContext, useMemo, useState, ReactNode } from "react";
+import {
+  createContext,
+  useContext,
+  useMemo,
+  useState,
+  ReactNode,
+} from "react";
+import { SUMMARY_STAGE_CONFIG } from "@/app/utils/recruitment-stage";
 
 export type StatusCard = { key: string; label: string; count: number };
 
@@ -20,11 +27,11 @@ const CtxRec = createContext<Ctx | null>(null);
 export function RecruitmentProvider({ children }: { children: ReactNode }) {
   const [summary, setSummary] = useState<StatusCard[]>([
     { key: "all", label: "Total Applicants", count: 0 },
-    { key: "screening", label: "Screening", count: 0 },
-    { key: "interview", label: "Interview", count: 0 },
-    { key: "hired", label: "Hired", count: 0 },
-    { key: "rejected", label: "Rejected", count: 0 },
-    { key: "waiting", label: "Waiting", count: 0 },
+    ...SUMMARY_STAGE_CONFIG.map((item) => ({
+      key: item.key,
+      label: item.label,
+      count: 0,
+    })),
   ]);
   const [sectionTitle, setSectionTitle] = useState("Total Applicant");
   const [sectionSubtitle, setSectionSubtitle] = useState<string | undefined>(

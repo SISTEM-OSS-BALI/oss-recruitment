@@ -26,17 +26,27 @@ import { ScheduleHiredPayloadCreateModel } from "@/app/models/hired";
 import { ApplicantDataModel } from "@/app/models/applicant";
 import { useScheduleHireds } from "@/app/hooks/schedule-hired";
 import type { ScheduleHiredFormValues } from "@/app/components/common/form/admin/hired";
+import {
+  SUMMARY_STAGE_CONFIG,
+  stageMatches,
+  toRecruitmentStage,
+} from "@/app/utils/recruitment-stage";
+import type { SummaryStageKey } from "@/app/utils/recruitment-stage";
 
 const { Title, Text } = Typography;
 
+type StageCounts = Record<SummaryStageKey, number> & { all: number };
+
 // Summary key -> Enum stage backend
 const STAGE_MAP: Record<string, RecruitmentStage | undefined> = {
-  new_aplicant: RecruitmentStage.NEW_APLICANT,
-  screening: RecruitmentStage.SCREENING,
-  interview: RecruitmentStage.INTERVIEW,
-  hired: RecruitmentStage.HIRED,
-  rejected: RecruitmentStage.REJECTED,
-  waiting: RecruitmentStage.WAITING,
+  new_aplicant: toRecruitmentStage("NEW_APLICANT"),
+  screening: toRecruitmentStage("SCREENING"),
+  interview: toRecruitmentStage("INTERVIEW"),
+  offering: toRecruitmentStage("OFFERING"),
+  hired: toRecruitmentStage("HIRING"),
+  hiring: toRecruitmentStage("HIRING"),
+  rejected: toRecruitmentStage("REJECTED"),
+  waiting: toRecruitmentStage("WAITING"),
 };
 
 export default function CandidatesPage() {
@@ -50,7 +60,7 @@ export default function CandidatesPage() {
 
   // hanya tampilkan kandidat di stage NEW_APLICANT (halaman Screening)
   const screening = useMemo(
-    () => candidatesData.filter((c) => c.stage === RecruitmentStage.HIRED),
+    () => candidatesData.filter((c) => stageMatches(c.stage, "HIRING")),
     [candidatesData]
   );
 
@@ -66,19 +76,18 @@ export default function CandidatesPage() {
   }, [screening]);
 
   // Summary (tampilan header di layout)
-  const counts = useMemo(() => {
+  const counts = useMemo<StageCounts>(() => {
     const total = candidatesData.length;
-    const by = (st: string) =>
-      candidatesData.filter((c) => c.stage?.toLowerCase() === st.toLowerCase())
-        .length;
-    return {
-      all: total,
-      screening: by("Screening"),
-      interview: by("Interview"),
-      hired: by("Hired"),
-      rejected: by("Rejected"),
-      waiting: by("Waiting"),
-    };
+    const detail = SUMMARY_STAGE_CONFIG.reduce(
+      (acc, item) => {
+        acc[item.key] = candidatesData.filter((c) =>
+          stageMatches(c.stage, ...item.stages)
+        ).length;
+        return acc;
+      },
+      {} as Record<SummaryStageKey, number>
+    );
+    return { all: total, ...detail };
   }, [candidatesData]);
 
   useEffect(() => {
@@ -88,21 +97,17 @@ export default function CandidatesPage() {
     );
     setSummary([
       { key: "all", label: "Total Applicants", count: counts.all },
-      { key: "screening", label: "Screening", count: counts.screening },
-      { key: "interview", label: "Interview", count: counts.interview },
-      { key: "hired", label: "Hired", count: counts.hired },
-      { key: "rejected", label: "Rejected", count: counts.rejected },
-      { key: "waiting", label: "Waiting", count: counts.waiting },
+      ...SUMMARY_STAGE_CONFIG.map((item) => ({
+        key: item.key,
+        label: item.label,
+        count: counts[item.key],
+      })),
     ]);
     // hanya bergantung pada counts object
   }, [counts, setSummary, setSectionTitle, setSectionSubtitle]);
 
   // Search, selection, pagination (berbasis list lokal)
   const [query, setQuery] = useState("");
-
-  const [selectedScheduleId, setSelectedScheduleId] = useState<string | null>(
-    null
-  );
 
   const {
     data: scheduleHireds = [],
@@ -208,9 +213,8 @@ export default function CandidatesPage() {
       start_time: startTimeValue,
     };
 
-    const result = await createHired(payload);
+    await createHired(payload);
     await refetchScheduleHireds();
-    setSelectedScheduleId(result.data?.result?.id || null);
   };
 
   return (
@@ -293,7 +297,6 @@ export default function CandidatesPage() {
             listData={scheduleHireds}
             listLoading={scheduleLoading}
             onCreateSchedule={handleCreateSceheduleHired}
-            selectedScheduleId={selectedScheduleId}
             onLoadingCreate={createHiredLoading}
           />
         </Card>

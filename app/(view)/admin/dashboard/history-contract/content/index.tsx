@@ -31,8 +31,10 @@ const STAGE_COLOR = {
   APPLICATION: "default",
   SCREENING: "processing",
   INTERVIEW: "geekblue",
+  OFFERING: "gold",
   OFFER_SENT: "gold",
   SIGNED: "cyan",
+  HIRING: "green",
   HIRED: "green",
   REJECTED: "red",
 };

@@ -65,7 +65,17 @@ export function prettyType(raw: string) {
       QA: "QA",
       UI: "UI",
       UX: "UX",
-      // Add more acronyms you want preserved here
     },
   });
 }
+
+ export const humanizeType = (type: string) => {
+    switch (type) {
+      case "HEAD_OFFICE":
+        return "Head Office";
+      case "BRANCH_OFFICE":
+        return "Branch Office";
+      default:
+        return type;
+    }
+  };

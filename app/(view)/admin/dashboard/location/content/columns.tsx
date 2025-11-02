@@ -4,6 +4,7 @@ import "dayjs/locale/id";
 import { TableProps } from "antd";
 import { LocationDataModel } from "@/app/models/location";
 import { makeActionsByType } from "@/app/utils/presets";
+import { humanizeType } from "@/app/utils/humanize";
 
 export const LocationColumns = ({
   onDelete,
@@ -28,6 +29,12 @@ export const LocationColumns = ({
       title: "Address",
       dataIndex: "address",
       key: "address",
+    },
+    {
+      title: "Type",
+      dataIndex: "type",
+      key: "type",
+      render: (type: string) => humanizeType(type),
     },
     {
       title: "Maps",

@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { ApplicantDataModel } from "@/app/models/applicant";
 import { formatDate } from "@/app/utils/date-helper";
+import { getStageLabel } from "@/app/utils/recruitment-stage";
 import { HistoryOutlined, UserOutlined } from "@ant-design/icons";
 import { Button } from "antd";
 
@@ -70,7 +71,7 @@ export default function Columns({
 }
 
 const StatusTag = ({ stage }: { stage?: string }) => {
-  const text = (stage || "Waiting").trim();
+  const text = getStageLabel(stage);
   return (
     <span
       style={{

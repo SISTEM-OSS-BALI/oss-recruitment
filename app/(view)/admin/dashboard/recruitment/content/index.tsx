@@ -25,9 +25,9 @@ import { ApplicantDataModel } from "@/app/models/applicant";
 import { HistoryCandidateDataModel } from "@/app/models/history-candidate";
 import { useRecruitment } from "../context";
 import Columns from "./columns";
+import { getStageLabel, stageMatches } from "@/app/utils/recruitment-stage";
 
 const { Text } = Typography;
-const { Option } = Select;
 
 /** Small helper */
 function formatDateTime(v?: string | Date | null) {
@@ -41,6 +41,8 @@ function formatDateTime(v?: string | Date | null) {
     minute: "2-digit",
   });
 }
+
+const normalize = (s: string) => s.toLowerCase().trim();
 
 export default function Content() {
   const { data: candidatesData = [] } = useCandidates({});
@@ -67,23 +69,43 @@ export default function Content() {
   }, []);
 
   const statusOptions = useMemo(() => {
-    const s = Array.from(
+    const stages = Array.from(
       new Set(
         (candidatesData as ApplicantDataModel[])
-          .map((c) => c.stage?.trim())
+          .map((c) => c.stage?.toString().trim())
           .filter(Boolean) as string[]
       )
-    );
-    return s.length
-      ? s
-      : ["Waiting", "Screening", "Interview", "Hired", "Rejected"];
+    ).map((stage) => {
+      const normalized = normalize(stage);
+      return normalized === "HIRED" ? "HIRING" : normalized;
+    });
+
+    const fallback = [
+      "NEW_APLICANT",
+      "SCREENING",
+      "INTERVIEW",
+      "OFFERING",
+      "HIRING",
+      "REJECTED",
+      "WAITING",
+    ];
+
+    const values = stages.length ? stages : fallback;
+    const uniqueValues = Array.from(new Set(values));
+
+    return uniqueValues.map((value) => ({
+      value,
+      label: getStageLabel(value),
+    }));
   }, [candidatesData]);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     return (candidatesData as ApplicantDataModel[]).filter((c) => {
       const m1 =
-        !status || (c.stage ?? "").toLowerCase() === status.toLowerCase();
+        !status ||
+        status === "ALL" ||
+        stageMatches(c.stage, status);
       const m3 =
         !q ||
         c.user.name?.toLowerCase().includes(q) ||
@@ -96,17 +118,16 @@ export default function Content() {
   // summary
   const counts = useMemo(() => {
     const total = candidatesData.length;
-    const by = (st: string) =>
-      candidatesData.filter(
-        (c) => c.stage?.toLowerCase() === st.toLowerCase()
-      ).length;
+    const by = (...stages: string[]) =>
+      candidatesData.filter((c) => stageMatches(c.stage, ...stages)).length;
     return {
       all: total,
-      screening: by("Screening"),
-      interview: by("Interview"),
-      hired: by("Hired"),
-      rejected: by("Rejected"),
-      waiting: by("Waiting"),
+      screening: by("SCREENING"),
+      interview: by("INTERVIEW"),
+      offering: by("OFFERING"),
+      hired: by("HIRING"),
+      rejected: by("REJECTED"),
+      waiting: by("WAITING"),
     };
   }, [candidatesData]);
 
@@ -119,7 +140,8 @@ export default function Content() {
       { key: "all", label: "Total Applicants", count: counts.all },
       { key: "screening", label: "Screening", count: counts.screening },
       { key: "interview", label: "Interview", count: counts.interview },
-      { key: "hired", label: "Hired", count: counts.hired },
+      { key: "offering", label: "Offering", count: counts.offering },
+      { key: "hired", label: "Hiring", count: counts.hired },
       { key: "rejected", label: "Rejected", count: counts.rejected },
       { key: "waiting", label: "Waiting", count: counts.waiting },
     ]);
@@ -166,13 +188,11 @@ export default function Content() {
               style={{ width: "100%" }}
               value={status}
               onChange={setStatus}
-            >
-              {statusOptions.map((s) => (
-                <Option key={s} value={s}>
-                  {s}
-                </Option>
-              ))}
-            </Select>
+              options={[
+                { value: "ALL", label: "All" },
+                ...statusOptions,
+              ]}
+            />
           </Col>
           <Col xs={24} md={8}>
             <Input

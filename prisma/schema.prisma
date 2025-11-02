@@ -17,6 +17,7 @@ enum RecruitmentStage {
   NEW_APLICANT
   SCREENING
   INTERVIEW
+  OFFERING
   HIRED
   REJECTED
   WAITING
@@ -35,6 +36,11 @@ enum QuestionScreeningType {
   SINGLE_CHOICE
   MULTIPLE_CHOICE
   TEXT
+}
+
+enum LocationType {
+  HEAD_OFFICE
+  BRANCH_OFFICE
 }
 
 enum Role {
@@ -73,7 +79,6 @@ model Job {
 
   candidate User[]
   Applicant Applicant[]
-
   @@map("job")
 }
 
@@ -81,6 +86,7 @@ model Location {
   id            String          @id @default(cuid())
   name          String
   maps_url      String
+  type          LocationType    @default(HEAD_OFFICE)
   address       String
   createdAt     DateTime        @default(now())
   updatedAt     DateTime        @updatedAt
@@ -416,7 +422,6 @@ model AnswerQuestionScreening {
   applicantId String?
 
   @@index([questionId])
-
   @@map("answer_question_screening")
 }
 
@@ -516,7 +521,6 @@ model MatriksAnswer {
   applicantId String?
 
   @@index([questionId])
-
   @@map("matriks_answer")
 }
 
@@ -546,7 +550,6 @@ model Conversation {
 
   @@index([updatedAt])
   @@index([lastMessageAt])
-
   @@map("conversation")
 }
 
@@ -562,7 +565,6 @@ model Participant {
 
   @@id([userId, conversationId])
   @@index([conversationId, userId])
-
   @@map("participant")
 }
 
@@ -586,7 +588,6 @@ model Message {
 
   @@index([conversationId, createdAt])
   @@index([senderId, createdAt])
-
   @@map("message")
 }
 
@@ -600,7 +601,6 @@ model Attachment {
   message Message @relation(fields: [messageId], references: [id])
 
   @@index([messageId])
-
   @@map("attachment")
 }
 
@@ -614,6 +614,5 @@ model MessageRead {
 
   @@id([messageId, userId])
   @@index([userId, messageId])
-
   @@map("message_read")
 }

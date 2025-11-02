@@ -22,7 +22,7 @@ export default function CandidateProgressPage() {
   if (!applicant) return <Empty description="No application found" />;
 
   return (
-    <div style={{ padding: 16, maxWidth: 1000, margin: "0 auto" }}>
+    <div style={{ padding: 16, maxWidth: 1500, margin: "0 auto" }}>
       <CandidateProgress applicant={applicant} />
     </div>
   );

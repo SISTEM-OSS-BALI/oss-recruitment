@@ -12,3 +12,5 @@ export async function sendWhatsAppMessage( message: string) {
     wait_until_send: "1",
   });
 }
+
+

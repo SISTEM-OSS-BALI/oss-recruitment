@@ -7,7 +7,7 @@ import { useSocket } from "@/app/hooks/socket";
 import { ChatPayload } from "@/app/utils/socket-type";
 import { useAuth } from "@/app/utils/useAuth";
 import { useSearchParams } from "next/navigation";
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { uploadChatFiles } from "@/app/utils/chat-upload";
 import { message } from "antd";
 
@@ -33,6 +33,7 @@ export default function ChatPage() {
     currentUser ? { userId: currentUser.id } : undefined
   );
   const [peerOnline, setPeerOnline] = useState(false);
+  const [peerTyping, setPeerTyping] = useState(false);
 
   const peer = useMemo(() => {
     const candidateUser = userDetailData?.user;
@@ -40,12 +41,14 @@ export default function ChatPage() {
       id: candidateUser?.id ?? applicantId,
       name: candidateUser?.name ?? "Candidate",
       online: peerOnline,
+      typing: peerTyping,
     };
-  }, [userDetailData?.user, applicantId, peerOnline]);
+  }, [userDetailData?.user, applicantId, peerOnline, peerTyping]);
 
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isLoadingHistory, setIsLoadingHistory] = useState(false);
   const [conversationId, setConversationId] = useState<string | null>(null);
+  const typingStateRef = useRef(false);
 
   const mapAttachments = (
     messageId: string,
@@ -182,6 +185,9 @@ export default function ChatPage() {
       // Kirim ACK delivered ke pengirim (supaya statusnya jadi "delivered" di sisi dia)
       // Tanpa DB, kita kirim global; pengirim akan match-by-id
       socket.emit("chat:markDelivered", [msg.id]);
+      if (msg.senderId !== currentUser?.id) {
+        setPeerTyping(false);
+      }
     };
 
     const onDelivered = (ids: string[]) => {
@@ -200,6 +206,13 @@ export default function ChatPage() {
 
     const onPresence = (online: boolean) => {
       setPeerOnline(online);
+      if (!online) setPeerTyping(false);
+    };
+
+    const onTyping = (payload: { room: string; typing: boolean }) => {
+      if (payload.room === roomId) {
+        setPeerTyping(payload.typing);
+      }
     };
 
     const onRoomJoined = (payload: { room: string; conversationId: string }) =>
@@ -209,6 +222,7 @@ export default function ChatPage() {
     socket.on("chat:delivered", onDelivered);
     socket.on("chat:read", onRead);
     socket.on("presence:update", onPresence);
+    socket.on("typing:update", onTyping);
     socket.on("room:joined", onRoomJoined);
 
     return () => {
@@ -216,9 +230,10 @@ export default function ChatPage() {
       socket.off("chat:delivered", onDelivered);
       socket.off("chat:read", onRead);
       socket.off("presence:update", onPresence);
+      socket.off("typing:update", onTyping);
       socket.off("room:joined", onRoomJoined);
     };
-  }, [socket]);
+  }, [socket, roomId, currentUser?.id]);
 
   // JOIN room saat socket siap
   useEffect(() => {
@@ -294,11 +309,35 @@ export default function ChatPage() {
   // Tandai pesan dari peer sebagai read → kirim ACK read ke server
   function handleMarkRead(ids: string[]) {
     if (!ids.length) return;
-    if (!socket) return;
+   if (!socket) return;
     socket.emit("chat:markRead", { room: roomId, ids });
     // Boleh juga langsung update lokal (untuk pesan yang kita kirim),
     // tapi biasanya ACK read datang dari peer/ server.
   }
+
+  const handleTypingChange = useCallback(
+    (typing: boolean) => {
+      if (!socket) return;
+      if (typing && !typingStateRef.current) {
+        socket.emit("typing:start", roomId);
+        typingStateRef.current = true;
+      }
+      if (!typing && typingStateRef.current) {
+        socket.emit("typing:stop", roomId);
+        typingStateRef.current = false;
+      }
+    },
+    [socket, roomId]
+  );
+
+  useEffect(() => {
+    return () => {
+      if (typingStateRef.current && socket) {
+        socket.emit("typing:stop", roomId);
+        typingStateRef.current = false;
+      }
+    };
+  }, [socket, roomId]);
 
   if (!currentUser) return null;
 
@@ -311,6 +350,7 @@ export default function ChatPage() {
         messages={messages}
         onSend={handleSend}
         onMarkRead={handleMarkRead}
+        onTypingChange={handleTypingChange}
         loading={isLoadingHistory}
       />
     </div>

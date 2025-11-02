@@ -12,6 +12,7 @@ import {
   faClipboardList,
   faSquareCheck,
   faCircleQuestion,
+  faBook,
 } from "@fortawesome/free-solid-svg-icons";
 import menuLabel from "@/app/utils/label";
 
@@ -86,6 +87,12 @@ export const SidebarMenuSettingAdmin = (): MenuProps["items"] => {
         },
       ],
     },
+    {
+      key: "/admin/dashboard/guidebook",
+      label: menuLabel("Guidebook"),
+      icon: <FontAwesomeIcon icon={faBook} />,
+      onClick: () => router.push("/admin/dashboard/guidebook"),
+    }
   ];
 
   return sidebarMenu;

@@ -1,7 +1,9 @@
 import { LocationDataModel } from "@/app/models/location";
-import { Button, Form, Input, FormInstance } from "antd";
+import { Button, Form, Input, FormInstance, Select } from "antd";
 import TextArea from "antd/es/input/TextArea";
 import { useEffect } from "react";
+import { LocationType } from "@prisma/client";
+import { humanizeType } from "@/app/utils/humanize";
 
 export default function LocationForm({
   form,
@@ -21,7 +23,7 @@ export default function LocationForm({
   open: boolean;
 }) {
   useEffect(() => {
-    if (!open) return; 
+    if (!open) return;
     if (type === "update" && initialValues) {
       form.setFieldsValue({
         ...initialValues,
@@ -30,6 +32,7 @@ export default function LocationForm({
       form.resetFields();
     }
   }, [open, type, initialValues, form]);
+
   return (
     <Form layout="vertical" onFinish={onFinish} form={form}>
       <Form.Item
@@ -52,6 +55,15 @@ export default function LocationForm({
         rules={[{ required: true, message: "Maps url is required" }]}
       >
         <Input placeholder="Maps" size="large" />
+      </Form.Item>
+      <Form.Item label="Type Location" name="type">
+        <Select>
+          {Object.values(LocationType).map((type) => (
+            <Select.Option key={type} value={type}>
+              {humanizeType(type)}
+            </Select.Option>
+          ))}
+        </Select>
       </Form.Item>
       <Form.Item>
         <Button
