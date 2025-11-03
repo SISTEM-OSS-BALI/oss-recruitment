@@ -19,6 +19,14 @@ type InterviewEmail = {
 
 type RecruitmentEmailOptions = AppliedEmail | InterviewEmail;
 
+type DirectorSignatureEmailPayload = {
+  to: string;
+  candidateName: string;
+  jobTitle: string;
+  contractUrl: string;
+  notes?: string;
+};
+
 function fmtDate(d: Date | string, locale = "en-US") {
   const date = typeof d === "string" ? new Date(d) : d;
   return new Intl.DateTimeFormat(locale, {
@@ -177,5 +185,60 @@ export async function sendRecruitmentEmail(
     to: email,
     subject,
     html,
+  });
+}
+
+export async function sendDirectorSignatureEmail(
+  payload: DirectorSignatureEmailPayload
+) {
+  const { to, candidateName, jobTitle, contractUrl, notes } = payload;
+
+  const transporter = nodemailer.createTransport({
+    service: "gmail",
+    auth: {
+      user: process.env.EMAIL_USERNAME,
+      pass: process.env.EMAIL_PASSWORD,
+    },
+  });
+
+  const subject = `Signature Request: ${candidateName} – ${jobTitle}`;
+
+  const content = `
+    <h2 style="color:#2d89e5; text-align:left;">Director Signature Request</h2>
+    <p style="font-size:15px; color:#555;">Dear Director,</p>
+    <p style="font-size:15px; color:#555;">
+      Please review and sign the offer contract for <strong>${candidateName}</strong>
+      (position: <strong>${jobTitle}</strong>).
+    </p>
+    <p style="font-size:15px; color:#555;">
+      You can download the document via the link below:
+    </p>
+    <p style="text-align:center; margin:24px 0;">
+      <a href="${contractUrl}"
+         style="display:inline-block; padding:12px 20px; background:#2d89e5; color:white; text-decoration:none; border-radius:8px; font-weight:600;">
+        View Contract
+      </a>
+    </p>
+    ${
+      notes
+        ? `<div style="background:#F6F9FF; border-left:4px solid #2d89e5; padding:14px 16px; margin:16px 0;">
+            <div style="font-weight:600; margin-bottom:6px;">Additional Notes</div>
+            <div style="color:#555; white-space:pre-wrap;">${notes}</div>
+          </div>`
+        : ""
+    }
+    <p style="font-size:15px; color:#555;">
+      After signing, please upload the signed document back to the recruitment portal.
+    </p>
+    <p style="font-size:15px; color:#555;">
+      Thank you for your prompt attention.
+    </p>
+  `;
+
+  await transporter.sendMail({
+    from: `"One Step Solution (OSS) Bali" <${process.env.EMAIL_USERNAME}>`,
+    to,
+    subject,
+    html: baseWrapper(content),
   });
 }

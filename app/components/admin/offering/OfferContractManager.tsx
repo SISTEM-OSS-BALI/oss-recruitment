@@ -26,7 +26,7 @@ import {
   message,
 } from "antd";
 import {
-  CalendarOutlined,
+  CheckOutlined,
   DeleteOutlined,
   DownloadOutlined,
   EditOutlined,
@@ -35,10 +35,9 @@ import {
   FileSearchOutlined,
   FileWordOutlined,
   LinkOutlined,
-  PaperClipOutlined,
+  MailOutlined,
   PlusOutlined,
   ReloadOutlined,
-  SafetyCertificateOutlined,
   SaveOutlined,
   SendOutlined,
   UsergroupAddOutlined,
@@ -61,6 +60,7 @@ import {
   useOfferingContractByApplicantId,
   useOfferingContracts,
 } from "@/app/hooks/offering-contract";
+import SupaFileUploader from "@/app/utils/pdf-uploader";
 
 const { Text } = Typography;
 
@@ -107,7 +107,7 @@ type TemplateVariables = {
   [key: string]: unknown;
 };
 
-type OfferChecklistKey = "contractFinalized" | "signatureDirectur";
+type OfferChecklistKey = "contractFinalized" | "signatureDirectur" | "decisionCandidate";
 
 type OfferChecklistItem = {
   key: OfferChecklistKey;
@@ -244,18 +244,64 @@ export function OfferContractManager({
   );
 
   const { onCreate: onCreateContract } = useOfferingContracts({});
-  const { data: contractByApplicant } = useOfferingContractByApplicantId({
+  const {
+    data: contractByApplicant,
+    onRequestDirectorSignature,
+    onRequestDirectorSignatureLoading,
+    onUploadDirectorSignature,
+    onUploadDirectorSignatureLoading,
+    onApplyCandidateSignature,
+    onApplyCandidateSignatureLoading,
+    onSendFinalEmail,
+    onSendFinalEmailLoading,
+  } = useOfferingContractByApplicantId({
     applicant_id: candidate?.id || "",
   });
   const hasExistingContract = Boolean(
     contractByApplicant?.id || contractByApplicant?.filePath
   );
 
+  const hasAccepetedCandidate = Boolean(
+    contractByApplicant?.candidateDecision === "ACCEPTED"
+  );
+  const directorSignatureSignedAt =
+    contractByApplicant?.directorSignatureSignedAt || null;
+  const hasDirectorSigned = Boolean(directorSignatureSignedAt);
+  const directorSignatureRequestedAt =
+    contractByApplicant?.directorSignatureRequestedAt || null;
+  const directorSignatureUrl =
+    contractByApplicant?.directorSignatureUrl || null;
+  const directorSignaturePath =
+    contractByApplicant?.directorSignaturePath || null;
+  const candidateSignatureUrl =
+    contractByApplicant?.candidateSignatureUrl || null;
+  const candidateSignedPdfUrl =
+    contractByApplicant?.candidateSignedPdfUrl || null;
+  const candidateSignedPdfAt =
+    contractByApplicant?.candidateSignedPdfAt || null;
+  const candidateNotifyEmail = contractByApplicant?.notifyEmail || "";
+
+  const defaultDirectorEmail = useMemo(
+    () => process.env.NEXT_PUBLIC_DIRECTOR_SIGNATURE_EMAIL || "",
+    []
+  );
+  const [directorEmail, setDirectorEmail] = useState(defaultDirectorEmail);
+
+  useEffect(() => {
+    setDirectorEmail(defaultDirectorEmail);
+  }, [candidate?.id, defaultDirectorEmail]);
+
+  const isDirectorEmailValid = useMemo(() => {
+    if (!directorEmail) return false;
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(directorEmail);
+  }, [directorEmail]);
+
   const [offerChecklist, setOfferChecklist] = useState<
     Record<OfferChecklistKey, boolean>
   >({
     contractFinalized: hasExistingContract,
-    signatureDirectur: false,
+    signatureDirectur: hasDirectorSigned,
+    decisionCandidate: hasAccepetedCandidate,
   });
   const [offerTriggeredAt, setOfferTriggeredAt] = useState<string | null>(null);
   const [sendingOffer, setSendingOffer] = useState(false);
@@ -268,6 +314,22 @@ export function OfferContractManager({
     );
   }, [hasExistingContract]);
 
+  useEffect(() => {
+    setOfferChecklist((prev) =>
+      prev.decisionCandidate === hasAccepetedCandidate
+        ? prev
+        : { ...prev, decisionCandidate: hasAccepetedCandidate }
+    );
+  }, [hasAccepetedCandidate]);
+
+  useEffect(() => {
+    setOfferChecklist((prev) =>
+      prev.signatureDirectur === hasDirectorSigned
+        ? prev
+        : { ...prev, signatureDirectur: hasDirectorSigned }
+    );
+  }, [hasDirectorSigned]);
+
   const updateChecklist = useCallback(
     (key: OfferChecklistKey, value: boolean) => {
       setOfferChecklist((prev) => ({ ...prev, [key]: value }));
@@ -275,13 +337,112 @@ export function OfferContractManager({
     []
   );
 
+  const handleRequestSignature = useCallback(async () => {
+    if (!contractByApplicant?.id) {
+      message.warning("Generate the contract before requesting signature.");
+      return;
+    }
+    if (!directorEmail) {
+      message.warning("Please assign director email first.");
+      return;
+    }
+    if (!isDirectorEmailValid) {
+      message.warning("Director email is invalid.");
+      return;
+    }
+    try {
+      await onRequestDirectorSignature({
+        contractId: contractByApplicant.id,
+        email: directorEmail,
+      });
+    } catch (error) {
+      message.error("Failed to send signature request email.");
+    }
+  }, [
+    contractByApplicant?.id,
+    directorEmail,
+    isDirectorEmailValid,
+    onRequestDirectorSignature,
+  ]);
+
+  const handleUploadDirectorSignature = useCallback(
+    async (path: string, url: string) => {
+      if (!contractByApplicant?.id) return;
+      try {
+        await onUploadDirectorSignature({
+          contractId: contractByApplicant.id,
+          signaturePath: path,
+          signatureUrl: url,
+        });
+      } catch (error) {
+        message.error("Failed to attach signed contract.");
+      }
+    },
+    [contractByApplicant?.id, onUploadDirectorSignature]
+  );
+
+  const handleRemoveDirectorSignature = useCallback(async () => {
+    if (!contractByApplicant?.id) return;
+    try {
+      await onUploadDirectorSignature({
+        contractId: contractByApplicant.id,
+        signaturePath: null,
+        signatureUrl: null,
+      });
+    } catch (error) {
+      message.error("Failed to remove signed contract.");
+    }
+  }, [contractByApplicant?.id, onUploadDirectorSignature]);
+
+  const handleApplyCandidateSignature = useCallback(async () => {
+    if (!contractByApplicant?.id) return;
+    if (!candidateSignatureUrl) {
+      message.warning("Candidate has not uploaded a signature yet.");
+      return;
+    }
+    try {
+      await onApplyCandidateSignature({ contractId: contractByApplicant.id });
+      message.success("Candidate signature applied to contract.");
+    } catch (error) {
+      message.error("Failed to apply candidate signature.");
+    }
+  }, [
+    candidateSignatureUrl,
+    contractByApplicant?.id,
+    onApplyCandidateSignature,
+  ]);
+
+  const handleSendFinalEmail = useCallback(async () => {
+    if (!contractByApplicant?.id) return;
+    if (!candidateSignedPdfUrl) {
+      message.warning("Generate the signed PDF before sending email.");
+      return;
+    }
+    if (!candidateNotifyEmail) {
+      message.warning("Assign candidate email in the contract form first.");
+      return;
+    }
+    try {
+      await onSendFinalEmail({ contractId: contractByApplicant.id });
+      message.success("Signed contract sent to candidate.");
+    } catch (error) {
+      message.error("Failed to send signed contract email.");
+    }
+  }, [
+    candidateNotifyEmail,
+    candidateSignedPdfUrl,
+    contractByApplicant?.id,
+    onSendFinalEmail,
+  ]);
+
   const handleResetOfferChecklist = useCallback(() => {
     setOfferTriggeredAt(null);
     setOfferChecklist({
       contractFinalized: hasExistingContract,
-      signatureDirectur: false,
+      signatureDirectur: hasDirectorSigned,
+      decisionCandidate: hasAccepetedCandidate,
     });
-  }, [hasExistingContract]);
+  }, [hasExistingContract, hasAccepetedCandidate, hasDirectorSigned]);
 
   const handleTriggerOfferReady = useCallback(async () => {
     setSendingOffer(true);
@@ -296,8 +457,18 @@ export function OfferContractManager({
     }
   }, []);
 
-  const checklistItems = useMemo<OfferChecklistItem[]>(
-    () => [
+  const checklistItems = useMemo<OfferChecklistItem[]>(() => {
+    const directorDescription = hasDirectorSigned
+      ? `Signed on ${dayjs(directorSignatureSignedAt).format(
+          "MMM D, YYYY HH:mm"
+        )}`
+      : directorSignatureRequestedAt
+      ? `Awaiting director signature • requested ${dayjs(
+          directorSignatureRequestedAt
+        ).format("MMM D, YYYY HH:mm")}`
+      : "Send the contract to directors for signature.";
+
+    return [
       {
         key: "contractFinalized",
         title: "Contract finalized",
@@ -308,9 +479,16 @@ export function OfferContractManager({
         disabled: true,
       },
       {
+        key: "decisionCandidate",
+        title: "Candidate accepted",
+        description: hasAccepetedCandidate ? "Candidate has accepted the offer." : "Candidate has not accepted the offer.",
+        icon: <CheckOutlined />,
+        disabled: true,
+      },
+      {
         key: "signatureDirectur",
         title: "Directors signed",
-        description: "Directors have signed the contract.",
+        description: directorDescription,
         icon: <UsergroupAddOutlined />,
         disabled: true,
       },
@@ -335,9 +513,14 @@ export function OfferContractManager({
       //     "Onboarding checklist, policies, and handbook are ready for the candidate.",
       //   icon: <PaperClipOutlined />,
       // },
-    ],
-    [hasExistingContract]
-  );
+    ];
+  }, [
+    directorSignatureSignedAt,
+    directorSignatureRequestedAt,
+    hasAccepetedCandidate,
+    hasDirectorSigned,
+    hasExistingContract,
+  ]);
 
   const checklistValues = useMemo(
     () => Object.values(offerChecklist),
@@ -486,6 +669,7 @@ export function OfferContractManager({
     selectedTemplate?.name,
     templateDefaults,
     convertDocxBlobToPdf,
+    closePicker,
   ]);
 
   const handleApplyEdits = useCallback(async () => {
@@ -534,7 +718,6 @@ export function OfferContractManager({
       setApplyingEdits(false);
     }
   }, [docState, form, convertDocxBlobToPdf]);
-
   const uploadToSupabase = async (file: Blob, fileName: string) => {
     if (!supabaseUrl || !supabaseKey) {
       throw new Error(
@@ -629,7 +812,7 @@ export function OfferContractManager({
     } finally {
       setCreatingContract(false);
     }
-  }, [candidate?.id, closeResult, docState, onCreateContract, queryClient]);
+  }, [candidate?.id, closeResult, docState, onCreateContract, queryClient, uploadToSupabase, uploadPdfToSupabase]);
 
   const handleConvertToPdf = useCallback(async () => {
     if (!docState?.docBlob) {
@@ -750,6 +933,198 @@ export function OfferContractManager({
             ) : null}
           </Space>
         )}
+      </Card>
+
+      <Card
+        style={{ borderRadius: 14, marginTop: 12 }}
+        title={
+          <Space>
+            <MailOutlined />
+            <span>Director Signature</span>
+          </Space>
+        }
+      >
+        <Space direction="vertical" size={16} style={{ width: "100%" }}>
+          <Alert
+            type={
+              hasDirectorSigned
+                ? "success"
+                : directorSignatureRequestedAt
+                ? "info"
+                : "warning"
+            }
+            showIcon
+            message={
+              hasDirectorSigned
+                ? "Signed document received from directors."
+                : directorSignatureRequestedAt
+                ? "Awaiting director signature. You can resend the email request if needed."
+                : "Send the contract to directors for signature."
+            }
+            />
+
+          <Space direction="vertical" size={6} style={{ width: "100%" }}>
+            <Text strong>Director email</Text>
+            <Input
+              placeholder="director@example.com"
+              value={directorEmail}
+              onChange={(event) => setDirectorEmail(event.target.value)}
+              type="email"
+            />
+            {!isDirectorEmailValid && directorEmail ? (
+              <Text type="danger">Please enter a valid email address.</Text>
+            ) : null}
+          </Space>
+
+          <Space align="center" wrap>
+            <Button
+              type="primary"
+              icon={<MailOutlined />}
+              onClick={handleRequestSignature}
+              disabled={!hasExistingContract || !isDirectorEmailValid}
+              loading={onRequestDirectorSignatureLoading}
+            >
+              {directorSignatureRequestedAt ? "Resend Request" : "Send Signature Request"}
+            </Button>
+            {!hasExistingContract ? (
+              <Tag>Generate contract first</Tag>
+            ) : directorSignatureRequestedAt ? (
+              <Tag color="purple">
+                Requested {dayjs(directorSignatureRequestedAt).format("MMM D, YYYY HH:mm")}
+              </Tag>
+            ) : null}
+            {hasDirectorSigned && directorSignatureSignedAt ? (
+              <Tag color="green">
+                Signed {dayjs(directorSignatureSignedAt).format("MMM D, YYYY HH:mm")}
+              </Tag>
+            ) : null}
+          </Space>
+
+          <Spin spinning={onUploadDirectorSignatureLoading}>
+            <SupaFileUploader
+              bucket={supabaseBucket}
+              folder={
+                candidate?.id
+                  ? `director-signatures/${candidate.id}`
+                  : "director-signatures"
+              }
+              allowedTypes={["pdf"]}
+              label="Upload signed contract (PDF)"
+              value={directorSignatureUrl ?? null}
+              initialPath={directorSignaturePath ?? null}
+              onUpload={handleUploadDirectorSignature}
+              onDelete={() => {
+                void handleRemoveDirectorSignature();
+              }}
+            />
+          </Spin>
+          {directorSignatureUrl ? (
+            <Typography.Link
+              href={directorSignatureUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              View signed contract
+            </Typography.Link>
+          ) : (
+            <Text type="secondary">
+              Upload the signed PDF once directors have completed the signature.
+            </Text>
+          )}
+      </Space>
+    </Card>
+
+      <Card
+        style={{ borderRadius: 14, marginTop: 12 }}
+        title={
+          <Space>
+            <FileDoneOutlined />
+            <span>Candidate Signature</span>
+          </Space>
+        }
+      >
+        <Space direction="vertical" size={16} style={{ width: "100%" }}>
+          <Alert
+            type={
+              candidateSignedPdfUrl
+                ? "success"
+                : candidateSignatureUrl
+                ? "info"
+                : "warning"
+            }
+            showIcon
+            message={
+              candidateSignedPdfUrl
+                ? "Signed PDF generated. You can download or send it to the candidate."
+                : candidateSignatureUrl
+                ? "Candidate has uploaded a signature. Apply it to the contract."
+                : "Waiting for candidate to upload signature."
+            }
+          />
+
+          <Space direction="vertical" size={6}>
+            <Text type="secondary">Candidate signature status</Text>
+            <Space wrap>
+              <Button
+                type="primary"
+                icon={<FileDoneOutlined />}
+                disabled={!candidateSignatureUrl}
+                loading={onApplyCandidateSignatureLoading}
+                onClick={handleApplyCandidateSignature}
+              >
+                Generate Signed PDF
+              </Button>
+              {!candidateSignatureUrl ? (
+                <Tag>Signature not uploaded yet</Tag>
+              ) : null}
+              {candidateSignedPdfAt ? (
+                <Tag color="green">
+                  Signed {dayjs(candidateSignedPdfAt).format("MMM D, YYYY HH:mm")}
+                </Tag>
+              ) : null}
+            </Space>
+          </Space>
+
+          <Space direction="vertical" size={6}>
+            <Text type="secondary">Candidate contact (notify email)</Text>
+            <Text strong>
+              {candidateNotifyEmail || "— (fill in contract form)"}
+            </Text>
+          </Space>
+
+          {candidateSignedPdfUrl ? (
+            <Space direction="vertical" size={8}>
+              <Space wrap>
+                <Button
+                  icon={<DownloadOutlined />}
+                  href={candidateSignedPdfUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  Download Signed PDF
+                </Button>
+                <Button
+                  type="primary"
+                  icon={<MailOutlined />}
+                  loading={onSendFinalEmailLoading}
+                  disabled={!candidateNotifyEmail}
+                  onClick={handleSendFinalEmail}
+                >
+                  Send Final Email
+                </Button>
+              </Space>
+              {!candidateNotifyEmail ? (
+                <Text type="danger">
+                  Assign candidate email in the contract form before sending.
+                </Text>
+              ) : null}
+            </Space>
+          ) : (
+            <Text type="secondary">
+              Generate the signed PDF to enable download and email actions.
+            </Text>
+          )}
+        </Space>
       </Card>
 
       <Card

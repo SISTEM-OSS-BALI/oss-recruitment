@@ -19,6 +19,7 @@ const { Text } = Typography;
 type ContractFormValues = {
   name: string;
   content: string;
+  notifyEmail?: string;
 };
 
 type Props = {
@@ -40,6 +41,7 @@ export default function ContractForm({ candidate, loading, onSubmit }: Props) {
       applicant_id: candidate.id,
       name: values.name,
       filePath: values.content,
+      notifyEmail: values.notifyEmail,
     };
 
     try {
@@ -90,6 +92,19 @@ export default function ContractForm({ candidate, loading, onSubmit }: Props) {
             placeholder="Enter contract content..."
             autoSize={{ minRows: 6 }}
           />
+        </Form.Item>
+
+        <Form.Item
+          label="Candidate Email (for sending signed contract)"
+          name="notifyEmail"
+          rules={[
+            {
+              type: "email",
+              message: "Please enter a valid email address",
+            },
+          ]}
+        >
+          <Input placeholder="candidate@example.com" type="email" />
         </Form.Item>
 
         <div style={{ display: "flex", justifyContent: "flex-end" }}>

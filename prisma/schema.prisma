@@ -58,6 +58,12 @@ enum EvaluationStatus {
   SUBMITTED
 }
 
+enum OfferDecisionStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+}
+
 enum MessageType {
   TEXT
   IMAGE
@@ -79,6 +85,7 @@ model Job {
 
   candidate User[]
   Applicant Applicant[]
+
   @@map("job")
 }
 
@@ -233,13 +240,26 @@ model ScheduleHired {
 }
 
 model OfferingContract {
-  id           String    @id @default(cuid())
-  applicant_id String
-  applicant    Applicant @relation(fields: [applicant_id], references: [id], onDelete: Cascade, onUpdate: Cascade)
-  filePath     String    @db.LongText
-  name         String
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
+  id                           String              @id @default(cuid())
+  applicant_id                 String
+  applicant                    Applicant           @relation(fields: [applicant_id], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  filePath                     String              @db.LongText
+  name                         String
+  candidateDecision            OfferDecisionStatus @default(PENDING)
+  candidateDecisionAt          DateTime?
+  candidateSignatureUrl        String?             @db.LongText
+  candidateSignaturePath       String?
+  candidateSignatureSignedAt   DateTime?
+  candidateRejectionReason     String?             @db.LongText
+  candidateSignedPdfPath       String?
+  directorSignatureRequestedAt DateTime?
+  candidateSignedPdfUrl        String?
+  directorSignatureUrl         String?             @db.LongText
+  directorSignaturePath        String?
+  directorSignatureSignedAt    DateTime?
+  notifyEmail                  String?
+  createdAt                    DateTime            @default(now())
+  updatedAt                    DateTime            @updatedAt
 
   @@map("offering_contract")
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useCallback, useState } from "react";
+import React, { useCallback, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   Avatar,
@@ -18,6 +18,9 @@ import {
   Modal,
   Progress,
   Badge,
+  Input,
+  Alert,
+  message,
 } from "antd";
 import {
   CheckCircleTwoTone,
@@ -43,8 +46,11 @@ import {
   getStageLabel,
   toProgressStage,
 } from "@/app/utils/recruitment-stage";
+import SupaImageUploader from "@/app/utils/image-uploader";
+import SignaturePadUploader from "./SignatureUploader";
 
 const { Title, Text } = Typography;
+const { TextArea } = Input;
 
 type Props = {
   applicant: ApplicantDataModel;
@@ -59,6 +65,31 @@ type Props = {
 };
 
 const stageOrder = PROGRESS_STAGE_ORDER;
+
+type CandidateDecisionState = "PENDING" | "ACCEPTED" | "DECLINED";
+
+const DECISION_STATUS_META: Record<
+  CandidateDecisionState,
+  { label: string; color: string; helper: string }
+> = {
+  PENDING: {
+    label: "Pending",
+    color: "gold",
+    helper: "Please review the offer to provide your decision.",
+  },
+  ACCEPTED: {
+    label: "Accepted",
+    color: "green",
+    helper:
+      "You have accepted the offer. HR will contact you for the next steps.",
+  },
+  DECLINED: {
+    label: "Declined",
+    color: "red",
+    helper:
+      "You have declined the offer. You can contact HR if you change your mind.",
+  },
+};
 
 // ---------------- Stage Config ----------------
 type ActionItem = {
@@ -75,17 +106,47 @@ type ActionItem = {
 // ---------------- Component ----------------
 export default function CandidateProgress({ applicant, meta }: Props) {
   const [isOpenModal, setIsOpenModal] = useState(false);
+  const [isDecisionModalOpen, setIsDecisionModalOpen] = useState(false);
+  const [decisionMode, setDecisionMode] = useState<"ACCEPT" | "DECLINE" | null>(
+    null
+  );
+  const [signatureUrl, setSignatureUrl] = useState<string | null>(null);
+  const [signaturePath, setSignaturePath] = useState<string | null>(null);
+  const [rejectionReason, setRejectionReason] = useState("");
   const router = useRouter();
   const currentStage = toProgressStage(applicant.stage);
   const nowStageIndex = stageOrder.findIndex((s) => s === currentStage);
   const normalizedStageIndex = nowStageIndex === -1 ? 0 : nowStageIndex;
   const { data: locations } = useLocations({});
 
-  const { data: contractByApplicant } = useOfferingContractByApplicantId({
+  const {
+    data: contractByApplicant,
+    onSubmitDecision,
+    onSubmitDecisionLoading,
+  } = useOfferingContractByApplicantId({
     applicant_id: applicant.id || "",
   });
 
   const { onPatchDocument } = useUser({ id: applicant.user_id });
+
+  const decisionStatus = useMemo<CandidateDecisionState>(() => {
+    const raw = (contractByApplicant?.candidateDecision ||
+      "PENDING") as CandidateDecisionState;
+    return DECISION_STATUS_META[raw] ? raw : "PENDING";
+  }, [contractByApplicant?.candidateDecision]);
+
+  const decisionMeta = DECISION_STATUS_META[decisionStatus];
+  const decisionAtDate = contractByApplicant?.candidateDecisionAt
+    ? dayjs(contractByApplicant.candidateDecisionAt)
+    : null;
+  const decisionAtDisplay = decisionAtDate
+    ? decisionAtDate.format("MMMM D, YYYY HH:mm")
+    : null;
+  const isDecisionLocked = decisionStatus !== "PENDING";
+  const signatureUrlFromServer =
+    contractByApplicant?.candidateSignatureUrl || null;
+  const signaturePathFromServer =
+    contractByApplicant?.candidateSignaturePath || null;
 
   const handlePatchDocument = useCallback(
     async (nik: string, imageUrl: string) => {
@@ -109,12 +170,106 @@ export default function CandidateProgress({ applicant, meta }: Props) {
     setIsOpenModal(false);
   };
 
+  const handleOpenDecisionModal = useCallback(() => {
+    setDecisionMode(
+      decisionStatus === "ACCEPTED"
+        ? "ACCEPT"
+        : decisionStatus === "DECLINED"
+        ? "DECLINE"
+        : null
+    );
+    setSignatureUrl(signatureUrlFromServer);
+    setSignaturePath(signaturePathFromServer);
+    setRejectionReason(contractByApplicant?.candidateRejectionReason || "");
+    setIsDecisionModalOpen(true);
+  }, [
+    contractByApplicant?.candidateRejectionReason,
+    decisionStatus,
+    signaturePathFromServer,
+    signatureUrlFromServer,
+  ]);
+
+  const handleCloseDecisionModal = useCallback(() => {
+    setIsDecisionModalOpen(false);
+    setDecisionMode(null);
+    setRejectionReason("");
+    setSignatureUrl(null);
+    setSignaturePath(null);
+  }, []);
+
+  const handleSelectDecision = useCallback(
+    (mode: "ACCEPT" | "DECLINE") => {
+      if (isDecisionLocked) return;
+      setDecisionMode(mode);
+    },
+    [isDecisionLocked]
+  );
+
+  const handleSubmitAcceptance = useCallback(async () => {
+    if (!applicant?.id) return;
+    if (!signatureUrl) {
+      message.warning("Please upload your signature before submitting.");
+      return;
+    }
+
+    try {
+      const payload: {
+        decision: CandidateDecisionState;
+        signatureUrl: string;
+        signaturePath?: string | null;
+      } = {
+        decision: "ACCEPTED",
+        signatureUrl,
+      };
+      if (signaturePath) {
+        payload.signaturePath = signaturePath;
+      }
+
+      await onSubmitDecision(payload);
+      message.success("Thank you! Your acceptance has been submitted.");
+      handleCloseDecisionModal();
+    } catch (error) {
+      message.error("Failed to submit your decision. Please try again.");
+    }
+  }, [
+    applicant?.id,
+    handleCloseDecisionModal,
+    onSubmitDecision,
+    signaturePath,
+    signatureUrl,
+  ]);
+
+  const handleSubmitDecline = useCallback(async () => {
+    if (!applicant?.id) return;
+    try {
+      const payload: {
+        decision: CandidateDecisionState;
+        rejectionReason?: string;
+      } = {
+        decision: "DECLINED",
+      };
+
+      if (rejectionReason.trim()) {
+        payload.rejectionReason = rejectionReason.trim();
+      }
+
+      await onSubmitDecision(payload);
+      message.success("Thank you for letting us know.");
+      handleCloseDecisionModal();
+    } catch (error) {
+      message.error("Failed to submit your decision. Please try again.");
+    }
+  }, [
+    applicant?.id,
+    handleCloseDecisionModal,
+    onSubmitDecision,
+    rejectionReason,
+  ]);
+
   const locationHeadOffice = () => {
     if (!Array.isArray(locations)) return null;
 
-    const headOffice = locations.find(
-      (item) => item.type === "HEAD_OFFICE"
-    );
+    const headOffice = locations.find((item) => item.type === "HEAD_OFFICE");
 
     if (!headOffice) return null;
 
@@ -320,24 +475,35 @@ export default function CandidateProgress({ applicant, meta }: Props) {
       }
 
       case "OFFERING":
-      case "HIRING":
+      // case "HIRING":
       case "HIRED": {
-        const isHiringStage = stage === "HIRING" || stage === "HIRED";
+        const isHiringStage = stage === "HIRED";
+        const hasOfferDocument = Boolean(contractByApplicant?.filePath);
+
         const actions: ActionItem[] = [
           {
             key: "offer",
-            label: "Review and sign the offer letter",
+            label: "Review the offer letter",
             button: {
-              text: contractByApplicant?.filePath
-                ? "View Offer"
-                : "Offer Pending",
+              text: hasOfferDocument ? "View Offer" : "Offer Pending",
               onClick: () =>
-                contractByApplicant?.filePath &&
-                window.open(contractByApplicant.filePath, "_blank"),
-              disabled: !contractByApplicant?.filePath,
-              tooltip: contractByApplicant?.filePath
-                ? "Open Offer"
-                : "No offer link",
+                hasOfferDocument &&
+                window.open(contractByApplicant!.filePath, "_blank"),
+              disabled: !hasOfferDocument,
+              tooltip: hasOfferDocument ? "Open Offer" : "No offer link",
+            },
+          },
+          {
+            key: "decision",
+            label: `Offer decision — ${decisionMeta.label}`,
+            button: {
+              text:
+                decisionStatus === "PENDING"
+                  ? "Review Decision"
+                  : "View Decision",
+              onClick: handleOpenDecisionModal,
+              tooltip: decisionMeta.helper,
+              disabled: !hasOfferDocument && decisionStatus === "PENDING",
             },
           },
           {
@@ -364,15 +530,43 @@ export default function CandidateProgress({ applicant, meta }: Props) {
           });
         }
 
+        const infoItems = [
+          {
+            label: "STATUS",
+            value: isHiringStage ? "Hiring" : "Offer Sent",
+          },
+          { label: "POSITION", value: applicant.job?.name ?? "-" },
+          {
+            label: "DECISION",
+            value: (
+              <Space size={6}>
+                <Tag color={decisionMeta.color}>{decisionMeta.label}</Tag>
+                {decisionStatus !== "PENDING" && decisionAtDisplay && (
+                  <Text type="secondary">{decisionAtDisplay}</Text>
+                )}
+              </Space>
+            ),
+          },
+        ] as { label: string; value: React.ReactNode }[];
+
+        if (decisionStatus === "ACCEPTED" && signatureUrlFromServer) {
+          infoItems.push({
+            label: "SIGNED OFFER",
+            value: (
+              <Link
+                href={signatureUrlFromServer}
+                target="_blank"
+                rel="noreferrer"
+              >
+                View Signature
+              </Link>
+            ),
+          });
+        }
+
         return {
           title: isHiringStage ? "Hiring & Onboarding" : "Offer Stage",
-          info: [
-            {
-              label: "STATUS",
-              value: isHiringStage ? "Hiring" : "Offer Sent",
-            },
-            { label: "POSITION", value: applicant.job?.name ?? "-" },
-          ],
+          info: infoItems,
           actions,
         };
       }
@@ -436,10 +630,10 @@ export default function CandidateProgress({ applicant, meta }: Props) {
   const statusInfo = cfg.info.find(
     (item) => item.label?.toUpperCase?.() === "STATUS"
   );
-const statusValue =
-  typeof statusInfo?.value === "string"
-    ? statusInfo.value
-    : getStageLabel(currentStage);
+  const statusValue =
+    typeof statusInfo?.value === "string"
+      ? statusInfo.value
+      : getStageLabel(currentStage);
   const primaryAction = cfg.actions[0];
   const summaryMetrics = [
     {
@@ -479,17 +673,19 @@ const statusValue =
       title: getStageLabel(stageKey),
       description: descriptor,
       icon:
-        stageKey === "APPLICATION"
-          ? <FileTextOutlined />
-          : stageKey === "SCREENING"
-          ? <SearchOutlined />
-          : stageKey === "INTERVIEW"
-          ? <MessageOutlined />
-          : stageKey === "OFFERING"
-          ? <FileDoneOutlined />
-          : stageKey === "HIRING"
-          ? <LaptopOutlined />
-          : <CloseCircleOutlined />,
+        stageKey === "APPLICATION" ? (
+          <FileTextOutlined />
+        ) : stageKey === "SCREENING" ? (
+          <SearchOutlined />
+        ) : stageKey === "INTERVIEW" ? (
+          <MessageOutlined />
+        ) : stageKey === "OFFERING" ? (
+          <FileDoneOutlined />
+        ) : stageKey === "HIRING" ? (
+          <LaptopOutlined />
+        ) : (
+          <CloseCircleOutlined />
+        ),
       status,
     };
   });
@@ -508,261 +704,158 @@ const statusValue =
         <Space direction="vertical" size={24} style={{ display: "flex" }}>
           <Card
             bordered={false}
-          style={{
-            borderRadius: 24,
-            background:
-              "linear-gradient(130deg, rgba(44,62,180,1) 0%, rgba(100,71,229,1) 55%, rgba(137,107,255,1) 100%)",
-            color: "#fff",
-            boxShadow: "0 24px 60px rgba(60,51,153,0.35)",
-          }}
-          bodyStyle={{ padding: 32 }}
-        >
-          <Row gutter={[24, 24]} align="middle" justify="space-between">
-            <Col flex="auto">
-              <Space direction="vertical" size={18}>
-                <Badge
-                  status="processing"
-                  text={
-                    <span style={{ color: "rgba(255,255,255,0.8)" }}>
-                      Apply Job Progress Tracking
-                    </span>
-                  }
-                />
-                <Space align="center" size={20}>
-                  <Avatar
-                    size={72}
-                    src={applicant.user?.photo_url || undefined}
-                    style={{
-                      background: "rgba(255,255,255,0.25)",
-                      color: "#fff",
-                      fontSize: 28,
-                      fontWeight: 600,
-                      border: "2px solid rgba(255,255,255,0.35)",
-                    }}
-                  >
-                    {initials}
-                  </Avatar>
-                  <Space direction="vertical" size={4}>
-                    <Title level={3} style={{ margin: 0, color: "#fff" }}>
-                      {applicant.user?.name || "Candidate"} ·{" "}
-                      {applicant.job?.name || "—"}
-                    </Title>
-                    <Text style={{ color: "rgba(255,255,255,0.75)" }}>
-                      Application ID: #{applicant.id.toUpperCase().slice(0, 8)}
-                    </Text>
-                    <Tag
-                      color="success"
+            style={{
+              borderRadius: 24,
+              background:
+                "linear-gradient(130deg, rgba(44,62,180,1) 0%, rgba(100,71,229,1) 55%, rgba(137,107,255,1) 100%)",
+              color: "#fff",
+              boxShadow: "0 24px 60px rgba(60,51,153,0.35)",
+            }}
+            bodyStyle={{ padding: 32 }}
+          >
+            <Row gutter={[24, 24]} align="middle" justify="space-between">
+              <Col flex="auto">
+                <Space direction="vertical" size={18}>
+                  <Badge
+                    status="processing"
+                    text={
+                      <span style={{ color: "rgba(255,255,255,0.8)" }}>
+                        Apply Job Progress Tracking
+                      </span>
+                    }
+                  />
+                  <Space align="center" size={20}>
+                    <Avatar
+                      size={72}
+                      src={applicant.user?.photo_url || undefined}
                       style={{
-                        borderRadius: 999,
-                        padding: "2px 12px",
-                        width: "fit-content",
+                        background: "rgba(255,255,255,0.25)",
+                        color: "#fff",
+                        fontSize: 28,
+                        fontWeight: 600,
+                        border: "2px solid rgba(255,255,255,0.35)",
                       }}
                     >
-                      Current Stage — {getStageLabel(currentStage)}
-                    </Tag>
+                      {initials}
+                    </Avatar>
+                    <Space direction="vertical" size={4}>
+                      <Title level={3} style={{ margin: 0, color: "#fff" }}>
+                        {applicant.user?.name || "Candidate"} ·{" "}
+                        {applicant.job?.name || "—"}
+                      </Title>
+                      <Text style={{ color: "rgba(255,255,255,0.75)" }}>
+                        Application ID: #
+                        {applicant.id.toUpperCase().slice(0, 8)}
+                      </Text>
+                      <Tag
+                        color="success"
+                        style={{
+                          borderRadius: 999,
+                          padding: "2px 12px",
+                          width: "fit-content",
+                        }}
+                      >
+                        Current Stage — {getStageLabel(currentStage)}
+                      </Tag>
+                    </Space>
                   </Space>
                 </Space>
-              </Space>
-            </Col>
-            <Col>
-              <Space direction="vertical" align="center">
-                <Progress
-                  type="circle"
-                  percent={stageProgressPercent}
-                  size={120}
-                  strokeColor="#ffce73"
-                  trailColor="rgba(255,255,255,0.25)"
-                  format={(percent) => (
-                    <span style={{ color: "#fff", fontWeight: 600 }}>
-                      {percent}%
-                    </span>
-                  )}
-                />
-                <Button
-                  size="large"
-                  style={{
-                    background: "#ffce73",
-                    borderColor: "#ffce73",
-                    color: "#1e2b5c",
-                    fontWeight: 600,
-                    boxShadow: "0 12px 24px rgba(255,206,115,0.35)",
-                  }}
-                  onClick={() =>
-                    router.push(`/user/home/apply-job/${applicant.id}/chat`)
-                  }
-                  icon={<MessageOutlined />}
-                >
-                  Contact Recruiter
-                </Button>
-              </Space>
-            </Col>
-          </Row>
-        </Card>
-
-        <Row gutter={[20, 20]}>
-          {summaryMetrics.map((metric) => (
-            <Col xs={24} md={8} key={metric.key}>
-              <Card
-                bordered={false}
-                style={{
-                  borderRadius: 18,
-                  background: "#ffffff",
-                  boxShadow: "0 16px 40px rgba(15, 23, 42, 0.08)",
-                  height: "100%",
-                }}
-                bodyStyle={{ padding: 20, height: "100%" }}
-              >
-                <Space direction="vertical" size={8} style={{ display: "flex" }}>
-                  <Text
-                    type="secondary"
+              </Col>
+              <Col>
+                <Space direction="vertical" align="center">
+                  <Progress
+                    type="circle"
+                    percent={stageProgressPercent}
+                    size={120}
+                    strokeColor="#ffce73"
+                    trailColor="rgba(255,255,255,0.25)"
+                    format={(percent) => (
+                      <span style={{ color: "#fff", fontWeight: 600 }}>
+                        {percent}%
+                      </span>
+                    )}
+                  />
+                  <Button
+                    size="large"
                     style={{
-                      textTransform: "uppercase",
-                      letterSpacing: 0.6,
-                      fontSize: 12,
+                      background: "#ffce73",
+                      borderColor: "#ffce73",
+                      color: "#1e2b5c",
+                      fontWeight: 600,
+                      boxShadow: "0 12px 24px rgba(255,206,115,0.35)",
                     }}
+                    onClick={() =>
+                      router.push(`/user/home/apply-job/${applicant.id}/chat`)
+                    }
+                    icon={<MessageOutlined />}
                   >
-                    {metric.label}
-                  </Text>
-                  <Title level={4} style={{ margin: 0 }}>
-                    {metric.value}
-                  </Title>
-                  <Text type="secondary">{metric.caption}</Text>
+                    Contact Recruiter
+                  </Button>
                 </Space>
-              </Card>
-            </Col>
-          ))}
-        </Row>
+              </Col>
+            </Row>
+          </Card>
 
-        <Card
-          bordered={false}
-          style={{
-            borderRadius: 20,
-            background: "#ffffff",
-            boxShadow: "0 20px 56px rgba(15,23,42,0.12)",
-          }}
-          title={
-            <Space align="center">
-              <CheckCircleTwoTone twoToneColor="#52c41a" />
-              <span>Pipeline Timeline</span>
-            </Space>
-          }
-          bodyStyle={{ paddingTop: 12 }}
-        >
-          <Steps current={normalizedStageIndex} responsive items={stepsItems} />
-        </Card>
-
-        <Card
-          bordered={false}
-          style={{
-            borderRadius: 20,
-            background: "#ffffff",
-            boxShadow: "0 20px 56px rgba(15,23,42,0.1)",
-          }}
-          title={
-            <Space align="center">
-              <FileTextOutlined />
-              <span>{cfg.title}</span>
-            </Space>
-          }
-          bodyStyle={{ paddingTop: 16 }}
-        >
-          {cfg.info.length > 0 && (
-            <>
-              <Space
-                direction="vertical"
-                size={12}
-                style={{ width: "100%" }}
-              >
-                {cfg.info.map((info) => (
-                  <div
-                    key={info.label}
-                    style={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      gap: 16,
-                      padding: "12px 16px",
-                      background: "#f5f7ff",
-                      borderRadius: 14,
-                    }}
+          <Row gutter={[20, 20]}>
+            {summaryMetrics.map((metric) => (
+              <Col xs={24} md={8} key={metric.key}>
+                <Card
+                  bordered={false}
+                  style={{
+                    borderRadius: 18,
+                    background: "#ffffff",
+                    boxShadow: "0 16px 40px rgba(15, 23, 42, 0.08)",
+                    height: "100%",
+                  }}
+                  bodyStyle={{ padding: 20, height: "100%" }}
+                >
+                  <Space
+                    direction="vertical"
+                    size={8}
+                    style={{ display: "flex" }}
                   >
                     <Text
                       type="secondary"
-                      style={{ fontSize: 12, textTransform: "uppercase" }}
+                      style={{
+                        textTransform: "uppercase",
+                        letterSpacing: 0.6,
+                        fontSize: 12,
+                      }}
                     >
-                      {info.label}
+                      {metric.label}
                     </Text>
-                    <div style={{ textAlign: "right" }}>
-                      {typeof info.value === "string" ? (
-                        <Text strong>{info.value}</Text>
-                      ) : (
-                        info.value
-                      )}
-                    </div>
-                  </div>
-                ))}
+                    <Title level={4} style={{ margin: 0 }}>
+                      {metric.value}
+                    </Title>
+                    <Text type="secondary">{metric.caption}</Text>
+                  </Space>
+                </Card>
+              </Col>
+            ))}
+          </Row>
+
+          <Card
+            bordered={false}
+            style={{
+              borderRadius: 20,
+              background: "#ffffff",
+              boxShadow: "0 20px 56px rgba(15,23,42,0.12)",
+            }}
+            title={
+              <Space align="center">
+                <CheckCircleTwoTone twoToneColor="#52c41a" />
+                <span>Pipeline Timeline</span>
               </Space>
-              <Divider />
-            </>
-          )}
-
-          <Title level={5} style={{ marginBottom: 12 }}>
-            Required Actions
-          </Title>
-          {cfg.actions.length > 0 ? (
-            <List
-              split={false}
-              dataSource={cfg.actions}
-              renderItem={(act) => (
-                <List.Item
-                  key={act.key}
-                  style={{
-                    padding: "12px 16px",
-                    background: "#f9fafc",
-                    borderRadius: 14,
-                    marginBottom: 12,
-                  }}
-                  actions={
-                    act.button
-                      ? [
-                          <Tooltip
-                            key={`${act.key}-tt`}
-                            title={act.button.tooltip || act.button.text}
-                          >
-                            <Button
-                              type="primary"
-                              disabled={act.button.disabled}
-                              onClick={act.button.onClick}
-                              icon={
-                                act.key === "schedule" ? (
-                                  <CalendarOutlined />
-                                ) : act.key === "offer" ? (
-                                  <FileDoneOutlined />
-                                ) : undefined
-                              }
-                            >
-                              {act.button.text}
-                            </Button>
-                          </Tooltip>,
-                        ]
-                      : undefined
-                  }
-                >
-                  <List.Item.Meta
-                    title={
-                      <Text strong style={{ fontSize: 14 }}>
-                        {act.label}
-                      </Text>
-                    }
-                  />
-                </List.Item>
-              )}
+            }
+            bodyStyle={{ paddingTop: 12 }}
+          >
+            <Steps
+              current={normalizedStageIndex}
+              responsive
+              items={stepsItems}
             />
-          ) : (
-            <Text type="secondary">No outstanding actions at this stage.</Text>
-          )}
-        </Card>
+          </Card>
 
-        {currentStage === "SCREENING" && applicant.mbti_test?.result && (
           <Card
             bordered={false}
             style={{
@@ -770,10 +863,271 @@ const statusValue =
               background: "#ffffff",
               boxShadow: "0 20px 56px rgba(15,23,42,0.1)",
             }}
+            title={
+              <Space align="center">
+                <FileTextOutlined />
+                <span>{cfg.title}</span>
+              </Space>
+            }
+            bodyStyle={{ paddingTop: 16 }}
           >
-            <ResultMBTIComponent result={applicant.mbti_test.result} />
+            {cfg.info.length > 0 && (
+              <>
+                <Space direction="vertical" size={12} style={{ width: "100%" }}>
+                  {cfg.info.map((info) => (
+                    <div
+                      key={info.label}
+                      style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        gap: 16,
+                        padding: "12px 16px",
+                        background: "#f5f7ff",
+                        borderRadius: 14,
+                      }}
+                    >
+                      <Text
+                        type="secondary"
+                        style={{ fontSize: 12, textTransform: "uppercase" }}
+                      >
+                        {info.label}
+                      </Text>
+                      <div style={{ textAlign: "right" }}>
+                        {typeof info.value === "string" ? (
+                          <Text strong>{info.value}</Text>
+                        ) : (
+                          info.value
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </Space>
+                <Divider />
+              </>
+            )}
+
+            <Title level={5} style={{ marginBottom: 12 }}>
+              Required Actions
+            </Title>
+            {cfg.actions.length > 0 ? (
+              <List
+                split={false}
+                dataSource={cfg.actions}
+                renderItem={(act) => (
+                  <List.Item
+                    key={act.key}
+                    style={{
+                      padding: "12px 16px",
+                      background: "#f9fafc",
+                      borderRadius: 14,
+                      marginBottom: 12,
+                    }}
+                    actions={
+                      act.button
+                        ? [
+                            <Tooltip
+                              key={`${act.key}-tt`}
+                              title={act.button.tooltip || act.button.text}
+                            >
+                              <Button
+                                type="primary"
+                                disabled={act.button.disabled}
+                                onClick={act.button.onClick}
+                                icon={
+                                  act.key === "schedule" ? (
+                                    <CalendarOutlined />
+                                  ) : act.key === "offer" ? (
+                                    <FileDoneOutlined />
+                                  ) : undefined
+                                }
+                              >
+                                {act.button.text}
+                              </Button>
+                            </Tooltip>,
+                          ]
+                        : undefined
+                    }
+                  >
+                    <List.Item.Meta
+                      title={
+                        <Text strong style={{ fontSize: 14 }}>
+                          {act.label}
+                        </Text>
+                      }
+                    />
+                  </List.Item>
+                )}
+              />
+            ) : (
+              <Text type="secondary">
+                No outstanding actions at this stage.
+              </Text>
+            )}
           </Card>
-        )}
+
+          {currentStage === "SCREENING" && applicant.mbti_test?.result && (
+            <Card
+              bordered={false}
+              style={{
+                borderRadius: 20,
+                background: "#ffffff",
+                boxShadow: "0 20px 56px rgba(15,23,42,0.1)",
+              }}
+            >
+              <ResultMBTIComponent result={applicant.mbti_test.result} />
+            </Card>
+          )}
+
+          <Modal
+            open={isDecisionModalOpen}
+            onCancel={handleCloseDecisionModal}
+            title="Offer Decision"
+            width={720}
+            footer={null}
+          >
+            <Space direction="vertical" size={16} style={{ display: "block" }}>
+              <Space align="center" size={8}>
+                <Tag
+                  color={decisionMeta.color}
+                  style={{ marginRight: 0, fontSize: 16, marginBottom: 12 }}
+                >
+                  {decisionMeta.label}
+                </Tag>
+                {decisionStatus !== "PENDING" && decisionAtDisplay && (
+                  <Text type="secondary">Submitted {decisionAtDisplay}</Text>
+                )}
+              </Space>
+
+              {isDecisionLocked && (
+                <Alert
+                  type="success"
+                  showIcon
+                  message={
+                    decisionStatus === "ACCEPTED"
+                      ? "You have already accepted this offer."
+                      : "You have already declined this offer."
+                  }
+                  description="If you need to make changes, please contact the recruitment team."
+                />
+              )}
+
+              <Text>{decisionMeta.helper}</Text>
+
+              <Space size={12} style={{ marginBottom: 12, marginTop: 12 }}>
+                <Button
+                  type={decisionMode === "ACCEPT" ? "primary" : "default"}
+                  onClick={() => handleSelectDecision("ACCEPT")}
+                  disabled={isDecisionLocked}
+                >
+                  Accept Offer
+                </Button>
+                <Button
+                  type={decisionMode === "DECLINE" ? "primary" : "default"}
+                  danger
+                  onClick={() => handleSelectDecision("DECLINE")}
+                  disabled={isDecisionLocked}
+                >
+                  Decline Offer
+                </Button>
+              </Space>
+
+              {decisionMode === "ACCEPT" && (
+                <Space
+                  direction="vertical"
+                  size={12}
+                  style={{ display: "block" }}
+                >
+                  <Text strong>Signature</Text>
+                  <Text type="secondary">
+                    Upload a clear photo of your handwritten signature. JPG or
+                    PNG up to 5MB.
+                  </Text>
+                  <SignaturePadUploader
+                    bucket="web-oss-recruitment"
+                    folder={`candidate-signatures/${applicant.id}`}
+                    value={signatureUrl ?? undefined}
+                    onUpload={(path, url) => {
+                      setSignatureUrl(url); // simpan URL publik
+                      setSignaturePath(path); // simpan storage path untuk DB
+                    }}
+                    onDelete={() => {
+                      setSignatureUrl(null);
+                      setSignaturePath(null);
+                    }}
+                    maxSizeMB={5}
+                    width={560}
+                    height={200}
+                  />
+                  <Button
+                    type="primary"
+                    style={{ marginTop: 12, marginBottom: 12 }}
+                    icon={<FileDoneOutlined />}
+                    onClick={handleSubmitAcceptance}
+                    loading={onSubmitDecisionLoading}
+                    disabled={!signatureUrl || isDecisionLocked}
+                  >
+                    Submit Acceptance
+                  </Button>
+                </Space>
+              )}
+
+              {decisionMode === "DECLINE" && (
+                <Space
+                  direction="vertical"
+                  size={12}
+                  style={{ display: "block" }}
+                >
+                  <Text strong>Optional note</Text>
+                  <Text type="secondary">
+                    Let us know why you are declining. This helps us improve the
+                    process.
+                  </Text>
+                  <TextArea
+                    placeholder="Share your reason (optional)"
+                    rows={4}
+                    value={rejectionReason}
+                    disabled={isDecisionLocked}
+                    onChange={(event) => setRejectionReason(event.target.value)}
+                  />
+                  <Button
+                    danger
+                    type="primary"
+                    style={{ marginTop: 12 }}
+                    onClick={handleSubmitDecline}
+                    loading={onSubmitDecisionLoading}
+                    disabled={isDecisionLocked}
+                  >
+                    Submit Decline
+                  </Button>
+                </Space>
+              )}
+
+              {!decisionMode && (
+                <Alert
+                  type="info"
+                  showIcon
+                  message="Select accept or decline to continue."
+                />
+              )}
+
+              {decisionStatus === "ACCEPTED" && signatureUrlFromServer && (
+                <Alert
+                  type="info"
+                  showIcon
+                  message="Signature on file"
+                  description={
+                    <Link
+                      href={signatureUrlFromServer}
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      View uploaded signature
+                    </Link>
+                  }
+                />
+              )}
+            </Space>
+          </Modal>
 
           <Modal
             open={isOpenModal}

@@ -39,6 +39,7 @@ interface SupaFileUploaderProps {
   /** Public URL (controlled) */
   value?: string | null;
   onChange?: (value: string | null) => void;
+  initialPath?: string | null;
   maxSizeMB?: number;
   /** Which file types to allow (default: ['pdf','doc','docx']) */
   allowedTypes?: AllowedType[];
@@ -85,6 +86,7 @@ export default function SupaFileUploader({
   label = "Upload File",
   value,
   onChange,
+  initialPath = null,
   maxSizeMB = 10,
   allowedTypes = ["pdf", "doc", "docx"],
 }: SupaFileUploaderProps) {
@@ -92,7 +94,7 @@ export default function SupaFileUploader({
     value
       ? {
           url: value,
-          path: "",
+          path: initialPath ?? "",
           name: value.split("/").pop() || "file",
           ext: extFromName(value) ?? "pdf",
         }
@@ -113,14 +115,14 @@ export default function SupaFileUploader({
     if (value && (!preview || preview.url !== value)) {
       setPreview({
         url: value,
-        path: "",
+        path: initialPath ?? "",
         name: value.split("/").pop() || "file",
         ext: extFromName(value) ?? "pdf",
       });
     }
     if (!value) setPreview(null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [value]);
+  }, [value, initialPath]);
 
   const beforeUpload: UploadProps["beforeUpload"] = (file) => {
     const validMimes = allowedTypes.flatMap((t) => MIME_BY_EXT[t]);
