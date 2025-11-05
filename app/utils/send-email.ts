@@ -25,6 +25,7 @@ type DirectorSignatureEmailPayload = {
   jobTitle: string;
   contractUrl: string;
   notes?: string;
+  linkUrl?: string;
 };
 
 function fmtDate(d: Date | string, locale = "en-US") {
@@ -191,7 +192,7 @@ export async function sendRecruitmentEmail(
 export async function sendDirectorSignatureEmail(
   payload: DirectorSignatureEmailPayload
 ) {
-  const { to, candidateName, jobTitle, contractUrl, notes } = payload;
+  const { to, candidateName, jobTitle, contractUrl, notes, linkUrl } = payload;
 
   const transporter = nodemailer.createTransport({
     service: "gmail",
@@ -228,10 +229,10 @@ export async function sendDirectorSignatureEmail(
         : ""
     }
     <p style="font-size:15px; color:#555;">
-      After signing, please upload the signed document back to the recruitment portal.
+      After signing, please upload the signed document back to the link below: <a href="${linkUrl}">${linkUrl}</a>
     </p>
     <p style="font-size:15px; color:#555;">
-      Thank you for your prompt attention.
+      Thank you for your attention.
     </p>
   `;
 

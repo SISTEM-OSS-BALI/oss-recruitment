@@ -252,10 +252,12 @@ model OfferingContract {
   candidateSignatureSignedAt   DateTime?
   candidateRejectionReason     String?             @db.LongText
   candidateSignedPdfPath       String?
+  candidateSignedPdfAt         DateTime?
   directorSignatureRequestedAt DateTime?
   candidateSignedPdfUrl        String?
   directorSignatureUrl         String?             @db.LongText
   directorSignaturePath        String?
+  directorSignedPdfUrl         String?
   directorSignatureSignedAt    DateTime?
   notifyEmail                  String?
   createdAt                    DateTime            @default(now())

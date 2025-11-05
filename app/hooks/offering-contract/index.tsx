@@ -149,7 +149,7 @@ export const useOfferingContractByApplicantId = ({
           rest ?? {}
         );
       },
-      onSuccess: (_, variables) => {
+      onSuccess: () => {
         queryClient.invalidateQueries({ queryKey: [entity, applicant_id] });
         MainNotification({
           type: "success",

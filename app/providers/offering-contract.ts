@@ -1,6 +1,7 @@
 import { db } from "@/lib/prisma";
 import type { Prisma } from "@prisma/client";
 import { GeneralError } from "../utils/general-error";
+import { applyCandidateSignatureToContract } from "../utils/contract-signature";
 import type {
   OfferDecisionValue,
   OfferingContractPayloadCreateModel,
@@ -145,10 +146,27 @@ export const UPDATE_OFFERING_CONTRACT_CANDIDATE_DECISION = async ({
     data.candidateRejectionReason = null;
   }
 
-  const updated = await db.offeringContract.update({
+  let updated = await db.offeringContract.update({
     where: { id: existing.id },
     data,
   });
+
+  if (decision === "ACCEPTED") {
+    try {
+      updated = await applyCandidateSignatureToContract(updated);
+    } catch (error) {
+      console.error("Failed to apply candidate signature automatically:", error);
+      throw new GeneralError({
+        code: 500,
+        error: "Failed to generate signed contract",
+        error_code: "APPLY_CANDIDATE_SIGNATURE_FAILED",
+        details:
+          error instanceof Error
+            ? error.message
+            : "Unknown error occurred while generating signed PDF.",
+      });
+    }
+  }
 
   return updated;
 };

@@ -13,7 +13,6 @@ const TZ = "Asia/Makassar";
 const INTERVIEW_SLOT_MINUTES = 30;
 
 type Interval = { start: Date; end: Date };
-type DayAvail = { day: string; slots: Interval[] };
 
 function isOverlap(a: Interval, b: Interval) {
   return a.start < b.end && b.start < a.end;

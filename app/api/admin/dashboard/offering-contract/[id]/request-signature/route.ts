@@ -13,10 +13,11 @@ export async function POST(
   try {
     const payload = await req
       .json()
-      .catch(() => ({}) as { email?: string; message?: string });
+      .catch(() => ({} as { email?: string; message?: string }));
 
-    const directorEmail =
-      payload?.email || process.env.DIRECTOR_SIGNATURE_EMAIL;
+    const directorEmail = payload?.email;
+
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "";
 
     if (!directorEmail) {
       throw new GeneralError({
@@ -39,24 +40,32 @@ export async function POST(
       });
     }
 
-    if (!contract.filePath) {
+    if (!contract.filePath && !contract.candidateSignedPdfUrl) {
       throw new GeneralError({
         code: 400,
         error: "Bad Request",
         error_code: "CONTRACT_FILE_MISSING",
-        details: "Contract filePath is missing. Generate the contract first.",
+        details:
+          "Contract file is missing. Generate or finalize the contract first.",
       });
     }
 
     const candidateName = contract.applicant?.user?.name ?? "Candidate";
     const jobTitle = contract.applicant?.job?.name ?? "Requested Position";
+    const contractUrl =
+      contract.candidateSignedPdfUrl && contract.candidateSignedPdfUrl.trim()
+        ? contract.candidateSignedPdfUrl
+        : contract.filePath;
+
+    const linkUrl = `${baseUrl}/upload-document?contract_id=${contract.id}`;
 
     await sendDirectorSignatureEmail({
       to: directorEmail,
       candidateName,
       jobTitle,
-      contractUrl: contract.filePath,
+      contractUrl,
       notes: payload?.message,
+      linkUrl,
     });
 
     const updated = await MARK_DIRECTOR_SIGNATURE_REQUESTED(contract.id);

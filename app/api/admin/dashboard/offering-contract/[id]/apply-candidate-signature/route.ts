@@ -1,20 +1,11 @@
-import { PDFDocument } from "pdf-lib";
 import { NextRequest, NextResponse } from "next/server";
 
 import { GET_OFFERING_CONTRACT } from "@/app/providers/offering-contract";
 import { GeneralError } from "@/app/utils/general-error";
-import { fetchArrayBuffer, saveSignedPdfResult } from "@/app/utils/contract-signature";
-import { supabase } from "@/app/utils/supabase-client";
-
-const BUCKET = "web-oss-recruitment";
-const SIGNATURE_WIDTH = 180;
-const SIGNATURE_HEIGHT = 80;
-const SIGNATURE_X = 330; // sesuaikan
-const SIGNATURE_Y = 120;
-const SIGNATURE_PAGE_OFFSET = 0; // 0 = halaman terakhir
+import { applyCandidateSignatureToContract } from "@/app/utils/contract-signature";
 
 export async function POST(
-  req: NextRequest,
+  _req: NextRequest,
   { params }: { params: { id: string } }
 ) {
   try {
@@ -36,51 +27,13 @@ export async function POST(
       });
     }
 
-    const [pdfBytes, signatureBytes] = await Promise.all([
-      fetchArrayBuffer(contract.filePath),
-      fetchArrayBuffer(contract.candidateSignatureUrl),
-    ]);
-
-    const pdfDoc = await PDFDocument.load(pdfBytes);
-    const png = await pdfDoc.embedPng(signatureBytes);
-    const pages = pdfDoc.getPages();
-    const targetPage =
-      pages[Math.max(pages.length - 1 - SIGNATURE_PAGE_OFFSET, 0)];
-    targetPage.drawImage(png, {
-      x: SIGNATURE_X,
-      y: SIGNATURE_Y,
-      width: SIGNATURE_WIDTH,
-      height: SIGNATURE_HEIGHT,
-    });
-
-    const stampedPdf = await pdfDoc.save();
-    const filePath = `candidate-signed/${contract.id}-${Date.now()}.pdf`;
-
-    const { error } = await supabase.storage
-      .from(BUCKET)
-      .upload(filePath, stampedPdf, {
-        contentType: "application/pdf",
-      });
-    if (error) {
-      throw error;
-    }
-
-    const { data } = supabase.storage.from(BUCKET).getPublicUrl(filePath);
-    if (!data?.publicUrl) {
-      throw new Error("Gagal mendapatkan URL publik.");
-    }
-
-    await saveSignedPdfResult({
-      contractId: contract.id,
-      signedUrl: data.publicUrl,
-      signedPath: filePath,
-    });
+    const updated = await applyCandidateSignatureToContract(contract);
 
     return NextResponse.json(
       {
         success: true,
         message: "Signature berhasil ditempelkan.",
-        result: data.publicUrl,
+        result: updated.candidateSignedPdfUrl,
       },
       { status: 200 }
     );

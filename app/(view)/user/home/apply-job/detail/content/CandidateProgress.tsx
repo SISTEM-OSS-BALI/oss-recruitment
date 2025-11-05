@@ -20,7 +20,9 @@ import {
   Badge,
   Input,
   Alert,
+  Image,
   message,
+  Empty,
 } from "antd";
 import {
   CheckCircleTwoTone,
@@ -31,6 +33,7 @@ import {
   FileTextOutlined,
   CalendarOutlined,
   FileDoneOutlined,
+  DownloadOutlined,
 } from "@ant-design/icons";
 import dayjs from "dayjs";
 import { ApplicantDataModel } from "@/app/models/applicant";
@@ -46,7 +49,6 @@ import {
   getStageLabel,
   toProgressStage,
 } from "@/app/utils/recruitment-stage";
-import SupaImageUploader from "@/app/utils/image-uploader";
 import SignaturePadUploader from "./SignatureUploader";
 
 const { Title, Text } = Typography;
@@ -103,6 +105,18 @@ type ActionItem = {
   };
 };
 
+type StageInfoItem = {
+  label: string;
+  value: React.ReactNode;
+};
+
+type SummaryMetric = {
+  key: string;
+  label: string;
+  value: React.ReactNode;
+  caption: React.ReactNode;
+};
+
 // ---------------- Component ----------------
 export default function CandidateProgress({ applicant, meta }: Props) {
   const [isOpenModal, setIsOpenModal] = useState(false);
@@ -110,6 +124,7 @@ export default function CandidateProgress({ applicant, meta }: Props) {
   const [decisionMode, setDecisionMode] = useState<"ACCEPT" | "DECLINE" | null>(
     null
   );
+  const [isContractPreviewOpen, setIsContractPreviewOpen] = useState(false);
   const [signatureUrl, setSignatureUrl] = useState<string | null>(null);
   const [signaturePath, setSignaturePath] = useState<string | null>(null);
   const [rejectionReason, setRejectionReason] = useState("");
@@ -147,6 +162,30 @@ export default function CandidateProgress({ applicant, meta }: Props) {
     contractByApplicant?.candidateSignatureUrl || null;
   const signaturePathFromServer =
     contractByApplicant?.candidateSignaturePath || null;
+  const contractUrl = contractByApplicant?.filePath || null;
+  const isContractPdf = useMemo(() => {
+    if (!contractUrl) return false;
+    const lower = contractUrl.toLowerCase();
+    return lower.includes(".pdf");
+  }, [contractUrl]);
+  const directorSignedPdfUrl =
+    contractByApplicant?.directorSignedPdfUrl || null;
+  const candidateSignedPdfUrl =
+    contractByApplicant?.candidateSignedPdfUrl || null;
+  const finalDocumentUrl = useMemo(
+    () => directorSignedPdfUrl || candidateSignedPdfUrl || null,
+    [candidateSignedPdfUrl, directorSignedPdfUrl]
+  );
+  const firstPartyName =
+    process.env.NEXT_PUBLIC_CONTRACT_FIRST_PARTY_NAME ||
+    "CV OSS Bali Internasional";
+  const firstPartyRepresentative =
+    process.env.NEXT_PUBLIC_CONTRACT_FIRST_PARTY_REPRESENTATIVE ||
+    "Putu Astina Putra";
+  const firstPartyRole =
+    process.env.NEXT_PUBLIC_CONTRACT_FIRST_PARTY_ROLE || "Direktur";
+
+  const hasDirectorSignedDocument = Boolean(directorSignedPdfUrl);
 
   const handlePatchDocument = useCallback(
     async (nik: string, imageUrl: string) => {
@@ -162,13 +201,13 @@ export default function CandidateProgress({ applicant, meta }: Props) {
     [applicant.user_id, onPatchDocument]
   );
 
-  const handleOpenModal = () => {
+  const handleOpenModal = useCallback(() => {
     setIsOpenModal(true);
-  };
+  }, []);
 
-  const handleCancelModal = () => {
+  const handleCancelModal = useCallback(() => {
     setIsOpenModal(false);
-  };
+  }, []);
 
   const handleOpenDecisionModal = useCallback(() => {
     setDecisionMode(
@@ -195,15 +234,23 @@ export default function CandidateProgress({ applicant, meta }: Props) {
     setRejectionReason("");
     setSignatureUrl(null);
     setSignaturePath(null);
+    setIsContractPreviewOpen(false);
   }, []);
 
   const handleSelectDecision = useCallback(
     (mode: "ACCEPT" | "DECLINE") => {
       if (isDecisionLocked) return;
       setDecisionMode(mode);
+      if (mode === "ACCEPT" && contractUrl) {
+        setIsContractPreviewOpen(true);
+      }
+      if (mode === "DECLINE") {
+        setIsContractPreviewOpen(false);
+      }
     },
-    [isDecisionLocked]
+    [contractUrl, isDecisionLocked]
   );
+
 
   const handleSubmitAcceptance = useCallback(async () => {
     if (!applicant?.id) return;
@@ -266,19 +313,16 @@ export default function CandidateProgress({ applicant, meta }: Props) {
     rejectionReason,
   ]);
 
-  const locationHeadOffice = () => {
+  const headOffice = useMemo(() => {
     if (!Array.isArray(locations)) return null;
-
-    const headOffice = locations.find((item) => item.type === "HEAD_OFFICE");
-
-    if (!headOffice) return null;
-
+    const ho = locations.find((item) => item.type === "HEAD_OFFICE");
+    if (!ho) return null;
     return {
-      name: headOffice.name,
-      type: headOffice.type,
-      mapsUrl: headOffice.maps_url,
+      name: ho.name,
+      type: ho.type,
+      mapsUrl: ho.maps_url,
     };
-  };
+  }, [locations]);
 
   function getStageConfig(
     stage: string,
@@ -413,7 +457,7 @@ export default function CandidateProgress({ applicant, meta }: Props) {
             );
           } else {
             // offline — boleh fallback ke Head Office *hanya setelah ada jadwal*
-            const hq = locationHeadOffice();
+            const hq = headOffice;
             methodValue = hq ? (
               <Space direction="vertical" size={2}>
                 <Text strong>{hq.name} (Offline)</Text>
@@ -474,13 +518,22 @@ export default function CandidateProgress({ applicant, meta }: Props) {
         };
       }
 
-      case "OFFERING":
-      // case "HIRING":
-      case "HIRED": {
-        const isHiringStage = stage === "HIRED";
+      case "OFFERING": {
+        // OFFERING is the offer-sent stage (not the hiring/onboarding stage)
         const hasOfferDocument = Boolean(contractByApplicant?.filePath);
 
         const actions: ActionItem[] = [
+          {
+            key: "upload-identity",
+            label: "Upload identity document",
+            button: {
+              text: applicant.user?.no_identity_url
+                ? "Document Uploaded"
+                : "Upload Document",
+              onClick: handleOpenModal,
+              disabled: !!applicant.user?.no_identity_url,
+            },
+          },
           {
             key: "offer",
             label: "Review the offer letter",
@@ -506,34 +559,36 @@ export default function CandidateProgress({ applicant, meta }: Props) {
               disabled: !hasOfferDocument && decisionStatus === "PENDING",
             },
           },
-          {
-            key: "upload-identity",
-            label: "Upload identity document",
-            button: {
-              text: applicant.user?.no_identity_url
-                ? "Document Uploaded"
-                : "Upload Document",
-              onClick: handleOpenModal,
-              disabled: !!applicant.user?.no_identity_url,
-            },
-          },
         ];
-
-        if (isHiringStage) {
+        if (finalDocumentUrl) {
           actions.push({
-            key: "onboarding",
-            label: "Complete onboarding documents",
+            key: "final-documents",
+            label: hasDirectorSignedDocument
+              ? "Download director signed contract"
+              : "Download signed contract",
             button: {
-              text: "Open Onboarding",
-              onClick: () => window.open("/onboarding", "_blank"),
+              text: "Download Final PDF",
+              onClick: () =>
+                window.open(finalDocumentUrl, "_blank", "noopener,noreferrer"),
+            },
+          });
+        } else {
+          actions.push({
+            key: "final-documents",
+            label: "Final contract pending",
+            button: {
+              text: "Awaiting Upload",
+              disabled: true,
+              tooltip:
+                "The final signed contract will appear here once available.",
             },
           });
         }
 
-        const infoItems = [
+        const infoItems: StageInfoItem[] = [
           {
             label: "STATUS",
-            value: isHiringStage ? "Hiring" : "Offer Sent",
+            value: "Offer Sent",
           },
           { label: "POSITION", value: applicant.job?.name ?? "-" },
           {
@@ -547,7 +602,7 @@ export default function CandidateProgress({ applicant, meta }: Props) {
               </Space>
             ),
           },
-        ] as { label: string; value: React.ReactNode }[];
+        ];
 
         if (decisionStatus === "ACCEPTED" && signatureUrlFromServer) {
           infoItems.push({
@@ -563,9 +618,150 @@ export default function CandidateProgress({ applicant, meta }: Props) {
             ),
           });
         }
+        if (finalDocumentUrl) {
+          infoItems.push({
+            label: hasDirectorSignedDocument
+              ? "DIRECTOR SIGNED CONTRACT"
+              : "FINAL SIGNED CONTRACT",
+            value: (
+              <Link href={finalDocumentUrl} target="_blank" rel="noreferrer">
+                View final PDF
+              </Link>
+            ),
+          });
+        }
 
         return {
-          title: isHiringStage ? "Hiring & Onboarding" : "Offer Stage",
+          title: "Offer Stage",
+          info: infoItems,
+          actions,
+        };
+      }
+      case "HIRING": {
+        // HIRED is the hiring/onboarding stage
+        const hasOfferDocument = Boolean(contractByApplicant?.filePath);
+
+        const actions: ActionItem[] = [
+          {
+            key: "",
+            label: "Upload identity document",
+            button: {
+              text: applicant.user?.no_identity_url
+                ? "Document Uploaded"
+                : "Upload Document",
+              onClick: handleOpenModal,
+              disabled: !!applicant.user?.no_identity_url,
+            },
+          },
+          {
+            key: "offer",
+            label: "Review the offer letter",
+            button: {
+              text: hasOfferDocument ? "View Offer" : "Offer Pending",
+              onClick: () =>
+                hasOfferDocument &&
+                window.open(contractByApplicant!.filePath, "_blank"),
+              disabled: !hasOfferDocument,
+              tooltip: hasOfferDocument ? "Open Offer" : "No offer link",
+            },
+          },
+          {
+            key: "decision",
+            label: `Offer decision — ${decisionMeta.label}`,
+            button: {
+              text:
+                decisionStatus === "PENDING"
+                  ? "Review Decision"
+                  : "View Decision",
+              onClick: handleOpenDecisionModal,
+              tooltip: decisionMeta.helper,
+              disabled: !hasOfferDocument && decisionStatus === "PENDING",
+            },
+          },
+        ];
+        if (finalDocumentUrl) {
+          actions.push({
+            key: "final-documents",
+            label: hasDirectorSignedDocument
+              ? "Download director signed contract"
+              : "Download signed contract",
+            button: {
+              text: "Download Final PDF",
+              onClick: () =>
+                window.open(finalDocumentUrl, "_blank", "noopener,noreferrer"),
+            },
+          });
+        } else {
+          actions.push({
+            key: "final-documents",
+            label: "Final contract pending",
+            button: {
+              text: "Awaiting Upload",
+              disabled: true,
+              tooltip:
+                "The final signed contract will appear here once available.",
+            },
+          });
+        }
+
+        // For HIRED stage, provide onboarding action
+        actions.push({
+          key: "onboarding",
+          label: "Complete onboarding documents",
+          button: {
+            text: "Open Onboarding",
+            onClick: () => window.open("/onboarding", "_blank"),
+          },
+        });
+
+        const infoItems: StageInfoItem[] = [
+          {
+            label: "STATUS",
+            value: "Hiring",
+          },
+          { label: "POSITION", value: applicant.job?.name ?? "-" },
+          {
+            label: "DECISION",
+            value: (
+              <Space size={6}>
+                <Tag color={decisionMeta.color}>{decisionMeta.label}</Tag>
+                {decisionStatus !== "PENDING" && decisionAtDisplay && (
+                  <Text type="secondary">{decisionAtDisplay}</Text>
+                )}
+              </Space>
+            ),
+          },
+        ];
+
+        if (decisionStatus === "ACCEPTED" && signatureUrlFromServer) {
+          infoItems.push({
+            label: "SIGNED OFFER",
+            value: (
+              <Link
+                href={signatureUrlFromServer}
+                target="_blank"
+                rel="noreferrer"
+              >
+                View Signature
+              </Link>
+            ),
+          });
+        }
+        if (finalDocumentUrl) {
+          infoItems.push({
+            label: hasDirectorSignedDocument
+              ? "DIRECTOR SIGNED CONTRACT"
+              : "FINAL SIGNED CONTRACT",
+            value: (
+              <Link href={finalDocumentUrl} target="_blank" rel="noreferrer">
+                View final PDF
+              </Link>
+            ),
+          });
+        }
+
+        return {
+          title: "Hiring & Onboarding",
           info: infoItems,
           actions,
         };
@@ -607,7 +803,7 @@ export default function CandidateProgress({ applicant, meta }: Props) {
       .join("")
       .toUpperCase() || "C";
 
-  const cfg = getStageConfig(currentStage, applicant, router, meta);
+  const stageConfig = getStageConfig(currentStage, applicant, router, meta);
 
   const progressTotal =
     currentStage === "REJECTED"
@@ -627,68 +823,86 @@ export default function CandidateProgress({ applicant, meta }: Props) {
       : currentStage === "REJECTED"
       ? "Process Closed"
       : "Journey Complete";
-  const statusInfo = cfg.info.find(
+  const statusInfo = stageConfig.info.find(
     (item) => item.label?.toUpperCase?.() === "STATUS"
   );
   const statusValue =
     typeof statusInfo?.value === "string"
       ? statusInfo.value
       : getStageLabel(currentStage);
-  const primaryAction = cfg.actions[0];
-  const summaryMetrics = [
-    {
-      key: "submitted",
-      label: "Submitted",
-      value: dayjs(applicant.createdAt).format("MMM D, YYYY"),
-      caption: "Application received",
-    },
-    {
-      key: "status",
-      label: "Status",
-      value: statusValue,
-      caption: `Current stage • ${getStageLabel(currentStage)}`,
-    },
-    {
-      key: "next",
-      label: nextStageKey ? "Next Milestone" : "Pipeline Status",
-      value: nextStageLabel,
-      caption: primaryAction?.label || "No outstanding actions",
-    },
-  ];
+  const primaryAction = stageConfig.actions[0];
+  const summaryMetrics = useMemo<SummaryMetric[]>(
+    () => [
+      {
+        key: "submitted",
+        label: "Submitted",
+        value: dayjs(applicant.createdAt).format("MMM D, YYYY"),
+        caption: "Application received",
+      },
+      {
+        key: "status",
+        label: "Status",
+        value: statusValue,
+        caption: `Current stage • ${getStageLabel(currentStage)}`,
+      },
+      {
+        key: "next",
+        label: nextStageKey ? "Next Milestone" : "Pipeline Status",
+        value: nextStageLabel,
+        caption: primaryAction?.label || "No outstanding actions",
+      },
+    ],
+    [
+      applicant.createdAt,
+      currentStage,
+      nextStageKey,
+      nextStageLabel,
+      primaryAction?.label,
+      statusValue,
+    ]
+  );
 
-  const stepsItems = stageOrder.map((stageKey, index) => {
-    const isCompleted = normalizedStageIndex > index;
-    const isCurrent = normalizedStageIndex === index;
-    const status = isCompleted ? "finish" : isCurrent ? "process" : "wait";
-    let descriptor: string;
-    if (isCompleted) {
-      descriptor = "Completed";
-    } else if (isCurrent) {
-      descriptor = stageKey === "REJECTED" ? "Closed" : "In progress";
-    } else {
-      descriptor = stageKey === "REJECTED" ? "N/A" : "Pending";
-    }
+  const stepsItems = useMemo(
+    () =>
+      stageOrder.map((stageKey, index) => {
+        const isCompleted = normalizedStageIndex > index;
+        const isCurrent = normalizedStageIndex === index;
+        const status: "finish" | "process" | "wait" = isCompleted
+          ? "finish"
+          : isCurrent
+          ? "process"
+          : "wait";
+        let descriptor: string;
+        if (isCompleted) {
+          descriptor = "Completed";
+        } else if (isCurrent) {
+          descriptor = stageKey === "REJECTED" ? "Closed" : "In progress";
+        } else {
+          descriptor = stageKey === "REJECTED" ? "N/A" : "Pending";
+        }
 
-    return {
-      title: getStageLabel(stageKey),
-      description: descriptor,
-      icon:
-        stageKey === "APPLICATION" ? (
-          <FileTextOutlined />
-        ) : stageKey === "SCREENING" ? (
-          <SearchOutlined />
-        ) : stageKey === "INTERVIEW" ? (
-          <MessageOutlined />
-        ) : stageKey === "OFFERING" ? (
-          <FileDoneOutlined />
-        ) : stageKey === "HIRING" ? (
-          <LaptopOutlined />
-        ) : (
-          <CloseCircleOutlined />
-        ),
-      status,
-    };
-  });
+        return {
+          title: getStageLabel(stageKey),
+          description: descriptor,
+          icon:
+            stageKey === "APPLICATION" ? (
+              <FileTextOutlined />
+            ) : stageKey === "SCREENING" ? (
+              <SearchOutlined />
+            ) : stageKey === "INTERVIEW" ? (
+              <MessageOutlined />
+            ) : stageKey === "OFFERING" ? (
+              <FileDoneOutlined />
+            ) : stageKey === "HIRING" ? (
+              <LaptopOutlined />
+            ) : (
+              <CloseCircleOutlined />
+            ),
+          status,
+        };
+      }),
+    [normalizedStageIndex]
+  );
 
   return (
     <div
@@ -866,15 +1080,15 @@ export default function CandidateProgress({ applicant, meta }: Props) {
             title={
               <Space align="center">
                 <FileTextOutlined />
-                <span>{cfg.title}</span>
+                <span>{stageConfig.title}</span>
               </Space>
             }
             bodyStyle={{ paddingTop: 16 }}
           >
-            {cfg.info.length > 0 && (
+            {stageConfig.info.length > 0 && (
               <>
                 <Space direction="vertical" size={12} style={{ width: "100%" }}>
-                  {cfg.info.map((info) => (
+                  {stageConfig.info.map((info) => (
                     <div
                       key={info.label}
                       style={{
@@ -909,10 +1123,10 @@ export default function CandidateProgress({ applicant, meta }: Props) {
             <Title level={5} style={{ marginBottom: 12 }}>
               Required Actions
             </Title>
-            {cfg.actions.length > 0 ? (
+            {stageConfig.actions.length > 0 ? (
               <List
                 split={false}
-                dataSource={cfg.actions}
+                dataSource={stageConfig.actions}
                 renderItem={(act) => (
                   <List.Item
                     key={act.key}
@@ -1034,30 +1248,119 @@ export default function CandidateProgress({ applicant, meta }: Props) {
               {decisionMode === "ACCEPT" && (
                 <Space
                   direction="vertical"
-                  size={12}
+                  size={16}
                   style={{ display: "block" }}
                 >
-                  <Text strong>Signature</Text>
-                  <Text type="secondary">
-                    Upload a clear photo of your handwritten signature. JPG or
-                    PNG up to 5MB.
-                  </Text>
-                  <SignaturePadUploader
-                    bucket="web-oss-recruitment"
-                    folder={`candidate-signatures/${applicant.id}`}
-                    value={signatureUrl ?? undefined}
-                    onUpload={(path, url) => {
-                      setSignatureUrl(url); // simpan URL publik
-                      setSignaturePath(path); // simpan storage path untuk DB
-                    }}
-                    onDelete={() => {
-                      setSignatureUrl(null);
-                      setSignaturePath(null);
-                    }}
-                    maxSizeMB={5}
-                    width={560}
-                    height={200}
-                  />
+                  <div>
+                    <Text strong>Review the contract</Text>
+                    <Text type="secondary" style={{ display: "block" }}>
+                      Read the contract before signing. Click the button below
+                      to open the contract preview.
+                    </Text>
+                    <Space wrap style={{ marginTop: 8 }}>
+                      <Button
+                        icon={<FileTextOutlined />}
+                        onClick={() => setIsContractPreviewOpen(true)}
+                        disabled={!contractUrl}
+                      >
+                        View Contract
+                      </Button>
+                      {contractUrl ? (
+                        <Button
+                          icon={<DownloadOutlined />}
+                          href={contractUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                        >
+                          Download
+                        </Button>
+                      ) : (
+                        <Tag>Contract not available yet</Tag>
+                      )}
+                    </Space>
+                  </div>
+
+                  <Row gutter={[16, 16]}>
+                    <Col xs={24} md={10}>
+                      <div
+                        style={{
+                          background: "#f9fafc",
+                          borderRadius: 14,
+                          padding: 16,
+                          height: "100%",
+                        }}
+                      >
+                        <Text strong>Pihak Pertama</Text>
+                        <div style={{ marginTop: 12 }}>
+                          <Text>{firstPartyRepresentative}</Text>
+                        </div>
+                        <Text type="secondary">{firstPartyRole}</Text>
+                        <Text type="secondary">{firstPartyName}</Text>
+                        <Text
+                          type="secondary"
+                          style={{ display: "block", marginTop: 16 }}
+                        >
+                          Tanda tangan pihak pertama akan dibubuhkan setelah
+                          proses verifikasi internal.
+                        </Text>
+                      </div>
+                    </Col>
+                    <Col xs={24} md={14}>
+                      <Space
+                        direction="vertical"
+                        size={12}
+                        style={{ width: "100%" }}
+                      >
+                        <Text strong>
+                          Pihak Kedua — {applicant.user?.name || "Candidate"}
+                        </Text>
+                        <Text type="secondary">
+                          Gunakan kotak di bawah untuk menandatangani kontrak
+                          secara digital. PNG atau JPG hingga 5MB.
+                        </Text>
+                        <SignaturePadUploader
+                          bucket="web-oss-recruitment"
+                          folder={`candidate-signatures/${applicant.id}`}
+                          value={signatureUrl ?? undefined}
+                          onUpload={(path, url) => {
+                            setSignatureUrl(url);
+                            setSignaturePath(path);
+                          }}
+                          onDelete={() => {
+                            setSignatureUrl(null);
+                            setSignaturePath(null);
+                          }}
+                          maxSizeMB={5}
+                          width={360}
+                          height={180}
+                        />
+                        {signatureUrl ? (
+                          <div
+                            style={{
+                              border: "1px solid #f0f0f0",
+                              borderRadius: 12,
+                              padding: 12,
+                              background: "#ffffff",
+                            }}
+                          >
+                            <Text
+                              type="secondary"
+                              style={{ display: "block", marginBottom: 8 }}
+                            >
+                              Pratinjau tanda tangan
+                            </Text>
+                            <Image
+                              src={signatureUrl}
+                              alt="Candidate signature preview"
+                              style={{ maxWidth: "100%" }}
+                              preview={false}
+                            />
+                          </div>
+                        ) : null}
+                      </Space>
+                    </Col>
+                  </Row>
+
                   <Button
                     type="primary"
                     style={{ marginTop: 12, marginBottom: 12 }}
@@ -1138,6 +1441,66 @@ export default function CandidateProgress({ applicant, meta }: Props) {
             footer={null}
           >
             <KTPWizard onPatchDocument={handlePatchDocument} />
+          </Modal>
+
+          <Modal
+            open={isContractPreviewOpen}
+            onCancel={() => setIsContractPreviewOpen(false)}
+            footer={null}
+            title="Contract Preview"
+            width={960}
+            bodyStyle={{ padding: 0, height: "70vh" }}
+            destroyOnClose
+          >
+            {contractUrl ? (
+              isContractPdf ? (
+                <iframe
+                  src={`${contractUrl}#toolbar=0`}
+                  title="Contract document preview"
+                  style={{
+                    width: "100%",
+                    height: "100%",
+                    border: "none",
+                  }}
+                />
+              ) : (
+                <div
+                  style={{
+                    height: "100%",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    padding: 32,
+                  }}
+                >
+                  <Space direction="vertical" size={16} align="center">
+                    <Text type="secondary">
+                      Contract preview is available in DOCX format. Download the
+                      document to review the content.
+                    </Text>
+                    <Button
+                      icon={<DownloadOutlined />}
+                      href={contractUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      Download Contract
+                    </Button>
+                  </Space>
+                </div>
+              )
+            ) : (
+              <div
+                style={{
+                  height: "100%",
+                  display: "grid",
+                  placeItems: "center",
+                  padding: 24,
+                }}
+              >
+                <Empty description="Contract not available yet" />
+              </div>
+            )}
           </Modal>
         </Space>
       </div>
