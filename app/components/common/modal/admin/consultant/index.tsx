@@ -1,10 +1,9 @@
-import { JobDataModel } from "@/app/models/job";
 import { Modal } from "antd";
-
 import { FormInstance } from "antd";
-import JobForm from "../../../form/admin/job";
+import { ConsultantDataModel } from "@/app/models/consultant";
+import ConsultantForm from "../../../form/admin/consultant";
 
-export default function JobModal({
+export default function ConsultantModal({
   open,
   onClose,
   handleFinish,
@@ -16,12 +15,12 @@ export default function JobModal({
 }: {
   open: boolean;
   onClose: () => void;
-  handleFinish: (values: JobDataModel) => Promise<void>;
+  handleFinish: (values: ConsultantDataModel) => Promise<void>;
   loadingCreate: boolean;
   loadingUpdate: boolean;
-  form: FormInstance<JobDataModel>;
+  form: FormInstance<ConsultantDataModel>;
   type: "create" | "update";
-  initialValues?: JobDataModel;
+  initialValues?: ConsultantDataModel;
 }) {
   return (
     <Modal
@@ -31,7 +30,7 @@ export default function JobModal({
       onCancel={onClose}
       width={700}
     >
-      <JobForm
+      <ConsultantForm
         open={open}
         onFinish={handleFinish}
         loadingCreate={loadingCreate}

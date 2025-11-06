@@ -8,17 +8,47 @@ const parseCreatePayload = (body: any): JobPayloadCreateModel => {
     throw new Error("Invalid payload");
   }
 
-  const { name, description, until_at, location_id, is_published } = body;
+  const {
+    name,
+    description,
+    until_at,
+    location_id,
+    is_published,
+    salary,
+    work_type,
+    employment,
+    show_salary,
+    type_job,
+  } = body;
 
   if (!name) throw new Error("Name is required");
   if (!description) throw new Error("Description is required");
   if (!location_id) throw new Error("Location is required");
   if (!until_at) throw new Error("Until_at is required");
+  if (!type_job) throw new Error("Job type is required");
+
+  const normalizedType =
+    type_job === "REFFERAL" ? "REFFERAL" : "TEAM_MEMBER";
+
+  if (salary === undefined || salary === null || salary === "")
+    throw new Error(
+      normalizedType === "REFFERAL"
+        ? "Referral reward is required"
+        : "Salary is required"
+    );
+
+  if (normalizedType === "TEAM_MEMBER") {
+    if (!work_type) throw new Error("Work type is required");
+    if (!employment) throw new Error("Employment type is required");
+  }
 
   const untilAtDate = new Date(until_at);
   if (Number.isNaN(untilAtDate.getTime())) {
     throw new Error("Invalid until_at value");
   }
+
+  const workTypeValue = work_type ?? "ONSITE";
+  const employmentValue = employment ?? "FULL_TIME";
 
   return {
     name,
@@ -26,6 +56,12 @@ const parseCreatePayload = (body: any): JobPayloadCreateModel => {
     location_id,
     until_at: untilAtDate,
     is_published: Boolean(is_published),
+    salary: salary.toString(),
+    type_job: normalizedType,
+    work_type: workTypeValue,
+    employment: employmentValue,
+    show_salary:
+      normalizedType === "REFFERAL" ? false : Boolean(show_salary),
   } as JobPayloadCreateModel;
 };
 

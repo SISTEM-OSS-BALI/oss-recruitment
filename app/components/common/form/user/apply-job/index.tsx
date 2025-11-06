@@ -12,6 +12,7 @@ import {
   Typography,
   Space,
   Button,
+  Select,
 } from "antd";
 import {
   UserOutlined,
@@ -160,6 +161,22 @@ export default function ApplyForm({ onSubmit, loading }: ApplyFormProps) {
               <DatePicker
                 style={{ width: "100%" }}
                 placeholder="Select birth date"
+              />
+            </Form.Item>
+          </Col>
+        </Row>
+
+        <Row gutter={[16, 8]}>
+          <Col xs={24}>
+            <Form.Item
+              label="Professional Interests"
+              name="interestTags"
+              tooltip="Tell us your preferred roles, industries, or skills. You can add multiple interests."
+            >
+              <Select
+                mode="tags"
+                tokenSeparators={[","]}
+                placeholder="e.g. Frontend Development, HR, Customer Success"
               />
             </Form.Item>
           </Col>

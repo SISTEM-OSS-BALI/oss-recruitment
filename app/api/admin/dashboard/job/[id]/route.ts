@@ -3,7 +3,7 @@ import { DELETE_JOB, GET_JOB, UPDATE_JOB } from "@/app/providers/job";
 import { GeneralError } from "@/app/utils/general-error";
 import { NextRequest, NextResponse } from "next/server";
 
-const buildUpdatePayload = (body: any): JobPayloadUpdateModel => {
+const buildUpdatePayload = (body: JobPayloadUpdateModel) => {
   if (!body || typeof body !== "object") {
     throw new Error("Invalid payload");
   }
@@ -15,8 +15,44 @@ const buildUpdatePayload = (body: any): JobPayloadUpdateModel => {
   if (body.location_id !== undefined) data.location_id = body.location_id;
   if (body.is_published !== undefined)
     data.is_published = Boolean(body.is_published);
+  if (body.type_job !== undefined) {
+    const normalizedType =
+      body.type_job === "REFFERAL" ? "REFFERAL" : "TEAM_MEMBER";
+    data.type_job = normalizedType;
+    if (normalizedType === "REFFERAL") {
+      data.show_salary = false;
+      data.work_type = body.work_type ?? "ONSITE";
+      data.employment = body.employment ?? "FULL_TIME";
+    }
+  }
+  if (body.salary !== undefined) {
+    if (body.salary === null || body.salary === "") {
+      throw new Error("Salary cannot be empty");
+    }
+    data.salary = body.salary.toString();
+  }
+  if (body.show_salary !== undefined) {
+    const isReferral =
+      (data.type_job ?? body.type_job) === "REFFERAL";
+    data.show_salary = isReferral ? false : Boolean(body.show_salary);
+  }
+  if (body.work_type !== undefined) {
+    data.work_type = body.work_type;
+  }
+  if (body.employment !== undefined) {
+    data.employment = body.employment;
+  }
   if (body.until_at !== undefined) {
-    const until = new Date(body.until_at);
+    let until: Date;
+    if (
+      typeof body.until_at === "string" ||
+      typeof body.until_at === "number" ||
+      body.until_at instanceof Date
+    ) {
+      until = new Date(body.until_at);
+    } else {
+      throw new Error("Invalid until_at value type");
+    }
     if (Number.isNaN(until.getTime())) {
       throw new Error("Invalid until_at value");
     }

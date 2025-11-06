@@ -2,35 +2,27 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import axios from "axios";
 
 import MainNotification from "../../components/common/notifications";
-import { ScheduleHiredDataModel, ScheduleHiredPayloadCreateModel } from "@/app/models/schedule-hired";
+import { ConsultantDataModel, ConsultantPayloadCreateModel, ConsultantPayloadUpdateModel } from "@/app/models/consultant";
 
 
-const baseUrl = "/api/admin/dashboard/schedule-hired";
-const entity = "schedule-hired";
-const queryKey = "schedule-hireds";
+const baseUrl = "/api/admin/dashboard/consultant";
+const entity = "consultant";
+const queryKey = "consultants";
 
-export const useScheduleHireds = ({
-  queryString,
-}: {
-  queryString?: string;
-}) => {
+export const useJobs = ({ queryString }: { queryString?: string }) => {
   const queryClient = useQueryClient();
 
-  const {
-    data,
-    isLoading: fetchLoading,
-    refetch,
-  } = useQuery({
+  const { data, isLoading: fetchLoading } = useQuery({
     queryKey: [queryKey, queryString],
     queryFn: async () => {
       const url = queryString ? `${baseUrl}?${queryString}` : baseUrl;
       const result = await axios.get(url);
-      return result.data.result as ScheduleHiredDataModel[];
+      return result.data.result as ConsultantDataModel[];
     },
   });
 
   const { mutateAsync: onCreate, isPending: onCreateLoading } = useMutation({
-    mutationFn: async (payload: ScheduleHiredPayloadCreateModel) =>
+    mutationFn: async (payload: ConsultantPayloadCreateModel) =>
       axios.post(baseUrl, payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [queryKey] });
@@ -55,7 +47,6 @@ export const useScheduleHireds = ({
   return {
     data,
     fetchLoading,
-    refetch,
     onCreate,
     onCreateLoading,
     onDelete,
@@ -63,7 +54,7 @@ export const useScheduleHireds = ({
   };
 };
 
-export const useScheduleHired = ({ id }: { id: string }) => {
+export const useJob = ({ id }: { id: string }) => {
   const queryClient = useQueryClient();
 
   // Query data berdasarkan ID
@@ -71,7 +62,7 @@ export const useScheduleHired = ({ id }: { id: string }) => {
     queryKey: [entity, id],
     queryFn: async () => {
       const result = await axios.get(`${baseUrl}/${id}`);
-      return result.data.result as ScheduleHiredDataModel;
+      return result.data.result as ConsultantDataModel;
     },
     enabled: Boolean(id),
   });
@@ -83,7 +74,7 @@ export const useScheduleHired = ({ id }: { id: string }) => {
       payload,
     }: {
       id: string;
-      payload: ScheduleHiredPayloadCreateModel;
+      payload: ConsultantPayloadUpdateModel;
     }) => axios.put(`${baseUrl}/${id}`, payload),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: [queryKey] });
@@ -100,25 +91,5 @@ export const useScheduleHired = ({ id }: { id: string }) => {
     fetchLoading,
     onUpdate,
     onUpdateLoading,
-  };
-};
-
-export const useScheduleHiredsByApplicantId = ({
-  applicantId,
-}: {
-  applicantId: string;
-}) => {
-  const { data, isLoading: fetchLoading } = useQuery({
-    queryKey: [entity, applicantId],
-    queryFn: async () => {
-      const result = await axios.get(`${baseUrl}/by-candidate/${applicantId}`);
-      return result.data.result as ScheduleHiredDataModel;
-    },
-    enabled: Boolean(applicantId),
-  });
-
-  return {
-    data,
-    fetchLoading,
   };
 };

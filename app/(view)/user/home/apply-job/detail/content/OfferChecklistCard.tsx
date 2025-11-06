@@ -20,7 +20,7 @@ import { ReloadOutlined, SendOutlined } from "@ant-design/icons";
 import type {
   OfferChecklistItem,
   OfferChecklistKey,
-} from "./offer-checklist-types";
+} from "../offer-checklist-types";
 
 const { Text } = Typography;
 
@@ -49,19 +49,15 @@ export default function OfferChecklistCard({
   onTriggerOfferReady,
   onResetChecklist,
 }: Props) {
-  const statusTag = offerTriggeredAt
-    ? (
-        <Tag color="purple">
-          Sent {dayjs(offerTriggeredAt).format("MMM D, YYYY HH:mm")}
-        </Tag>
-      )
-    : isOfferReady
-    ? (
-        <Tag color="blue">Ready to Send</Tag>
-      )
-    : (
-        <Tag>Checklist Pending</Tag>
-      );
+  const statusTag = offerTriggeredAt ? (
+    <Tag color="purple">
+      Sent {dayjs(offerTriggeredAt).format("MMM D, YYYY HH:mm")}
+    </Tag>
+  ) : isOfferReady ? (
+    <Tag color="blue">Ready to Send</Tag>
+  ) : (
+    <Tag>Checklist Pending</Tag>
+  );
 
   return (
     <Card
@@ -77,11 +73,7 @@ export default function OfferChecklistCard({
       <Space direction="vertical" size={16} style={{ width: "100%" }}>
         <Alert
           type={
-            isOfferReady
-              ? "success"
-              : hasExistingContract
-              ? "info"
-              : "warning"
+            isOfferReady ? "success" : hasExistingContract ? "info" : "warning"
           }
           showIcon
           message={

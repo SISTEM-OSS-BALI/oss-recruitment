@@ -1,11 +1,11 @@
-import { ScheduleHiredPayloadCreateModel } from "@/app/models/schedule-hired";
-import { CREATE_SCHEDULE_HIRED, GET_SCHEDULE_HIREDS } from "@/app/providers/schedule-hired";
+import { ProcedureDocumentPayloadCreateModel } from "@/app/models/procedure-documents";
+import { CREATE_PROCEDURE_DOCUMENT, GET_PROCEDURE_DOCUMENTS } from "@/app/providers/procedure-document";
 import { GeneralError } from "@/app/utils/general-error";
 import { NextRequest, NextResponse } from "next/server";
 
 export const GET = async () => {
   try {
-    const data = await GET_SCHEDULE_HIREDS();
+    const data = await GET_PROCEDURE_DOCUMENTS();
     return NextResponse.json(
       {
         success: true,
@@ -31,9 +31,9 @@ export const GET = async () => {
 
 export const POST = async (req: NextRequest) => {
   try {
-    const payload: ScheduleHiredPayloadCreateModel= await req.json();
+    const payload: ProcedureDocumentPayloadCreateModel= await req.json();
 
-    const data = await CREATE_SCHEDULE_HIRED(payload);
+    const data = await CREATE_PROCEDURE_DOCUMENT(payload);
 
     return NextResponse.json(
       {

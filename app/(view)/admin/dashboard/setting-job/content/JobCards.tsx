@@ -8,12 +8,14 @@ import {
   Divider,
   Flex,
   Dropdown,
+  Tooltip,
 } from "antd";
 import {
   MoreOutlined,
   ThunderboltOutlined,
   EnvironmentOutlined,
   ClockCircleOutlined,
+  DollarOutlined,
 } from "@ant-design/icons";
 import dayjs from "dayjs";
 import { JobDataModel } from "@/app/models/job";
@@ -27,6 +29,31 @@ type Props = {
   onTogglePublish: (id: string, next: boolean) => void;
   goToPage: () => void;
 };
+
+const EMPLOYMENT_LABEL: Record<string, string> = {
+  FULL_TIME: "Full-time",
+  PART_TIME: "Part-time",
+  CONTRACT: "Contract",
+  INTERNSHIP: "Internship",
+  FREELANCE: "Freelance",
+};
+
+const WORK_TYPE_LABEL: Record<string, string> = {
+  ONSITE: "Onsite",
+  HYBRID: "Hybrid",
+  REMOTE: "Remote",
+};
+
+function formatCurrency(value?: string | null) {
+  if (!value) return "-";
+  const numeric = Number(value);
+  if (Number.isNaN(numeric)) return value;
+  return new Intl.NumberFormat("id-ID", {
+    style: "currency",
+    currency: "IDR",
+    maximumFractionDigits: 0,
+  }).format(numeric);
+}
 
 export default function JobCard({
   job,
@@ -49,6 +76,14 @@ export default function JobCard({
     ],
   };
 
+  const employmentLabel = EMPLOYMENT_LABEL[job.employment] ?? job.employment;
+  const workTypeLabel = WORK_TYPE_LABEL[job.work_type] ?? job.work_type;
+  const salaryLabel = job.show_salary
+    ? formatCurrency(job.salary)
+    : "Hidden for candidates";
+  const typeLabel = job.type_job === "REFFERAL" ? "Referral" : "Team Member";
+  const salaryPrefix = job.type_job === "REFFERAL" ? "Reward" : "Salary";
+
   return (
     <Card style={{ borderRadius: 12 }} bodyStyle={{ padding: 16 }}>
       <Flex align="flex-start" justify="space-between" wrap="wrap" gap={12}>
@@ -59,7 +94,15 @@ export default function JobCard({
           </Title>
 
           <Space size="small">
-            <Text type="secondary">Full-time</Text>
+            <Tag color={job.type_job === "REFFERAL" ? "purple" : "gold"}>
+              {typeLabel}
+            </Tag>
+            <Tooltip title={workTypeLabel}>
+              <Tag color="blue">{workTypeLabel}</Tag>
+            </Tooltip>
+            <Tooltip title={employmentLabel}>
+              <Tag color="geekblue">{employmentLabel}</Tag>
+            </Tooltip>
           </Space>
 
           <Space direction="vertical" size={4}>
@@ -74,6 +117,12 @@ export default function JobCard({
               <ClockCircleOutlined />
               <Text>
                 Active until: {dayjs(job.until_at).format("DD MMM YYYY")}
+              </Text>
+            </Space>
+            <Space size="small">
+              <DollarOutlined />
+              <Text>
+                {salaryPrefix}: {salaryLabel}
               </Text>
             </Space>
           </Space>

@@ -71,14 +71,39 @@ enum MessageType {
   SYSTEM
 }
 
+enum WorkType {
+  ONSITE
+  HYBRID
+  REMOTE
+}
+
+enum EmploymentType {
+  FULL_TIME
+  PART_TIME
+  CONTRACT
+  INTERNSHIP
+  FREELANCE
+}
+
+enum TypeJob {
+  TEAM_MEMBER
+  REFFERAL
+}
+
 model Job {
-  id           String   @id @default(cuid())
-  name         String
-  until_at     DateTime
-  description  String   @db.LongText
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-  is_published Boolean  @default(false)
+  id          String         @id @default(cuid())
+  name        String
+  until_at    DateTime
+  description String         @db.LongText
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+  salary      String
+  type_job    TypeJob
+  work_type   WorkType
+  employment  EmploymentType
+
+  is_published Boolean @default(false)
+  show_salary  Boolean @default(false)
 
   location_id String
   location    Location @relation(fields: [location_id], references: [id], onDelete: Cascade, onUpdate: Cascade)
@@ -118,8 +143,10 @@ model User {
   date_of_birth       DateTime?
   photo_url           String?
   portfolio_url       String?
-  job_id              String?
-  job                 Job?      @relation(fields: [job_id], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  interestTags UserInterestTag[]
+  job_id       String?
+  job          Job?              @relation(fields: [job_id], references: [id], onDelete: Cascade, onUpdate: Cascade)
 
   createdAt    DateTime      @default(now())
   updatedAt    DateTime      @updatedAt
@@ -130,6 +157,17 @@ model User {
   messagesSent Message[]     @relation("MessagesBySender")
 
   @@map("user")
+}
+
+model UserInterestTag {
+  user_id  String
+  interest String
+
+  user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@id([user_id, interest])
+  @@index([interest])
+  @@map("user_interest_tag")
 }
 
 model Applicant {
@@ -266,6 +304,15 @@ model OfferingContract {
   @@map("offering_contract")
 }
 
+model Consultant {
+  id        String   @id @default(cuid())
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("consultant")
+}
+
 model ContractTemplate {
   id        String     @id @default(cuid())
   name      String
@@ -310,6 +357,17 @@ model MbtiTest {
   applicant Applicant? @relation("ApplicantMbti")
 
   @@map("mbti_test")
+}
+
+model ProcedureDocument {
+  id        String           @id @default(cuid())
+  name      String
+  filePath  String
+  createdAt DateTime         @default(now())
+  stage     RecruitmentStage
+  updatedAt DateTime         @updatedAt
+
+  @@map("procedure_document")
 }
 
 model Evaluator {

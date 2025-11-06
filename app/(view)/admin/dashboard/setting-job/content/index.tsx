@@ -18,6 +18,16 @@ import { useRouter } from "next/navigation";
 
 const { Text } = Typography;
 
+const WORK_TYPE_OPTIONS = ["ONSITE", "HYBRID", "REMOTE"] as const;
+const EMPLOYMENT_TYPE_OPTIONS = [
+  "FULL_TIME",
+  "PART_TIME",
+  "CONTRACT",
+  "INTERNSHIP",
+  "FREELANCE",
+] as const;
+const TYPE_JOB_OPTIONS = ["TEAM_MEMBER", "REFFERAL"] as const;
+
 export default function SettingJobContent() {
   const [form] = Form.useForm<JobDataModel>();
   const [modalOpen, setModalOpen] = useState(false);
@@ -70,8 +80,20 @@ export default function SettingJobContent() {
     setModalType("update");
     setModalOpen(true);
 
+    const isReferral = jobEdit.type_job === "REFFERAL";
     form.setFieldsValue({
       ...jobEdit,
+      type_job: jobEdit.type_job ?? TYPE_JOB_OPTIONS[0],
+      salary: jobEdit.salary
+        ? Number(jobEdit.salary.replace(/[^\d]/g, ""))
+        : undefined,
+      work_type: isReferral
+        ? WORK_TYPE_OPTIONS[0]
+        : jobEdit.work_type ?? WORK_TYPE_OPTIONS[0],
+      employment: isReferral
+        ? EMPLOYMENT_TYPE_OPTIONS[0]
+        : jobEdit.employment ?? EMPLOYMENT_TYPE_OPTIONS[0],
+      show_salary: isReferral ? false : Boolean(jobEdit.show_salary),
       until_at: dayjs(jobEdit.until_at),
     });
   };
@@ -83,11 +105,44 @@ export default function SettingJobContent() {
     if (!until) {
       throw new Error("Date is required");
     }
+    const jobType =
+      (values.type_job as (typeof TYPE_JOB_OPTIONS)[number]) ??
+      TYPE_JOB_OPTIONS[0];
+    const salaryValue = values.salary;
+    const salary =
+      typeof salaryValue === "number"
+        ? salaryValue.toString()
+        : (salaryValue ?? "").toString();
+    if (!salary) {
+      throw new Error(
+        jobType === "REFFERAL" ? "Referral reward is required" : "Salary is required"
+      );
+    }
+    if (jobType === "TEAM_MEMBER") {
+      if (!values.work_type) {
+        throw new Error("Work type is required");
+      }
+      if (!values.employment) {
+        throw new Error("Employment type is required");
+      }
+    }
+
+    const workTypeValue =
+      values.work_type ?? WORK_TYPE_OPTIONS[0];
+    const employmentValue =
+      values.employment ?? EMPLOYMENT_TYPE_OPTIONS[0];
+
     return {
       name: values.name,
       description: values.description,
       location_id: values.location_id,
       is_published: Boolean(values.is_published),
+      salary,
+      type_job: jobType,
+      work_type: workTypeValue,
+      employment: employmentValue,
+      show_salary:
+        jobType === "REFFERAL" ? false : Boolean(values.show_salary),
       until_at: until,
     } as JobPayloadCreateModel & JobPayloadUpdateModel;
   };
@@ -154,6 +209,12 @@ export default function SettingJobContent() {
           title="Add Job"
           onClick={() => {
             form.resetFields();
+            form.setFieldsValue({
+              type_job: TYPE_JOB_OPTIONS[0],
+              work_type: WORK_TYPE_OPTIONS[0],
+              employment: EMPLOYMENT_TYPE_OPTIONS[0],
+              show_salary: true,
+            });
             setSelectedJob(null);
             setModalType("create");
             setModalOpen(true);

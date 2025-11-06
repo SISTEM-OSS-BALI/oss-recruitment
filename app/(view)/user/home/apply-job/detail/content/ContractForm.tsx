@@ -14,7 +14,6 @@ import { FileTextOutlined } from "@ant-design/icons";
 import { ApplicantDataModel } from "@/app/models/applicant";
 import { OfferingContractPayloadCreateModel } from "@/app/models/offering-contract";
 
-
 const { Text } = Typography;
 
 type ContractFormValues = {

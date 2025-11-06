@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { Card, Typography, Space, Divider } from "antd";
+import { Card, Typography, Space, Divider, Tag } from "antd";
 import {
   MailOutlined,
   PhoneOutlined,
@@ -17,6 +17,7 @@ type LeftPanelProps = {
   dateOfBirth?: string | Date | null;
   cvUrl?: string | null;
   portfolioUrl?: string | null;
+  interests?: string[];
 };
 
 
@@ -65,6 +66,7 @@ export default function CandidatePreview({
   email,
   phone,
   dateOfBirth,
+  interests = [],
 }: LeftPanelProps) {
   return (
     <Card
@@ -106,6 +108,28 @@ export default function CandidatePreview({
           />
         </Space>
       </div>
+
+      {interests.length > 0 && (
+        <>
+          <div style={{ padding: "20px 20px 8px" }}>
+            <SectionTitle>Professional Interests</SectionTitle>
+          </div>
+          <Divider style={{ margin: "10px 0 0" }} />
+          <div style={{ padding: "16px 20px 20px" }}>
+            <Space size={[8, 8]} wrap>
+              {interests.map((interest) => (
+                <Tag
+                  key={interest}
+                  color="blue"
+                  style={{ borderRadius: 999, padding: "4px 12px" }}
+                >
+                  {interest}
+                </Tag>
+              ))}
+            </Space>
+          </div>
+        </>
+      )}
 
       {/* Application Details */}
       {/* <div style={{ padding: "20px 20px 8px" }}>

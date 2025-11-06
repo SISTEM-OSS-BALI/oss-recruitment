@@ -92,6 +92,18 @@ export const SidebarMenuSettingAdmin = (): MenuProps["items"] => {
       label: menuLabel("Guidebook"),
       icon: <FontAwesomeIcon icon={faBook} />,
       onClick: () => router.push("/admin/dashboard/guidebook"),
+    }, 
+    {
+      key: "/admin/dashboard/procedure-document",
+      label: menuLabel("Procedure Document"),
+      icon: <FontAwesomeIcon icon={faBook} />,
+      onClick: () => router.push("/admin/dashboard/procedure-document"),
+    }, 
+    {
+      key: "/admin/dashboard/consultant",
+      label: menuLabel("Consultant"),
+      icon: <FontAwesomeIcon icon={faBook} />,
+      onClick: () => router.push("/admin/dashboard/consultant"),
     }
   ];
 

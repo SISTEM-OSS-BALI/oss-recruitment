@@ -1,4 +1,4 @@
-import { UserPayloadCreateModel } from "@/app/models/user";
+import { UserPayloadUpdateModel } from "@/app/models/user";
 import { DELETE_JOB } from "@/app/providers/job";
 import { GET_USER, UPDATE_USER, UPDATE_USER_DOCUMENT } from "@/app/providers/user";
 import { GeneralError } from "@/app/utils/general-error";
@@ -33,6 +33,15 @@ export const GET = async (
         { status: error.code }
       );
     }
+
+    return NextResponse.json(
+      {
+        success: false,
+        message: "Failed to get user",
+        error: error instanceof Error ? error.message : "Internal server error",
+      },
+      { status: 500 }
+    );
   }
 };
 
@@ -42,7 +51,7 @@ export const PUT = async (
 ) => {
   try {
     const id = params.id;
-    const payload: UserPayloadCreateModel = await req.json();
+    const payload: UserPayloadUpdateModel = await req.json();
 
     const data = await UPDATE_USER(id, payload);
 
@@ -66,6 +75,15 @@ export const PUT = async (
         { status: error.code }
       );
     }
+
+    return NextResponse.json(
+      {
+        success: false,
+        message: "Failed to update user",
+        error: error instanceof Error ? error.message : "Internal server error",
+      },
+      { status: 500 }
+    );
   }
 };
 
@@ -98,6 +116,15 @@ export const DELETE = async (
         { status: error.code }
       );
     }
+
+    return NextResponse.json(
+      {
+        success: false,
+        message: "Failed to delete user",
+        error: error instanceof Error ? error.message : "Internal server error",
+      },
+      { status: 500 }
+    );
   }
 };
 
@@ -107,7 +134,7 @@ export const PATCH = async (
 ) => {
   try {
     const id = params.id;
-    const payload: UserPayloadCreateModel = await req.json();
+    const payload: UserPayloadUpdateModel = await req.json();
 
     const data = await UPDATE_USER_DOCUMENT(id, payload);
 
@@ -131,5 +158,14 @@ export const PATCH = async (
         { status: error.code }
       );
     }
+
+    return NextResponse.json(
+      {
+        success: false,
+        message: "Failed to update document",
+        error: error instanceof Error ? error.message : "Internal server error",
+      },
+      { status: 500 }
+    );
   }
 }

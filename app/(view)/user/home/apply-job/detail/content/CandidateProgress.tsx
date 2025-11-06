@@ -22,6 +22,7 @@ import {
   Alert,
   Image,
   message,
+  Spin,
   Empty,
 } from "antd";
 import {
@@ -47,9 +48,13 @@ import { humanizeType } from "@/app/utils/humanize";
 import {
   PROGRESS_STAGE_ORDER,
   getStageLabel,
+  coerceStage,
   toProgressStage,
 } from "@/app/utils/recruitment-stage";
 import SignaturePadUploader from "./SignatureUploader";
+import { useScheduleHiredsByApplicantId } from "@/app/hooks/schedule-hired";
+import { formatDateTime } from "@/app/utils/date-helper";
+import { useProcedureDocuments } from "@/app/hooks/procedure-document";
 
 const { Title, Text } = Typography;
 const { TextArea } = Input;
@@ -129,10 +134,31 @@ export default function CandidateProgress({ applicant, meta }: Props) {
   const [signaturePath, setSignaturePath] = useState<string | null>(null);
   const [rejectionReason, setRejectionReason] = useState("");
   const router = useRouter();
+  const { data: procedureDocuments, fetchLoading: procedureDocumentsLoading } =
+    useProcedureDocuments({});
+  const { data: scheduleHired } = useScheduleHiredsByApplicantId({
+    applicantId: applicant.id || "",
+  });
   const currentStage = toProgressStage(applicant.stage);
+  const applicantStageKey = coerceStage(applicant.stage);
+  const stageProcedureDocuments = useMemo(
+    () => {
+      if (!Array.isArray(procedureDocuments)) return [];
+      if (!applicantStageKey) return [];
+      return procedureDocuments.filter(
+        (doc) => coerceStage(doc.stage) === applicantStageKey
+      );
+    },
+    [procedureDocuments, applicantStageKey]
+  );
+  const procedureDocumentStageLabel = getStageLabel(
+    applicantStageKey || currentStage
+  );
   const nowStageIndex = stageOrder.findIndex((s) => s === currentStage);
   const normalizedStageIndex = nowStageIndex === -1 ? 0 : nowStageIndex;
   const { data: locations } = useLocations({});
+
+  console.log(scheduleHired);
 
   const {
     data: contractByApplicant,
@@ -251,7 +277,6 @@ export default function CandidateProgress({ applicant, meta }: Props) {
     [contractUrl, isDecisionLocked]
   );
 
-
   const handleSubmitAcceptance = useCallback(async () => {
     if (!applicant?.id) return;
     if (!signatureUrl) {
@@ -276,7 +301,9 @@ export default function CandidateProgress({ applicant, meta }: Props) {
       message.success("Thank you! Your acceptance has been submitted.");
       handleCloseDecisionModal();
     } catch (error) {
-      message.error("Failed to submit your decision. Please try again.");
+      message.error(
+        `Failed to submit your decision. Please try again ${error}`
+      );
     }
   }, [
     applicant?.id,
@@ -304,7 +331,9 @@ export default function CandidateProgress({ applicant, meta }: Props) {
       message.success("Thank you for letting us know.");
       handleCloseDecisionModal();
     } catch (error) {
-      message.error("Failed to submit your decision. Please try again.");
+      message.error(
+        `Failed to submit your decision. Please try again. ${error}`
+      );
     }
   }, [
     applicant?.id,
@@ -639,7 +668,6 @@ export default function CandidateProgress({ applicant, meta }: Props) {
       }
       case "HIRING": {
         // HIRED is the hiring/onboarding stage
-        const hasOfferDocument = Boolean(contractByApplicant?.filePath);
 
         const actions: ActionItem[] = [
           {
@@ -653,66 +681,7 @@ export default function CandidateProgress({ applicant, meta }: Props) {
               disabled: !!applicant.user?.no_identity_url,
             },
           },
-          {
-            key: "offer",
-            label: "Review the offer letter",
-            button: {
-              text: hasOfferDocument ? "View Offer" : "Offer Pending",
-              onClick: () =>
-                hasOfferDocument &&
-                window.open(contractByApplicant!.filePath, "_blank"),
-              disabled: !hasOfferDocument,
-              tooltip: hasOfferDocument ? "Open Offer" : "No offer link",
-            },
-          },
-          {
-            key: "decision",
-            label: `Offer decision — ${decisionMeta.label}`,
-            button: {
-              text:
-                decisionStatus === "PENDING"
-                  ? "Review Decision"
-                  : "View Decision",
-              onClick: handleOpenDecisionModal,
-              tooltip: decisionMeta.helper,
-              disabled: !hasOfferDocument && decisionStatus === "PENDING",
-            },
-          },
         ];
-        if (finalDocumentUrl) {
-          actions.push({
-            key: "final-documents",
-            label: hasDirectorSignedDocument
-              ? "Download director signed contract"
-              : "Download signed contract",
-            button: {
-              text: "Download Final PDF",
-              onClick: () =>
-                window.open(finalDocumentUrl, "_blank", "noopener,noreferrer"),
-            },
-          });
-        } else {
-          actions.push({
-            key: "final-documents",
-            label: "Final contract pending",
-            button: {
-              text: "Awaiting Upload",
-              disabled: true,
-              tooltip:
-                "The final signed contract will appear here once available.",
-            },
-          });
-        }
-
-        // For HIRED stage, provide onboarding action
-        actions.push({
-          key: "onboarding",
-          label: "Complete onboarding documents",
-          button: {
-            text: "Open Onboarding",
-            onClick: () => window.open("/onboarding", "_blank"),
-          },
-        });
 
         const infoItems: StageInfoItem[] = [
           {
@@ -721,44 +690,20 @@ export default function CandidateProgress({ applicant, meta }: Props) {
           },
           { label: "POSITION", value: applicant.job?.name ?? "-" },
           {
-            label: "DECISION",
-            value: (
-              <Space size={6}>
-                <Tag color={decisionMeta.color}>{decisionMeta.label}</Tag>
-                {decisionStatus !== "PENDING" && decisionAtDisplay && (
-                  <Text type="secondary">{decisionAtDisplay}</Text>
-                )}
+            label: "SCHEDULE ONBOARDING",
+            value: scheduleHired ? (
+              <Space>
+                <Tag color="green">
+                  {formatDateTime(scheduleHired.start_time)}
+                </Tag>
+              </Space>
+            ) : (
+              <Space>
+                <Tag color="red">Not Scheduled</Tag>
               </Space>
             ),
           },
         ];
-
-        if (decisionStatus === "ACCEPTED" && signatureUrlFromServer) {
-          infoItems.push({
-            label: "SIGNED OFFER",
-            value: (
-              <Link
-                href={signatureUrlFromServer}
-                target="_blank"
-                rel="noreferrer"
-              >
-                View Signature
-              </Link>
-            ),
-          });
-        }
-        if (finalDocumentUrl) {
-          infoItems.push({
-            label: hasDirectorSignedDocument
-              ? "DIRECTOR SIGNED CONTRACT"
-              : "FINAL SIGNED CONTRACT",
-            value: (
-              <Link href={finalDocumentUrl} target="_blank" rel="noreferrer">
-                View final PDF
-              </Link>
-            ),
-          });
-        }
 
         return {
           title: "Hiring & Onboarding",
@@ -1177,6 +1122,97 @@ export default function CandidateProgress({ applicant, meta }: Props) {
                 No outstanding actions at this stage.
               </Text>
             )}
+          </Card>
+
+          <Card
+            bordered={false}
+            style={{
+              borderRadius: 20,
+              background: "#ffffff",
+              boxShadow: "0 20px 56px rgba(15,23,42,0.1)",
+            }}
+            title={
+              <Space align="center">
+                <FileTextOutlined />
+                <span>
+                  Procedure Documents · {procedureDocumentStageLabel}
+                </span>
+              </Space>
+            }
+            bodyStyle={{ paddingTop: 16 }}
+          >
+            <Space direction="vertical" size={16} style={{ width: "100%" }}>
+              <Text type="secondary">
+                Review these files to stay ready for the{" "}
+                {procedureDocumentStageLabel} stage.
+              </Text>
+              {procedureDocumentsLoading ? (
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "center",
+                    padding: "24px 0",
+                  }}
+                >
+                  <Spin />
+                </div>
+              ) : stageProcedureDocuments.length > 0 ? (
+                <List
+                  split={false}
+                  dataSource={stageProcedureDocuments}
+                  renderItem={(doc) => {
+                    const updatedAtLabel =
+                      doc.updatedAt && dayjs(doc.updatedAt).isValid()
+                        ? dayjs(doc.updatedAt).format("MMM D, YYYY")
+                        : null;
+                    return (
+                      <List.Item
+                        key={doc.id}
+                        style={{
+                          padding: "12px 16px",
+                          background: "#f9fafc",
+                          borderRadius: 14,
+                          marginBottom: 12,
+                        }}
+                        actions={[
+                          <Button
+                            key={`${doc.id}-download`}
+                            type="link"
+                            icon={<DownloadOutlined />}
+                            href={doc.filePath}
+                            target="_blank"
+                            rel="noreferrer"
+                          >
+                            Open Document
+                          </Button>,
+                        ]}
+                      >
+                        <List.Item.Meta
+                          title={<Text strong>{doc.name}</Text>}
+                          description={
+                            <Space size={8}>
+                              <Tag color="blue">
+                                {getStageLabel(doc.stage)}
+                              </Tag>
+                              {updatedAtLabel && (
+                                <Text type="secondary">
+                                  Updated {updatedAtLabel}
+                                </Text>
+                              )}
+                            </Space>
+                          }
+                        />
+                      </List.Item>
+                    );
+                  }}
+                />
+              ) : (
+                <Empty
+                  image={Empty.PRESENTED_IMAGE_SIMPLE}
+                  description={`No documents available for the ${procedureDocumentStageLabel} stage.`}
+                />
+              )}
+            </Space>
           </Card>
 
           {currentStage === "SCREENING" && applicant.mbti_test?.result && (

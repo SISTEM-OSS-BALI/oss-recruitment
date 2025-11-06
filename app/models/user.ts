@@ -1,14 +1,24 @@
 /* eslint-disable @typescript-eslint/no-empty-object-type */
 
-import { Prisma, User } from "@prisma/client";
+import { Prisma, User, UserInterestTag } from "@prisma/client";
 import { GeneralOmitModel } from "./general-omit";
 
-export interface UserDataModel extends User {}
+export interface UserDataModel extends User {
+  interestTags: UserInterestTag[];
+}
 
-export interface UserPayloadCreateModel
-  extends Prisma.UserUncheckedCreateInput {}
+export type UserPayloadCreateModel = Omit<
+  Prisma.UserUncheckedCreateInput,
+  "interestTags"
+> & {
+  interestTags?: string[];
+};
 
-export interface UserPayloadUpdateModel
-  extends Omit<Prisma.UserUncheckedUpdateInput, GeneralOmitModel> {}
+export type UserPayloadUpdateModel = Omit<
+  Prisma.UserUncheckedUpdateInput,
+  GeneralOmitModel | "interestTags"
+> & {
+  interestTags?: string[];
+};
 
 export interface UserFormModel extends Omit<UserDataModel, GeneralOmitModel> {}

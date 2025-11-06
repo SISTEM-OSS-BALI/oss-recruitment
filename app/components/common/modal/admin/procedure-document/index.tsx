@@ -1,10 +1,10 @@
-import { JobDataModel } from "@/app/models/job";
 import { Modal } from "antd";
-
 import { FormInstance } from "antd";
-import JobForm from "../../../form/admin/job";
 
-export default function JobModal({
+import { ProcedureDocumentDataModel } from "@/app/models/procedure-documents";
+import ProcedureDocumentForm from "../../../form/admin/procedure-document";
+
+export default function ProcedureDocumentModal({
   open,
   onClose,
   handleFinish,
@@ -16,22 +16,25 @@ export default function JobModal({
 }: {
   open: boolean;
   onClose: () => void;
-  handleFinish: (values: JobDataModel) => Promise<void>;
+  handleFinish: (values: ProcedureDocumentDataModel) => Promise<void>;
   loadingCreate: boolean;
   loadingUpdate: boolean;
-  form: FormInstance<JobDataModel>;
+  form: FormInstance<ProcedureDocumentDataModel>;
   type: "create" | "update";
-  initialValues?: JobDataModel;
+  initialValues?: ProcedureDocumentDataModel;
 }) {
   return (
     <Modal
       open={open}
-      title={type === "create" ? "Add Job" : "Edit Job"}
+      title={
+        type === "create"
+          ? "Add Procedure Document"
+          : "Edit Procedure Documents"
+      }
       footer={null}
       onCancel={onClose}
-      width={700}
     >
-      <JobForm
+      <ProcedureDocumentForm
         open={open}
         onFinish={handleFinish}
         loadingCreate={loadingCreate}

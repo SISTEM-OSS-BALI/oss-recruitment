@@ -1,4 +1,4 @@
-import { GET_SCHEDULES_BY_CANDIDATE } from "@/app/providers/hired";
+import { GET_SCHEDULES_BY_CANDIDATE } from "@/app/providers/schedule-hired";
 import { GeneralError } from "@/app/utils/general-error";
 import { NextRequest, NextResponse } from "next/server";
 
