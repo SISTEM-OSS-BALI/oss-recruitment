@@ -23,9 +23,7 @@ import {
 } from "antd";
 import {
   PlusOutlined,
-  EditOutlined,
   QuestionCircleOutlined,
-  EyeOutlined,
   CopyOutlined,
 } from "@ant-design/icons";
 import { useParams } from "next/navigation";
@@ -142,6 +140,10 @@ export default function Content(): JSX.Element {
     id: String(editTarget?.id || ""),
   });
 
+  // ----------------------------- Loading flag ----------------------------
+  // Tampilkan skeleton saat data belum ada (undefined/null/falsy)
+  const isLoading = !questionScreening;
+
   // ------------------------------ Filtering ------------------------------
   const list = Array.isArray(questionScreening) ? questionScreening : [];
   const filtered = useMemo(() => {
@@ -202,7 +204,6 @@ export default function Content(): JSX.Element {
 
       bulkForm.resetFields();
       setBulkOpen(false);
-      message.success("Questions created.");
       // await refetch?.();
     } catch (e) {
       notification.error({
@@ -233,7 +234,7 @@ export default function Content(): JSX.Element {
           label: o.label,
           value: o.value,
           order: o.order ?? null,
-          active: (o as any).active ?? true,
+          active: o.active ?? true,
         })) || [],
     });
     setEditOpen(true);
@@ -293,7 +294,6 @@ export default function Content(): JSX.Element {
 
       await onUpdate?.(payload);
       setEditOpen(false);
-      message.success("Question updated.");
       // await refetch?.();
     } catch (e) {
       notification.error({
@@ -306,7 +306,6 @@ export default function Content(): JSX.Element {
   async function handleDelete(id: string) {
     try {
       await onDelete?.(id);
-      message.success("Question deleted.");
       // await refetch?.();
     } catch (e) {
       notification.error({
@@ -363,11 +362,11 @@ export default function Content(): JSX.Element {
       <Divider style={{ marginTop: 16, marginBottom: 16 }} />
 
       {/* Stack Panels */}
-      {questionScreening == null ? (
+      {isLoading ? (
         <Row gutter={[0, 12]}>
-          {Array.from({ length: 2 }).map((_, i) => (
+          {Array.from({ length: 3 }).map((_, i) => (
             <div key={i} className="q-panel skeleton">
-              <Skeleton active paragraph={{ rows: 3 }} />
+              <Skeleton active title paragraph={{ rows: 3 }} />
             </div>
           ))}
         </Row>
@@ -387,7 +386,7 @@ export default function Content(): JSX.Element {
             .map((q) => {
               const updatedAt = q.updatedAt ? dayjs(q.updatedAt) : null;
               const choice = isChoice(q.inputType);
-              const hasOptions = (q as any)?.options?.length > 0;
+              const hasOptions = q?.options?.length > 0;
 
               return (
                 <div key={q.id} className="q-panel">
@@ -424,24 +423,6 @@ export default function Content(): JSX.Element {
                     </div>
 
                     <div className="q-toolbar">
-                      {/* <Tooltip title="Edit">
-                        <Button
-                          size="small"
-                          type="text"
-                          icon={<EditOutlined />}
-                          onClick={() => openEdit(q as any)}
-                        />
-                      </Tooltip>
-                      <Tooltip title="Preview">
-                        <Button
-                          size="small"
-                          type="text"
-                          icon={<EyeOutlined />}
-                          onClick={() =>
-                            message.info("Preview coming soon (mock).")
-                          }
-                        />
-                      </Tooltip> */}
                       <Tooltip title="Duplicate">
                         <Button
                           size="small"
@@ -460,18 +441,17 @@ export default function Content(): JSX.Element {
                                 minLength: q.minLength ?? null,
                                 maxLength: q.maxLength ?? null,
                               };
-                              if (choice && (q as any)?.options?.length > 0) {
-                                dto.options = (q as any).options.map(
+                              if (choice && q?.options?.length > 0) {
+                                dto.options = q.options.map(
                                   (o: QuestionOptionDataModel, i: number) => ({
                                     label: o.label,
                                     value: o.value,
                                     order: o.order ?? i + 1,
-                                    active: (o as any).active ?? true,
+                                    active: o.active ?? true,
                                   })
                                 );
                               }
                               await onCreate?.(dto);
-                              message.success("Question duplicated.");
                             } catch (e) {
                               notification.error({
                                 message: "Duplicate failed",
@@ -489,13 +469,11 @@ export default function Content(): JSX.Element {
                     {choice ? (
                       hasOptions ? (
                         <Space wrap>
-                          {(q as any).options.map(
-                            (o: QuestionOptionDataModel) => (
-                              <span className="q-chip" key={o.id}>
-                                {o.label}
-                              </span>
-                            )
-                          )}
+                          {q.options.map((o: QuestionOptionDataModel) => (
+                            <span className="q-chip" key={o.id}>
+                              {o.label}
+                            </span>
+                          ))}
                         </Space>
                       ) : (
                         <span className="q-empty">
@@ -517,7 +495,7 @@ export default function Content(): JSX.Element {
                     </Text>
 
                     <Space>
-                      <Button onClick={() => openEdit(q as any)}>Edit</Button>
+                      <Button onClick={() => openEdit(q)}>Edit</Button>
                       <Popconfirm
                         title="Delete question?"
                         description="This action cannot be undone."
@@ -683,7 +661,7 @@ type BulkCreateFormProps = {
   onSubmit: (payload: { questions: BulkCreateItem[] }) => Promise<void>;
 };
 
-function BulkCreateForm({ baseId, form, onSubmit }: BulkCreateFormProps) {
+function BulkCreateForm({ form, onSubmit }: BulkCreateFormProps) {
   return (
     <Form
       form={form}

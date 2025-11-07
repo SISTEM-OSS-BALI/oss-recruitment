@@ -84,9 +84,10 @@ export default function SettingJobContent() {
     form.setFieldsValue({
       ...jobEdit,
       type_job: jobEdit.type_job ?? TYPE_JOB_OPTIONS[0],
-      salary: jobEdit.salary
-        ? Number(jobEdit.salary.replace(/[^\d]/g, ""))
-        : undefined,
+      salary:
+        isReferral || !jobEdit.salary
+          ? undefined
+          : Number(jobEdit.salary.replace(/[^\d]/g, "")),
       work_type: isReferral
         ? WORK_TYPE_OPTIONS[0]
         : jobEdit.work_type ?? WORK_TYPE_OPTIONS[0],
@@ -109,15 +110,15 @@ export default function SettingJobContent() {
       (values.type_job as (typeof TYPE_JOB_OPTIONS)[number]) ??
       TYPE_JOB_OPTIONS[0];
     const salaryValue = values.salary;
-    const salary =
+    const parsedSalary =
       typeof salaryValue === "number"
         ? salaryValue.toString()
         : (salaryValue ?? "").toString();
-    if (!salary) {
-      throw new Error(
-        jobType === "REFFERAL" ? "Referral reward is required" : "Salary is required"
-      );
+
+    if (jobType === "TEAM_MEMBER" && !parsedSalary) {
+      throw new Error("Salary is required");
     }
+
     if (jobType === "TEAM_MEMBER") {
       if (!values.work_type) {
         throw new Error("Work type is required");
@@ -137,7 +138,7 @@ export default function SettingJobContent() {
       description: values.description,
       location_id: values.location_id,
       is_published: Boolean(values.is_published),
-      salary,
+      salary: jobType === "TEAM_MEMBER" ? parsedSalary : "",
       type_job: jobType,
       work_type: workTypeValue,
       employment: employmentValue,

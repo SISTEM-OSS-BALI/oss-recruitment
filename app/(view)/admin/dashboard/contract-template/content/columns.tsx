@@ -4,6 +4,7 @@ import "dayjs/locale/id";
 import { TableProps } from "antd";
 import { ContractTemplateDataModel } from "@/app/models/contract-template";
 import { makeActionsByType } from "@/app/utils/presets";
+import Link from "next/link";
 
 export const ContractTemplateColumns = ({
   onDelete,
@@ -31,14 +32,9 @@ export const ContractTemplateColumns = ({
       key: "filePath",
       render: (filePath: string) =>
         filePath ? (
-          <a
-            href={filePath}
-            target="_blank"
-            rel="noopener noreferrer"
-            style={{ color: "#1677ff" }}
-          >
-            {filePath.split("/").pop() || "View File"}
-          </a>
+          <Link href={filePath} target="_blank" rel="noopener noreferrer">
+            View File
+          </Link>
         ) : (
           <span style={{ color: "#999" }}>No file</span>
         ),

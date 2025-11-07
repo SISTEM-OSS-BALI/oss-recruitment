@@ -298,8 +298,8 @@ export default function AnswerScreening({
       {!data ? (
         <Alert
           type="error"
-          message="Gagal memuat jawaban"
-          description="Terjadi kesalahan saat mengambil data screening."
+          message="Failed to Load Answer"
+          description="An error occurred while taking the screening data."
           showIcon
         />
       ) : fetchLoading ? (

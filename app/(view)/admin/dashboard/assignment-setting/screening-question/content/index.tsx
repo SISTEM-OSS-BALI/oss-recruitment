@@ -20,6 +20,7 @@ import {
   Skeleton,
   Switch,
   Tooltip,
+  Select,
 } from "antd";
 import {
   PlusOutlined,
@@ -33,7 +34,7 @@ import dayjs from "dayjs";
 import "dayjs/locale/en";
 dayjs.locale("en");
 
-import type { QuestionBaseScreening } from "@prisma/client";
+import { TypeJob, type QuestionBaseScreening } from "@prisma/client";
 import type {
   QuestionBaseScreeningDataModel,
   QuestionBaseScreeningPayloadCreateModel,
@@ -44,6 +45,19 @@ import {
   useQuestionBaseScreening,
   useQuestionBaseScreenings,
 } from "@/app/hooks/base-question-screening";
+
+const JOB_TYPE_LABELS: Record<TypeJob, string> = Object.values(TypeJob).reduce(
+  (acc, type) => {
+    const label = type
+      .toLowerCase()
+      .split("_")
+      .map((segment) => segment.charAt(0).toUpperCase() + segment.slice(1))
+      .join(" ");
+    acc[type] = label;
+    return acc;
+  },
+  {} as Record<TypeJob, string>
+);
 
 const BRAND = "#003A6F";
 const { Title, Text } = Typography;
@@ -88,19 +102,25 @@ export default function BaseScreeningCards(): JSX.Element {
 
   /* ---------- Search & filter ---------- */
   const [search, setSearch] = useState<string>("");
+  const [typeFilter, setTypeFilter] = useState<TypeJob | "ALL">("ALL");
+
   const filtered: QuestionBaseScreening[] = useMemo(() => {
     const q = search.trim().toLowerCase();
     const arr = Array.isArray(baseScreeningData)
       ? (baseScreeningData as QuestionBaseScreening[])
       : [];
-    if (!q) return arr;
+
     return arr.filter((x) => {
       const name = (x?.name || "").toLowerCase();
       const desc = (x?.desc || "").toLowerCase();
       const version = String(x?.version ?? "");
-      return name.includes(q) || desc.includes(q) || version.includes(q);
+      const matchesSearch = q
+        ? name.includes(q) || desc.includes(q) || version.includes(q)
+        : true;
+      const matchesType = typeFilter === "ALL" || x.type === typeFilter;
+      return matchesSearch && matchesType;
     });
-  }, [baseScreeningData, search]);
+  }, [baseScreeningData, search, typeFilter]);
 
   /* ---------- Handlers: Create ---------- */
   async function handleCreate(values: QuestionBaseScreeningPayloadCreateModel) {
@@ -108,6 +128,7 @@ export default function BaseScreeningCards(): JSX.Element {
       await onCreateBaseScreening({
         name: values.name?.trim(),
         desc: values.desc?.trim?.() || null,
+        type: values.type,
       });
       createForm.resetFields();
       setCreateOpen(false);
@@ -128,6 +149,7 @@ export default function BaseScreeningCards(): JSX.Element {
       name: item.name || "",
       desc: item.desc || "",
       active: item.active ?? true,
+      type: item.type,
     });
     setEditOpen(true);
   }
@@ -216,6 +238,18 @@ export default function BaseScreeningCards(): JSX.Element {
             onChange={(e) => setSearch(e.target.value)}
             style={{ maxWidth: 520, borderRadius: 12, marginTop: 20 }}
           />
+          <Select
+            value={typeFilter}
+            onChange={(value) => setTypeFilter(value as TypeJob | "ALL")}
+            style={{ minWidth: 220, borderRadius: 12, marginTop: 20 }}
+          >
+            <Select.Option value="ALL">All Job Types</Select.Option>
+            {Object.values(TypeJob).map((type) => (
+              <Select.Option key={type} value={type}>
+                {JOB_TYPE_LABELS[type]}
+              </Select.Option>
+            ))}
+          </Select>
         </Space>
       </Space>
 
@@ -296,6 +330,9 @@ export default function BaseScreeningCards(): JSX.Element {
                           style={{ borderRadius: 999 }}
                         >
                           {active ? "Active" : "Inactive"}
+                        </Tag>
+                        <Tag color="purple" style={{ borderRadius: 999 }}>
+                          {JOB_TYPE_LABELS[item.type as TypeJob] || item.type}
                         </Tag>
                         <Tag style={{ borderRadius: 999 }}>{`v${version}`}</Tag>
                       </Space>
@@ -383,7 +420,12 @@ export default function BaseScreeningCards(): JSX.Element {
           form={createForm}
           layout="vertical"
           onFinish={handleCreate}
-          initialValues={{ name: "", desc: "" }}
+          initialValues={{
+            name: "",
+            desc: "",
+            type: TypeJob.TEAM_MEMBER,
+            allowMultipleSubmissions: false,
+          }}
         >
           <Form.Item
             label="Base Name"
@@ -401,6 +443,27 @@ export default function BaseScreeningCards(): JSX.Element {
               rows={4}
               placeholder="Short description about what this base is for…"
             />
+          </Form.Item>
+
+          <Form.Item
+            label="Type Screening"
+            name="type"
+            rules={[{ required: true, message: "Type is required." }]}
+          >
+            <Select placeholder="Select job type">
+              {Object.entries(TypeJob).map(([key, value]) => (
+                <Select.Option key={value} value={value}>
+                  {key
+                    .toLowerCase()
+                    .split("_")
+                    .map(
+                      (segment) =>
+                        segment.charAt(0).toUpperCase() + segment.slice(1)
+                    )
+                    .join(" ")}
+                </Select.Option>
+              ))}
+            </Select>
           </Form.Item>
 
           <Form.Item
@@ -438,7 +501,12 @@ export default function BaseScreeningCards(): JSX.Element {
           form={editForm}
           layout="vertical"
           onFinish={handleUpdate}
-          initialValues={{ name: "", desc: "", active: true }}
+          initialValues={{
+            name: "",
+            desc: "",
+            active: true,
+            type: TypeJob.TEAM_MEMBER,
+          }}
         >
           <Form.Item
             label="Base Name"
@@ -456,6 +524,27 @@ export default function BaseScreeningCards(): JSX.Element {
               rows={4}
               placeholder="Short description about what this base is for…"
             />
+          </Form.Item>
+
+          <Form.Item
+            label="Type Screening"
+            name="type"
+            rules={[{ required: true, message: "Type is required." }]}
+          >
+            <Select placeholder="Select job type">
+              {Object.entries(TypeJob).map(([key, value]) => (
+                <Select.Option key={value} value={value}>
+                  {key
+                    .toLowerCase()
+                    .split("_")
+                    .map(
+                      (segment) =>
+                        segment.charAt(0).toUpperCase() + segment.slice(1)
+                    )
+                    .join(" ")}
+                </Select.Option>
+              ))}
+            </Select>
           </Form.Item>
 
           <Form.Item label="Active" name="active" valuePropName="checked">

@@ -1,4 +1,4 @@
-import type { Prisma } from "@prisma/client";
+import type { Prisma, TypeJob } from "@prisma/client";
 import db from "@/lib/prisma";
 import {
   QuestionBaseScreeningPayloadCreateModel,
@@ -29,8 +29,14 @@ function toPrismaCreate(
     throw new Error("Name is required");
   }
 
+  const type = payload.type as TypeJob | undefined;
+  if (!type) {
+    throw new Error("Type is required");
+  }
+
   return {
     name,
+    type,
     desc: normalizeNullableString(payload.desc) ?? null,
     allowMultipleSubmissions:
       payload.allowMultipleSubmissions ?? false,
@@ -68,13 +74,24 @@ function toPrismaUpdate(
     data.version = payload.version;
   }
 
+  if (payload.type !== undefined) {
+    const type = payload.type as TypeJob | undefined;
+    if (!type) {
+      throw new Error("Type cannot be empty");
+    }
+    data.type = type;
+  }
+
   return data;
 }
 
-export const GET_BASE_QUESTIONS_SCREENING = async () => {
+export const GET_BASE_QUESTIONS_SCREENING = async (params?: {
+  type?: TypeJob;
+}) => {
   return db.questionBaseScreening.findMany({
     include: baseInclude,
     orderBy: [{ createdAt: "desc" }],
+    where: params?.type ? { type: params.type } : undefined,
   });
 };
 

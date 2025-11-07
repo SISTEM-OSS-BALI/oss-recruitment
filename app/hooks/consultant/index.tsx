@@ -9,7 +9,7 @@ const baseUrl = "/api/admin/dashboard/consultant";
 const entity = "consultant";
 const queryKey = "consultants";
 
-export const useJobs = ({ queryString }: { queryString?: string }) => {
+export const useConsultants = ({ queryString }: { queryString?: string }) => {
   const queryClient = useQueryClient();
 
   const { data, isLoading: fetchLoading } = useQuery({
@@ -54,7 +54,7 @@ export const useJobs = ({ queryString }: { queryString?: string }) => {
   };
 };
 
-export const useJob = ({ id }: { id: string }) => {
+export const useConsultant = ({ id }: { id: string }) => {
   const queryClient = useQueryClient();
 
   // Query data berdasarkan ID

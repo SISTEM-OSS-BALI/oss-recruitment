@@ -2,8 +2,12 @@ import { JobPayloadUpdateModel } from "@/app/models/job";
 import { DELETE_JOB, GET_JOB, UPDATE_JOB } from "@/app/providers/job";
 import { GeneralError } from "@/app/utils/general-error";
 import { NextRequest, NextResponse } from "next/server";
+import { TypeJob } from "@prisma/client";
 
-const buildUpdatePayload = (body: JobPayloadUpdateModel) => {
+const buildUpdatePayload = (
+  body: JobPayloadUpdateModel,
+  currentType?: TypeJob
+) => {
   if (!body || typeof body !== "object") {
     throw new Error("Invalid payload");
   }
@@ -25,11 +29,20 @@ const buildUpdatePayload = (body: JobPayloadUpdateModel) => {
       data.employment = body.employment ?? "FULL_TIME";
     }
   }
+
+  const resolvedType = (
+    data.type_job ?? body.type_job ?? currentType
+  ) as TypeJob | undefined;
+  const isReferral = resolvedType === "REFFERAL";
+
   if (body.salary !== undefined) {
-    if (body.salary === null || body.salary === "") {
+    if ((body.salary === null || body.salary === "") && !isReferral) {
       throw new Error("Salary cannot be empty");
     }
-    data.salary = body.salary.toString();
+    data.salary =
+      isReferral && (body.salary === null || body.salary === "")
+        ? ""
+        : body.salary.toString();
   }
   if (body.show_salary !== undefined) {
     const isReferral =
@@ -102,7 +115,8 @@ export const PUT = async (
   try {
     const id = params.id;
     const body = await req.json();
-    const payload = buildUpdatePayload(body);
+    const existing = await GET_JOB(id);
+    const payload = buildUpdatePayload(body, existing?.type_job as TypeJob);
 
     const data = await UPDATE_JOB(id, payload);
 

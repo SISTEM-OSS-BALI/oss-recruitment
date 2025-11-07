@@ -79,3 +79,22 @@ export function prettyType(raw: string) {
         return type;
     }
   };
+
+  export const humanizeStage = (stage: string) => {
+    switch (stage) {
+      case "NEW_APLICANT":
+        return "New Applicant";
+      case "SCREENING":
+        return "Screening";
+      case "INTERVIEW":
+        return "Interview";
+      case "OFFERING":
+        return "Offering";
+      case "HIRED":
+        return "Hiring";
+      case "REJECTED":
+        return "Rejected";
+      default:
+        return stage;
+    }
+  }

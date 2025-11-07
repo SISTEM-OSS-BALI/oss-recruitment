@@ -25,6 +25,7 @@ import type {
   QuestionScreening,
   QuestionScreeningType,
 } from "@prisma/client";
+import { TypeJob } from "@prisma/client";
 import { useAnswerQuestionScreenings } from "@/app/hooks/answer-question-screening";
 import { useRouter } from "next/navigation";
 
@@ -60,12 +61,16 @@ function coerceBases(data: any): QuestionBaseScreeningWithQuestions[] {
 export default function FormScreeningQuestionAll({
   job_id,
   user_id,
+  job_type,
 }: {
   job_id: string;
   user_id: string;
+  job_type: TypeJob;
 }) {
   const screens = useBreakpoint();
-  const { data, fetchLoading } = useQuestionBaseScreenings({});
+  const { data, fetchLoading } = useQuestionBaseScreenings({
+    queryString: `type=${job_type}`,
+  });
   const bases = useMemo(() => coerceBases(data), [data]);
 
   // form global untuk SEMUA base

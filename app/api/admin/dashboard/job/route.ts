@@ -30,12 +30,12 @@ const parseCreatePayload = (body: any): JobPayloadCreateModel => {
   const normalizedType =
     type_job === "REFFERAL" ? "REFFERAL" : "TEAM_MEMBER";
 
-  if (salary === undefined || salary === null || salary === "")
-    throw new Error(
-      normalizedType === "REFFERAL"
-        ? "Referral reward is required"
-        : "Salary is required"
-    );
+  if (
+    normalizedType === "TEAM_MEMBER" &&
+    (salary === undefined || salary === null || salary === "")
+  ) {
+    throw new Error("Salary is required");
+  }
 
   if (normalizedType === "TEAM_MEMBER") {
     if (!work_type) throw new Error("Work type is required");
@@ -56,7 +56,10 @@ const parseCreatePayload = (body: any): JobPayloadCreateModel => {
     location_id,
     until_at: untilAtDate,
     is_published: Boolean(is_published),
-    salary: salary.toString(),
+    salary:
+      normalizedType === "TEAM_MEMBER"
+        ? salary?.toString() ?? ""
+        : "",
     type_job: normalizedType,
     work_type: workTypeValue,
     employment: employmentValue,

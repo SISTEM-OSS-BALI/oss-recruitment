@@ -5,14 +5,15 @@ import {
   faBriefcase,
   faLocationDot,
   faFileContract,
-  faUserCheck,
-  faUsers,
+  faClipboardCheck,
+  faUserGroup,
   faCalendarCheck,
-  faTableList,
+  faTable,
   faClipboardList,
-  faSquareCheck,
   faCircleQuestion,
-  faBook,
+  faBookOpen,
+  faFileLines,
+  faUserTie,
 } from "@fortawesome/free-solid-svg-icons";
 import menuLabel from "@/app/utils/label";
 
@@ -41,12 +42,12 @@ export const SidebarMenuSettingAdmin = (): MenuProps["items"] => {
     {
       key: "/admin/dashboard/evaluator",
       label: menuLabel("Evaluation"),
-      icon: <FontAwesomeIcon icon={faUserCheck} />,
+      icon: <FontAwesomeIcon icon={faClipboardCheck} />,
       children: [
         {
           key: "/admin/dashboard/evaluator/list",
           label: menuLabel("Evaluator List"),
-          icon: <FontAwesomeIcon icon={faUsers} />,
+          icon: <FontAwesomeIcon icon={faUserGroup} />,
           onClick: () => router.push("/admin/dashboard/evaluator/list"),
         },
         {
@@ -58,7 +59,7 @@ export const SidebarMenuSettingAdmin = (): MenuProps["items"] => {
         {
           key: "/admin/dashboard/evaluator/matriks-question",
           label: menuLabel("Matriks Question"),
-          icon: <FontAwesomeIcon icon={faTableList} />,
+          icon: <FontAwesomeIcon icon={faTable} />,
           onClick: () =>
             router.push("/admin/dashboard/evaluator/matriks-question"),
         },
@@ -69,13 +70,6 @@ export const SidebarMenuSettingAdmin = (): MenuProps["items"] => {
       label: menuLabel("Assignment Setting"),
       icon: <FontAwesomeIcon icon={faClipboardList} />,
       children: [
-        {
-          key: "/admin/dashboard/assignment-setting/task",
-          label: menuLabel("Task"),
-          icon: <FontAwesomeIcon icon={faSquareCheck} />,
-          onClick: () =>
-            router.push("/admin/dashboard/assignment-setting/task"),
-        },
         {
           key: "/admin/dashboard/assignment-setting/screening-question",
           label: menuLabel("Screening Question"),
@@ -90,21 +84,21 @@ export const SidebarMenuSettingAdmin = (): MenuProps["items"] => {
     {
       key: "/admin/dashboard/guidebook",
       label: menuLabel("Guidebook"),
-      icon: <FontAwesomeIcon icon={faBook} />,
+      icon: <FontAwesomeIcon icon={faBookOpen} />,
       onClick: () => router.push("/admin/dashboard/guidebook"),
-    }, 
+    },
     {
       key: "/admin/dashboard/procedure-document",
       label: menuLabel("Procedure Document"),
-      icon: <FontAwesomeIcon icon={faBook} />,
+      icon: <FontAwesomeIcon icon={faFileLines} />,
       onClick: () => router.push("/admin/dashboard/procedure-document"),
-    }, 
-    {
-      key: "/admin/dashboard/consultant",
-      label: menuLabel("Consultant"),
-      icon: <FontAwesomeIcon icon={faBook} />,
-      onClick: () => router.push("/admin/dashboard/consultant"),
-    }
+    },
+    // {
+    //   key: "/admin/dashboard/consultant",
+    //   label: menuLabel("Consultant"),
+    //   icon: <FontAwesomeIcon icon={faUserTie} />,
+    //   onClick: () => router.push("/admin/dashboard/consultant"),
+    // },
   ];
 
   return sidebarMenu;

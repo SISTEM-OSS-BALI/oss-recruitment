@@ -6,6 +6,7 @@ import {
 } from "@/app/providers/base-question-screening";
 import { GeneralError } from "@/app/utils/general-error";
 import { NextRequest, NextResponse } from "next/server";
+import { TypeJob } from "@prisma/client";
 
 function normalizeNullableString(value: unknown) {
   if (value === undefined) return undefined;
@@ -37,6 +38,10 @@ function handleGeneralError(error: unknown) {
     { status: 500 }
   );
 }
+
+const isValidTypeJob = (value: unknown): value is TypeJob =>
+  typeof value === "string" &&
+  Object.values(TypeJob).includes(value as TypeJob);
 
 export const GET = async (
   _req: NextRequest,
@@ -118,6 +123,16 @@ export const PUT = async (
 
     if (body.version !== undefined) {
       payload.version = body.version;
+    }
+
+    if (body.type !== undefined) {
+      if (!isValidTypeJob(body.type)) {
+        return NextResponse.json(
+          { success: false, message: "type is invalid" },
+          { status: 400 }
+        );
+      }
+      payload.type = body.type;
     }
 
     const data = await UPDATE_QUESTION_BASE_SCREENING(id, payload);

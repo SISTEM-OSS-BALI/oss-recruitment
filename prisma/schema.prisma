@@ -305,10 +305,11 @@ model OfferingContract {
 }
 
 model Consultant {
-  id        String   @id @default(cuid())
-  name      String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id          String   @id @default(cuid())
+  name        String
+  createdAt   DateTime @default(now())
+  no_whatsapp String
+  updatedAt   DateTime @updatedAt
 
   @@map("consultant")
 }
@@ -427,9 +428,10 @@ model EvaluatorReview {
 }
 
 model QuestionBaseScreening {
-  id   String  @id @default(cuid())
+  id   String         @id @default(cuid())
   name String
   desc String?
+  type TypeJob
 
   questions                QuestionScreening[]
   allowMultipleSubmissions Boolean             @default(false)
@@ -463,8 +465,7 @@ model QuestionScreening {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-
-  active Boolean @default(true)
+  active    Boolean  @default(true)
 
   @@map("question_screening")
 }

@@ -3,7 +3,9 @@ import {
   UPDATE_STATUS_CANDIDATE,
 } from "@/app/providers/applicant";
 import { CREATE_HISTORY_CANDIDATE } from "@/app/providers/history-candidate";
+import { GET_USER_BY_APPLICANT_ID } from "@/app/providers/user";
 import { toRecruitmentStage } from "@/app/utils/recruitment-stage";
+import { formatPhoneNumber, sendWhatsAppMessage } from "@/app/utils/send-message-helper";
 import { NextRequest, NextResponse } from "next/server";
 
 export const GET = async (
@@ -46,10 +48,20 @@ export const PATCH = async (
 
     const data = await UPDATE_STATUS_CANDIDATE(id, stage);
 
+    const user = await GET_USER_BY_APPLICANT_ID(id)
+
     await CREATE_HISTORY_CANDIDATE({
       applicantId: id,
       stage,
     });
+
+    const waMessage = `Hi ${user?.name}, your status has been updated to ${stage}.`;
+
+    const phone = formatPhoneNumber(user?.phone || "");
+    if (phone) {
+      await sendWhatsAppMessage(phone, waMessage);
+    }
+
 
     return NextResponse.json(
       {

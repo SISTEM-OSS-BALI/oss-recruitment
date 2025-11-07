@@ -68,7 +68,10 @@ export default function JobForm({
 
       form.setFieldsValue({
         ...initialValues,
-        salary: Number.isNaN(salaryNumeric) ? undefined : salaryNumeric,
+        salary:
+          nextType === "REFFERAL" || Number.isNaN(salaryNumeric)
+            ? undefined
+            : salaryNumeric,
         type_job: nextType,
         show_salary:
           nextType === "REFFERAL" ? false : Boolean(initialValues.show_salary),
@@ -95,6 +98,7 @@ export default function JobForm({
 
     if (selectedType === "REFFERAL") {
       form.setFieldsValue({
+        salary: undefined,
         show_salary: false,
         work_type: WORK_TYPE_OPTIONS[0],
         employment: EMPLOYMENT_TYPE_OPTIONS[0],
@@ -207,15 +211,6 @@ export default function JobForm({
         </>
       ) : (
         <>
-          <Form.Item
-            name="salary"
-            label="Referral Reward"
-            rules={[{ required: true, message: "Reward is required" }]}
-          >
-            <Select>
-              
-            </Select>
-          </Form.Item>
           <Form.Item name="show_salary" hidden valuePropName="checked">
             <Checkbox />
           </Form.Item>
@@ -223,6 +218,9 @@ export default function JobForm({
             <Input />
           </Form.Item>
           <Form.Item name="employment" hidden>
+            <Input />
+          </Form.Item>
+          <Form.Item name="salary" hidden>
             <Input />
           </Form.Item>
         </>

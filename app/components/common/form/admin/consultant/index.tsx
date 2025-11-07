@@ -14,7 +14,7 @@ export default function ConsultantForm({
   onFinish: (values: ConsultantDataModel) => Promise<void>;
   loadingCreate: boolean;
   loadingUpdate: boolean;
-  initialValues?:ConsultantDataModel;
+  initialValues?: ConsultantDataModel;
   form: FormInstance<ConsultantDataModel>;
   type: "create" | "update";
   open: boolean;
@@ -38,6 +38,9 @@ export default function ConsultantForm({
         rules={[{ required: true, message: "Name Consultant" }]}
       >
         <Input placeholder="Add Name Consultant" size="large" />
+      </Form.Item>
+      <Form.Item name="no_whatsapp" label="No Whatsapp">
+        <Input placeholder="Add No Whatsapp" size="large" />
       </Form.Item>
 
       <Form.Item>

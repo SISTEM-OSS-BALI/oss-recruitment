@@ -141,6 +141,19 @@ export const DELETE_USER = async (id: string) => {
   return result;
 };
 
+export const GET_USER_BY_APPLICANT_ID = async (applicant_id: string) => {
+  const result = await db.user.findFirst({
+    where: {
+      Applicant: {
+        some: {
+          id: applicant_id,
+        },
+      },
+    },
+  });
+  return result;
+}
+
 export const UPDATE_USER_DOCUMENT = async (user_id: string, payload: UserPayloadUpdateModel) => {
   const result = await db.user.update({
     where: {
