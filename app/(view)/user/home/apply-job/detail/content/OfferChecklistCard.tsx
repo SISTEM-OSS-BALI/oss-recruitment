@@ -16,11 +16,7 @@ import {
   Typography,
 } from "antd";
 import { ReloadOutlined, SendOutlined } from "@ant-design/icons";
-
-import type {
-  OfferChecklistItem,
-  OfferChecklistKey,
-} from "../offer-checklist-types";
+import { OfferChecklistItem, OfferChecklistKey } from "./offer-checklist-types";
 
 const { Text } = Typography;
 

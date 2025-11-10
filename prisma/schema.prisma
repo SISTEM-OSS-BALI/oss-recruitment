@@ -143,6 +143,7 @@ model User {
   date_of_birth       DateTime?
   photo_url           String?
   portfolio_url       String?
+  no_unique           String?
 
   interestTags UserInterestTag[]
   job_id       String?
@@ -297,6 +298,7 @@ model OfferingContract {
   directorSignaturePath        String?
   directorSignedPdfUrl         String?
   directorSignatureSignedAt    DateTime?
+  card_member                  String?
   notifyEmail                  String?
   createdAt                    DateTime            @default(now())
   updatedAt                    DateTime            @updatedAt
@@ -323,6 +325,15 @@ model ContractTemplate {
   contracts Contract[]
 
   @@map("contract_template")
+}
+
+model CardTemplate {
+  id              String   @id @default(cuid())
+  name            String
+  image_url_front String
+  image_url_back  String
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 }
 
 model Contract {
@@ -380,7 +391,6 @@ model Evaluator {
 
   is_active  Boolean
   is_default Boolean? @default(false)
-
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -428,7 +438,7 @@ model EvaluatorReview {
 }
 
 model QuestionBaseScreening {
-  id   String         @id @default(cuid())
+  id   String  @id @default(cuid())
   name String
   desc String?
   type TypeJob

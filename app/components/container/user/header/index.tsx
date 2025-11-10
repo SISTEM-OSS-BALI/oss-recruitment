@@ -92,7 +92,7 @@ export default function MainHeader({
             disabled: true,
             label: (
               <div style={{ padding: "8px 12px", fontSize: 13, color: "#999" }}>
-                Tidak ada pesan baru
+                No notifications
               </div>
             ),
           },

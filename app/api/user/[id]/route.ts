@@ -1,6 +1,6 @@
 import { UserPayloadUpdateModel } from "@/app/models/user";
 import { DELETE_JOB } from "@/app/providers/job";
-import { GET_USER, UPDATE_USER, UPDATE_USER_DOCUMENT } from "@/app/providers/user";
+import { GET_USER, UPDATE_NO_UNIQUE, UPDATE_USER, UPDATE_USER_DOCUMENT } from "@/app/providers/user";
 import { GeneralError } from "@/app/utils/general-error";
 import { NextRequest, NextResponse } from "next/server";
 
@@ -136,7 +136,10 @@ export const PATCH = async (
     const id = params.id;
     const payload: UserPayloadUpdateModel = await req.json();
 
-    const data = await UPDATE_USER_DOCUMENT(id, payload);
+    const data =
+      payload.no_unique !== undefined
+        ? await UPDATE_NO_UNIQUE(id, { no_unique: payload.no_unique })
+        : await UPDATE_USER_DOCUMENT(id, payload);
 
     return NextResponse.json(
       {

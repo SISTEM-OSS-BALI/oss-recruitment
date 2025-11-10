@@ -4,7 +4,6 @@ import { GeneralError } from "@/app/utils/general-error";
 import { NextRequest, NextResponse } from "next/server";
 
 
-
 export const GET = async () => {
     try {
         const data = await GET_EVALUATORS();

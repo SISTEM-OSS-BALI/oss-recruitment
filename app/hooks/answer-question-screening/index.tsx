@@ -76,20 +76,28 @@ export const useAnswerQuestionScreenings = (
 
 export const useAnswerQuestionScreeningByApplicantId = ({
   applicantId,
+  enabled = true,
 }: {
-  applicantId: string;
+  applicantId?: string;
+  enabled?: boolean;
 }) => {
+  const shouldFetch = Boolean(applicantId) && enabled;
+
   const { data, isLoading: fetchLoading } = useQuery({
     queryKey: [queryKey, applicantId],
     queryFn: async () => {
+      if (!applicantId) {
+        throw new Error("applicantId is required");
+      }
       const url = `${baseUrl}/by-candidate/${applicantId}`;
       const result = await axios.get(url);
       return result.data.result as AnswerQuestionScreeningDataModel[];
     },
+    enabled: shouldFetch,
   });
 
   return {
-    data,
+    data: shouldFetch ? data : undefined,
     fetchLoading,
   };
 };

@@ -5,7 +5,7 @@ import { Card, Col, Empty, Row, Space } from "antd";
 
 import type { ApplicantDataModel } from "@/app/models/applicant";
 import CandidateInfoPanel from "@/app/components/common/information-panel";
-import OfferContractManager from "@/app/components/common/form/admin/offering/OfferContractManager";
+import OfferContractManager from "@/app/(view)/user/home/apply-job/detail/content/OfferContractManager";
 
 type Props = {
   candidate: ApplicantDataModel | null;

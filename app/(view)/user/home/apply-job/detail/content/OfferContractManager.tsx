@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Alert,
   Button,
@@ -30,9 +30,11 @@ import {
   FilePdfOutlined,
   FileSearchOutlined,
   FileWordOutlined,
+  IdcardOutlined,
   LinkOutlined,
   PlusOutlined,
   ReloadOutlined,
+  SafetyCertificateOutlined,
   SaveOutlined,
   UsergroupAddOutlined,
 } from "@ant-design/icons";
@@ -44,7 +46,6 @@ import { createClient } from "@supabase/supabase-js";
 
 import { formatDate } from "@/app/utils/date-helper";
 import type { ApplicantDataModel } from "@/app/models/applicant";
-import type { ScheduleHiredDataModel } from "@/app/models/hired";
 import type { ContractTemplateDataModel } from "@/app/models/contract-template";
 import {
   useContractTemplate,
@@ -54,13 +55,19 @@ import {
   useOfferingContractByApplicantId,
   useOfferingContracts,
 } from "@/app/hooks/offering-contract";
-import CandidateSignatureCard from "./CandidateSignatureCard";
+import { useAnswerQuestionScreeningByApplicantId } from "@/app/hooks/answer-question-screening";
+import type { AnswerQuestionScreeningDataModel } from "@/app/models/answer-question-screening";
+import generateCodeUnique from "@/app/utils/generate_code_unique";
+import { useUser } from "@/app/hooks/user";
+// import CandidateSignatureCard from "./CandidateSignatureCard";
 import DirectorSignatureCard from "./DirectorSignatureCard";
 import OfferChecklistCard from "./OfferChecklistCard";
 import type {
   OfferChecklistItem,
   OfferChecklistKey,
 } from "./offer-checklist-types";
+import { ScheduleHiredDataModel } from "@/app/models/schedule-hired";
+import GenerateCardReferral from "./GenerateCardReferral";
 export type {
   OfferChecklistItem,
   OfferChecklistKey,
@@ -82,7 +89,10 @@ type ContractFormValues = {
   candidate_full_name?: string;
   no_identity?: string;
   address?: string;
+  email?: string;
   no_phone?: string;
+  name_consultant?: string;
+  code_unique?: string;
   position?: string;
   duties?: string[];
   month?: string;
@@ -95,6 +105,7 @@ type TemplateVariables = {
   candidate_full_name: string;
   address: string;
   no_phone: string;
+  email: string;
   no_identity: string;
   position: string;
   duties: string[];
@@ -104,11 +115,57 @@ type TemplateVariables = {
   salary: string;
   sal: string;
   bonus: string[];
+  name_consultant: string;
+  code_unique: string;
   candidate: ApplicantDataModel | null;
   user: ApplicantDataModel["user"] | null;
   job: ApplicantDataModel["job"] | null;
   schedules: ScheduleHiredDataModel[] | null;
   [key: string]: unknown;
+};
+
+const CONSULTANT_KEYWORDS = ["consult", "konsul"];
+
+const isConsultantQuestion = (row?: AnswerQuestionScreeningDataModel) => {
+  if (!row?.question) return false;
+  const combined = [
+    row.question.text,
+    row.question.placeholder,
+    row.question.helpText,
+  ]
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase();
+
+  if (!combined) return false;
+  if (CONSULTANT_KEYWORDS.some((keyword) => combined.includes(keyword))) {
+    return true;
+  }
+  return combined.includes("referral") && combined.includes("nama");
+};
+
+const extractConsultantName = (
+  answers?: AnswerQuestionScreeningDataModel[]
+): string => {
+  if (!answers?.length) return "";
+
+  for (const row of answers) {
+    if (!isConsultantQuestion(row)) continue;
+
+    const textAnswer = row.answerText?.trim();
+    if (textAnswer) return textAnswer;
+
+    const labels =
+      row.selectedOptions
+        ?.map((sel) =>
+          row.question?.options?.find((opt) => opt.id === sel.optionId)?.label
+        )
+        .filter((label): label is string => Boolean(label && label.trim())) ?? [];
+
+    if (labels.length) return labels[0].trim();
+  }
+
+  return "";
 };
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -177,6 +234,7 @@ const buildTemplateVariables = (
     candidate_full_name: candidateName,
     address: candidateUser?.address || "",
     no_phone: candidateUser?.phone || "",
+    email: candidateUser?.email || "",
     no_identity: candidateUser?.no_identity || "",
     position: candidateJob?.name || "",
     duties: [] as string[],
@@ -186,6 +244,8 @@ const buildTemplateVariables = (
     salary: "",
     sal: "",
     bonus: [] as string[],
+    name_consultant: "",
+    code_unique: "",
     candidate,
     user: candidateUser,
     job: candidateJob,
@@ -199,7 +259,10 @@ const mapTemplateVarsToFormValues = (
   candidate_full_name: vars.candidate_full_name,
   address: vars.address,
   no_phone: vars.no_phone,
+  email: vars.email,
   no_identity: vars.no_identity,
+  name_consultant: vars.name_consultant,
+  code_unique: vars.code_unique,
   position: vars.position,
   duties: Array.isArray(vars.duties) && vars.duties.length ? vars.duties : [""],
   month: vars.month,
@@ -236,16 +299,70 @@ export function OfferContractManager({
     () => buildTemplateVariables(candidate ?? null, schedules),
     [candidate, schedules]
   );
+  const isReferralJob = candidate?.job?.type_job === "REFFERAL";
+
+  const { data: screeningAnswers, fetchLoading: screeningAnswersLoading } =
+    useAnswerQuestionScreeningByApplicantId({
+      applicantId: candidate?.id,
+      enabled: Boolean(candidate?.id) && isReferralJob,
+    });
+
+  const referralConsultantName = useMemo(
+    () => (isReferralJob ? extractConsultantName(screeningAnswers) : ""),
+    [isReferralJob, screeningAnswers]
+  );
+
+  const referralUniqueCode = useMemo(() => {
+    if (!isReferralJob) return "";
+    const fullName = candidate?.user?.name?.trim();
+    if (!fullName) return "";
+    const firstName = fullName.split(/\s+/)[0] || fullName;
+    return generateCodeUnique(firstName, 8);
+  }, [isReferralJob, candidate?.user?.name]);
+
+  const userId = candidate?.user_id ?? "";
+  const { onPatchCodeUnique } = useUser({ id: userId });
+  const lastPatchedCodeRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (!isReferralJob || !referralUniqueCode || !userId) return;
+    if (candidate?.user?.no_unique === referralUniqueCode) {
+      lastPatchedCodeRef.current = referralUniqueCode;
+      return;
+    }
+    if (lastPatchedCodeRef.current === referralUniqueCode) return;
+
+    let cancelled = false;
+    lastPatchedCodeRef.current = referralUniqueCode;
+    onPatchCodeUnique({
+      id: userId,
+      payload: { no_unique: referralUniqueCode },
+    }).catch(() => {
+      if (!cancelled && lastPatchedCodeRef.current === referralUniqueCode) {
+        lastPatchedCodeRef.current = null;
+      }
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    isReferralJob,
+    referralUniqueCode,
+    userId,
+    onPatchCodeUnique,
+    candidate?.user?.no_unique,
+  ]);
 
   const { onCreate: onCreateContract } = useOfferingContracts({});
   const {
     data: contractByApplicant,
     onRequestDirectorSignature,
     onRequestDirectorSignatureLoading,
-    onApplyCandidateSignature,
-    onApplyCandidateSignatureLoading,
-    onSendFinalEmail,
-    onSendFinalEmailLoading,
+    // onApplyCandidateSignature,
+    // onApplyCandidateSignatureLoading,
+    // onSendFinalEmail,
+    // onSendFinalEmailLoading,
   } = useOfferingContractByApplicantId({
     applicant_id: candidate?.id || "",
   });
@@ -267,13 +384,13 @@ export function OfferContractManager({
     contractByApplicant?.directorSignatureRequestedAt || null;
   const directorSignatureUrl =
     contractByApplicant?.directorSignatureUrl || null;
-  const candidateSignatureUrl =
-    contractByApplicant?.candidateSignatureUrl || null;
+  // const candidateSignatureUrl =
+  //   contractByApplicant?.candidateSignatureUrl || null;
   const candidateSignedPdfUrl =
     contractByApplicant?.candidateSignedPdfUrl || null;
-  const candidateSignedPdfAt =
-    contractByApplicant?.candidateSignedPdfAt || null;
-  const candidateNotifyEmail = contractByApplicant?.notifyEmail || "";
+  // const candidateSignedPdfAt =
+  //   contractByApplicant?.candidateSignedPdfAt || null;
+  // const candidateNotifyEmail = contractByApplicant?.notifyEmail || "";
 
   const defaultDirectorEmail = useMemo(
     () => process.env.NEXT_PUBLIC_DIRECTOR_SIGNATURE_EMAIL || "",
@@ -350,7 +467,7 @@ export function OfferContractManager({
         email: directorEmail,
       });
     } catch (error) {
-      message.error("Failed to send signature request email.");
+      message.error(`Failed to send signature request email ${error}`);
     }
   }, [
     contractByApplicant?.id,
@@ -359,46 +476,46 @@ export function OfferContractManager({
     onRequestDirectorSignature,
   ]);
 
-  const handleApplyCandidateSignature = useCallback(async () => {
-    if (!contractByApplicant?.id) return;
-    if (!candidateSignatureUrl) {
-      message.warning("Candidate has not uploaded a signature yet.");
-      return;
-    }
-    try {
-      await onApplyCandidateSignature({ contractId: contractByApplicant.id });
-      message.success("Candidate signature applied to contract.");
-    } catch (error) {
-      message.error("Failed to apply candidate signature.");
-    }
-  }, [
-    candidateSignatureUrl,
-    contractByApplicant?.id,
-    onApplyCandidateSignature,
-  ]);
+  // const handleApplyCandidateSignature = useCallback(async () => {
+  //   if (!contractByApplicant?.id) return;
+  //   if (!candidateSignatureUrl) {
+  //     message.warning("Candidate has not uploaded a signature yet.");
+  //     return;
+  //   }
+  //   try {
+  //     await onApplyCandidateSignature({ contractId: contractByApplicant.id });
+  //     message.success("Candidate signature applied to contract.");
+  //   } catch (error) {
+  //     message.error("Failed to apply candidate signature.");
+  //   }
+  // }, [
+  //   candidateSignatureUrl,
+  //   contractByApplicant?.id,
+  //   onApplyCandidateSignature,
+  // ]);
 
-  const handleSendFinalEmail = useCallback(async () => {
-    if (!contractByApplicant?.id) return;
-    if (!candidateSignedPdfUrl) {
-      message.warning("Generate the signed PDF before sending email.");
-      return;
-    }
-    if (!candidateNotifyEmail) {
-      message.warning("Assign candidate email in the contract form first.");
-      return;
-    }
-    try {
-      await onSendFinalEmail({ contractId: contractByApplicant.id });
-      message.success("Signed contract sent to candidate.");
-    } catch (error) {
-      message.error("Failed to send signed contract email.");
-    }
-  }, [
-    candidateNotifyEmail,
-    candidateSignedPdfUrl,
-    contractByApplicant?.id,
-    onSendFinalEmail,
-  ]);
+  // const handleSendFinalEmail = useCallback(async () => {
+  //   if (!contractByApplicant?.id) return;
+  //   if (!candidateSignedPdfUrl) {
+  //     message.warning("Generate the signed PDF before sending email.");
+  //     return;
+  //   }
+  //   if (!candidateNotifyEmail) {
+  //     message.warning("Assign candidate email in the contract form first.");
+  //     return;
+  //   }
+  //   try {
+  //     await onSendFinalEmail({ contractId: contractByApplicant.id });
+  //     message.success("Signed contract sent to candidate.");
+  //   } catch (error) {
+  //     message.error("Failed to send signed contract email.");
+  //   }
+  // }, [
+  //   candidateNotifyEmail,
+  //   candidateSignedPdfUrl,
+  //   contractByApplicant?.id,
+  //   onSendFinalEmail,
+  // ]);
 
   const handleResetOfferChecklist = useCallback(() => {
     setOfferTriggeredAt(null);
@@ -435,6 +552,24 @@ export function OfferContractManager({
         ).format("MMM D, YYYY HH:mm")}`
       : "Send the contract to directors for signature.";
 
+    // Item tanda tangan (kondisional)
+    const signatureItem: OfferChecklistItem = isReferralJob
+      ? {
+          key: "generateCard",
+          title: "Generete Card Referral",
+          description: "Generate Card Referral for Sahabat Referral",
+          icon: <IdcardOutlined/>,
+          disabled: true,
+        }
+      : {
+          key: "signatureDirectur",
+          title: "Directors signed",
+          description: directorDescription,
+          fileUrl: directorSignedPdfUrl || directorSignatureUrl || undefined,
+          icon: <UsergroupAddOutlined />,
+          disabled: true,
+        };
+
     return [
       {
         key: "contractFinalized",
@@ -455,42 +590,21 @@ export function OfferContractManager({
         icon: <CheckOutlined />,
         disabled: true,
       },
-      {
-        key: "signatureDirectur",
-        title: "Directors signed",
-        description: directorDescription,
-        fileUrl: directorSignedPdfUrl || directorSignatureUrl || undefined,
-        icon: <UsergroupAddOutlined />,
-        disabled: true,
-      },
-      // {
-      //   key: "compensationApproved",
-      //   title: "Compensation package approved",
-      //   description:
-      //     "Finance/HR has validated salary, allowances, and benefits in this offer.",
-      //   icon: <SafetyCertificateOutlined />,
-      // },
-      // {
-      //   key: "startDateConfirmed",
-      //   title: "Start date aligned",
-      //   description:
-      //     "Candidate and hiring manager agree on the official start date.",
-      //   icon: <CalendarOutlined />,
-      // },
-      // {
-      //   key: "attachmentsPrepared",
-      //   title: "Supporting documents prepared",
-      //   description:
-      //     "Onboarding checklist, policies, and handbook are ready for the candidate.",
-      //   icon: <PaperClipOutlined />,
-      // },
+
+      // masukkan item kondisional di sini
+      signatureItem,
+
+      // ...item lain (kompensasi, start date, dsb) kalau diperlukan
     ];
   }, [
+    isReferralJob,
     directorSignatureSignedAt,
     directorSignatureRequestedAt,
+    directorSignedPdfUrl,
+    directorSignatureUrl,
     hasAccepetedCandidate,
-    hasDirectorSigned,
     hasExistingContract,
+    candidateSignedPdfUrl,
   ]);
 
   const checklistValues = useMemo(
@@ -593,6 +707,15 @@ export function OfferContractManager({
       const buf = await fetchArrayBuffer(selectedTemplate.filePath);
       const vars = cloneTemplateVariables(templateDefaults);
 
+      if (isReferralJob) {
+        if (referralConsultantName) {
+          vars.name_consultant = referralConsultantName;
+        }
+        if (referralUniqueCode) {
+          vars.code_unique = referralUniqueCode;
+        }
+      }
+
       const filledBlob = fillTemplateToDocxBlob(buf, vars);
 
       const cleanedBaseName =
@@ -625,6 +748,9 @@ export function OfferContractManager({
     selectedTemplate?.filePath,
     selectedTemplate?.name,
     templateDefaults,
+    isReferralJob,
+    referralConsultantName,
+    referralUniqueCode,
     convertDocxBlobToPdf,
     closePicker,
   ]);
@@ -644,6 +770,8 @@ export function OfferContractManager({
       next.no_identity = values.no_identity ?? "";
       next.address = values.address ?? "";
       next.no_phone = values.no_phone ?? "";
+      next.name_consultant = values.name_consultant ?? "";
+      next.code_unique = values.code_unique ?? "";
       next.position = values.position ?? "";
       next.month = values.month ?? "";
       next.salary = values.salary ?? "";
@@ -795,6 +923,22 @@ export function OfferContractManager({
     form.setFieldsValue(mapTemplateVarsToFormValues(docState.vars));
   }, [docState, form]);
 
+  useEffect(() => {
+    if (!isReferralJob) return;
+    const updates: Partial<ContractFormValues> = {};
+    const currentName = form.getFieldValue("name_consultant");
+    if (referralConsultantName && !currentName) {
+      updates.name_consultant = referralConsultantName;
+    }
+    const currentCode = form.getFieldValue("code_unique");
+    if (referralUniqueCode && !currentCode) {
+      updates.code_unique = referralUniqueCode;
+    }
+    if (Object.keys(updates).length) {
+      form.setFieldsValue(updates);
+    }
+  }, [isReferralJob, referralConsultantName, referralUniqueCode, form]);
+
   if (!candidate) {
     return (
       <Card style={{ borderRadius: 14 }}>
@@ -900,21 +1044,32 @@ export function OfferContractManager({
         )}
       </Card>
 
-      <DirectorSignatureCard
-        hasExistingContract={hasExistingContract}
-        hasDirectorSigned={hasDirectorSigned}
-        directorSignatureRequestedAt={directorSignatureRequestedAt}
-        directorSignatureSignedAt={directorSignatureSignedAt}
-        directorEmail={directorEmail}
-        isDirectorEmailValid={isDirectorEmailValid}
-        showDirectorEmailError={!isDirectorEmailValid && Boolean(directorEmail)}
-        onDirectorEmailChange={setDirectorEmail}
-        onRequestSignature={handleRequestSignature}
-        requestLoading={onRequestDirectorSignatureLoading}
-        directorSignatureUrl={directorSignatureUrl}
-        directorSignedPdfUrl={directorSignedPdfUrl}
-        candidateSignedPdfUrl={candidateSignedPdfUrl}
-      />
+      {!isReferralJob ? (
+        <DirectorSignatureCard
+          hasExistingContract={hasExistingContract}
+          hasDirectorSigned={hasDirectorSigned}
+          directorSignatureRequestedAt={directorSignatureRequestedAt}
+          directorSignatureSignedAt={directorSignatureSignedAt}
+          directorEmail={directorEmail}
+          isDirectorEmailValid={isDirectorEmailValid}
+          showDirectorEmailError={
+            !isDirectorEmailValid && Boolean(directorEmail)
+          }
+          onDirectorEmailChange={setDirectorEmail}
+          onRequestSignature={handleRequestSignature}
+          requestLoading={onRequestDirectorSignatureLoading}
+          directorSignatureUrl={directorSignatureUrl}
+          directorSignedPdfUrl={directorSignedPdfUrl}
+          candidateSignedPdfUrl={candidateSignedPdfUrl}
+        />
+      ) : (
+        <GenerateCardReferral
+          consultantName={referralConsultantName}
+          candidateName={candidate.user?.name || ""}
+          no_unique={referralUniqueCode}
+          loading={screeningAnswersLoading}
+        />
+      )}
 
       {/* <CandidateSignatureCard
         candidateSignatureUrl={candidateSignatureUrl}
@@ -1031,6 +1186,7 @@ export function OfferContractManager({
             convertingPdf={convertingPdf}
             onConvertToPdf={handleConvertToPdf}
             form={form}
+            candidate={candidate}
           />
         )}
       </Modal>
@@ -1039,6 +1195,7 @@ export function OfferContractManager({
 }
 
 type ContractResultTabsProps = {
+  candidate: ApplicantDataModel;
   docState: GeneratedDoc;
   convertingPdf: boolean;
   onConvertToPdf: () => Promise<void>;
@@ -1050,6 +1207,7 @@ const ContractResultTabs = ({
   convertingPdf,
   onConvertToPdf,
   form,
+  candidate,
 }: ContractResultTabsProps) => {
   const items = useMemo(
     () => [
@@ -1065,6 +1223,7 @@ const ContractResultTabs = ({
             form={form}
             convertingPdf={convertingPdf}
             onConvertToPdf={onConvertToPdf}
+            candidate={candidate}
           />
         ),
       },
@@ -1125,13 +1284,14 @@ const ContractResultTabs = ({
         children: <InfoTabContent docState={docState} />,
       },
     ],
-    [docState, convertingPdf, form, onConvertToPdf]
+    [docState, convertingPdf, form, onConvertToPdf, candidate]
   );
 
   return <Tabs items={items} destroyInactiveTabPane />;
 };
 
 type VariableEditFormProps = {
+  candidate: ApplicantDataModel;
   form: FormInstance<ContractFormValues>;
   convertingPdf: boolean;
   onConvertToPdf: () => Promise<void>;
@@ -1141,6 +1301,7 @@ const VariableEditForm = ({
   form,
   convertingPdf,
   onConvertToPdf,
+  candidate,
 }: VariableEditFormProps) => (
   <div>
     <Alert
@@ -1184,137 +1345,157 @@ const VariableEditForm = ({
             <Input />
           </Form.Item>
         </Col>
-      </Row>
 
-      <Alert
-        style={{ margin: "8px 0 16px" }}
-        type="info"
-        message="ARTICLE 1 — Position & Duties"
-        showIcon
-      />
-      <Form.Item name="position" label="Position">
-        <Input />
-      </Form.Item>
-      <Form.List name="duties">
-        {(fields, { add, remove }) => (
+        {candidate.job.type_job === "REFFERAL" && (
           <>
-            {fields.map((field, idx) => (
-              <Row
-                key={field.key}
-                gutter={8}
-                align="middle"
-                style={{ marginBottom: 8 }}
-              >
-                <Col flex="auto">
-                  <Form.Item
-                    {...field}
-                    label={idx === 0 ? "Job Duties" : undefined}
-                    name={[field.name]}
-                    fieldKey={field.fieldKey}
-                    rules={[
-                      {
-                        required: true,
-                        message: "Fill the duty or remove this line.",
-                      },
-                    ]}
-                  >
-                    <Input.TextArea
-                      autoSize={{ minRows: 1, maxRows: 3 }}
-                      placeholder={`Job Duty ${idx + 1}`}
-                    />
-                  </Form.Item>
-                </Col>
-                <Col>
-                  <Button
-                    danger
-                    icon={<DeleteOutlined />}
-                    onClick={() => remove(field.name)}
-                  />
-                </Col>
-              </Row>
-            ))}
-            <Button
-              type="dashed"
-              icon={<PlusOutlined />}
-              onClick={() => add("")}
-            >
-              Add Duty
-            </Button>
+            <Col xs={24} md={12}>
+              <Form.Item name="name_consultant" label="Name Consultant">
+                <Input />
+              </Form.Item>
+            </Col>
+
+            <Col xs={24} md={12}>
+              <Form.Item name="code_unique" label="Code Unique">
+                <Input />
+              </Form.Item>
+            </Col>
           </>
         )}
-      </Form.List>
-
-      <Alert
-        style={{ margin: "8px 0 16px" }}
-        type="info"
-        message="ARTICLE 2 — Employment Period"
-        showIcon
-      />
-      <Row gutter={12}>
-        <Col xs={24} md={12}>
-          <Form.Item name="month" label="Month (duration in months)">
-            <Input placeholder="e.g. 3" />
-          </Form.Item>
-        </Col>
-        <Col xs={24} md={12}>
-          <Form.Item name="start_date" label="Start Date">
-            <DatePicker style={{ width: "100%" }} />
-          </Form.Item>
-        </Col>
       </Row>
 
-      <Alert
-        style={{ margin: "8px 0 16px" }}
-        type="info"
-        message="ARTICLE 4 — Salary & Bonuses"
-        showIcon
-      />
-      <Form.Item label="Salary Amount" name="salary">
-        <Input placeholder="e.g. Rp 3.000.000" />
-      </Form.Item>
-
-      <Form.List name="bonus">
-        {(fields, { add, remove }) => (
-          <>
-            {fields.map((field, idx) => (
-              <Row
-                key={field.key}
-                gutter={8}
-                align="middle"
-                style={{ marginBottom: 8 }}
-              >
-                <Col flex="auto">
-                  <Form.Item
-                    {...field}
-                    label={idx === 0 ? "Bonuses / Allowances" : undefined}
-                    name={[field.name]}
-                    fieldKey={field.fieldKey}
+      {candidate.job.type_job !== "REFFERAL" && (
+        <>
+          <Alert
+            style={{ margin: "8px 0 16px" }}
+            type="info"
+            message="ARTICLE 1 — Position & Duties"
+            showIcon
+          />
+          <Form.Item name="position" label="Position">
+            <Input />
+          </Form.Item>
+          <Form.List name="duties">
+            {(fields, { add, remove }) => (
+              <>
+                {fields.map((field, idx) => (
+                  <Row
+                    key={field.key}
+                    gutter={8}
+                    align="middle"
+                    style={{ marginBottom: 8 }}
                   >
-                    <Input.TextArea
-                      autoSize={{ minRows: 1, maxRows: 3 }}
-                      placeholder={`Bonus/Allowance ${idx + 1}`}
-                    />
-                  </Form.Item>
-                </Col>
-                <Col>
-                  <Button
-                    danger
-                    icon={<DeleteOutlined />}
-                    onClick={() => remove(field.name)}
-                  />
-                </Col>
-              </Row>
-            ))}
-            <Button
-              type="dashed"
-              icon={<PlusOutlined />}
-              onClick={() => add("")}
-            >
-              Add Bonus/Allowance
-            </Button>
-          </>
-        )}
-      </Form.List>
+                    <Col flex="auto">
+                      <Form.Item
+                        {...field}
+                        label={idx === 0 ? "Job Duties" : undefined}
+                        name={[field.name]}
+                        fieldKey={field.fieldKey}
+                        rules={[
+                          {
+                            required: true,
+                            message: "Fill the duty or remove this line.",
+                          },
+                        ]}
+                      >
+                        <Input.TextArea
+                          autoSize={{ minRows: 1, maxRows: 3 }}
+                          placeholder={`Job Duty ${idx + 1}`}
+                        />
+                      </Form.Item>
+                    </Col>
+                    <Col>
+                      <Button
+                        danger
+                        icon={<DeleteOutlined />}
+                        onClick={() => remove(field.name)}
+                      />
+                    </Col>
+                  </Row>
+                ))}
+                <Button
+                  type="dashed"
+                  icon={<PlusOutlined />}
+                  onClick={() => add("")}
+                >
+                  Add Duty
+                </Button>
+              </>
+            )}
+          </Form.List>
+
+          <Alert
+            style={{ margin: "8px 0 16px" }}
+            type="info"
+            message="ARTICLE 2 — Employment Period"
+            showIcon
+          />
+          <Row gutter={12}>
+            <Col xs={24} md={12}>
+              <Form.Item name="month" label="Month (duration in months)">
+                <Input placeholder="e.g. 3" />
+              </Form.Item>
+            </Col>
+            <Col xs={24} md={12}>
+              <Form.Item name="start_date" label="Start Date">
+                <DatePicker style={{ width: "100%" }} />
+              </Form.Item>
+            </Col>
+          </Row>
+
+          <Alert
+            style={{ margin: "8px 0 16px" }}
+            type="info"
+            message="ARTICLE 4 — Salary & Bonuses"
+            showIcon
+          />
+          <Form.Item label="Salary Amount" name="salary">
+            <Input placeholder="e.g. Rp 3.000.000" />
+          </Form.Item>
+
+          <Form.List name="bonus">
+            {(fields, { add, remove }) => (
+              <>
+                {fields.map((field, idx) => (
+                  <Row
+                    key={field.key}
+                    gutter={8}
+                    align="middle"
+                    style={{ marginBottom: 8 }}
+                  >
+                    <Col flex="auto">
+                      <Form.Item
+                        {...field}
+                        label={idx === 0 ? "Bonuses / Allowances" : undefined}
+                        name={[field.name]}
+                        fieldKey={field.fieldKey}
+                      >
+                        <Input.TextArea
+                          autoSize={{ minRows: 1, maxRows: 3 }}
+                          placeholder={`Bonus/Allowance ${idx + 1}`}
+                        />
+                      </Form.Item>
+                    </Col>
+                    <Col>
+                      <Button
+                        danger
+                        icon={<DeleteOutlined />}
+                        onClick={() => remove(field.name)}
+                      />
+                    </Col>
+                  </Row>
+                ))}
+                <Button
+                  type="dashed"
+                  icon={<PlusOutlined />}
+                  onClick={() => add("")}
+                >
+                  Add Bonus/Allowance
+                </Button>
+              </>
+            )}
+          </Form.List>
+        </>
+      )}
     </Form>
 
     <Alert

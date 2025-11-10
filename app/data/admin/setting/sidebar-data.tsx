@@ -13,7 +13,6 @@ import {
   faCircleQuestion,
   faBookOpen,
   faFileLines,
-  faUserTie,
 } from "@fortawesome/free-solid-svg-icons";
 import menuLabel from "@/app/utils/label";
 
@@ -34,10 +33,23 @@ export const SidebarMenuSettingAdmin = (): MenuProps["items"] => {
       onClick: () => router.push("/admin/dashboard/location"),
     },
     {
-      key: "/admin/dashboard/contract-template",
-      label: menuLabel("Contract Template"),
-      icon: <FontAwesomeIcon icon={faFileContract} />,
-      onClick: () => router.push("/admin/dashboard/contract-template"),
+      key: "/admin/dashboard/template",
+      label: menuLabel("Template"),
+      icon: <FontAwesomeIcon icon={faBookOpen} />,
+      children: [
+        {
+          key: "/admin/dashboard/template/contract-template",
+          label: menuLabel("Contract Template"),
+          icon: <FontAwesomeIcon icon={faFileContract} />,
+          onClick: () => router.push("/admin/dashboard/template/contract-template"),
+        },
+        {
+          key: "/admin/dashboard/template/card-template",
+          label: menuLabel("Card Template"),
+          icon: <FontAwesomeIcon icon={faClipboardList} />,
+          onClick: () => router.push("/admin/dashboard/template/card-template"),
+        }
+      ],
     },
     {
       key: "/admin/dashboard/evaluator",

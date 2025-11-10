@@ -167,3 +167,15 @@ export const UPDATE_USER_DOCUMENT = async (user_id: string, payload: UserPayload
   });
   return result;
 }
+
+export const UPDATE_NO_UNIQUE = async (user_id: string, payload: UserPayloadUpdateModel) => {
+  const result = await db.user.update({
+    where: {
+      id: user_id,
+    },    
+    data: {
+      no_unique: payload.no_unique,
+    },
+  });
+  return result;
+}

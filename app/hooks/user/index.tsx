@@ -2,7 +2,11 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import axios from "axios";
 
 import MainNotification from "../../components/common/notifications";
-import { UserDataModel, UserPayloadCreateModel, UserPayloadUpdateModel } from "@/app/models/user";
+import {
+  UserDataModel,
+  UserPayloadCreateModel,
+  UserPayloadUpdateModel,
+} from "@/app/models/user";
 
 const baseUrl = "/api/user";
 const entity = "user";
@@ -112,6 +116,38 @@ export const useUser = ({ id }: { id: string }) => {
       },
     });
 
+  const { mutateAsync: onPatchCodeUnique, isPending: onPatchDocumentUnique } =
+    useMutation({
+      mutationFn: async ({
+        id,
+        payload,
+      }: {
+        id: string;
+        payload: UserPayloadUpdateModel;
+      }) => {
+        return axios.patch(`${baseUrl}/${id}`, {
+          no_unique : payload.no_unique,
+        });
+      },
+      onSuccess: (_, variables) => {
+        // segarkan list & detail
+        queryClient.invalidateQueries({ queryKey: [queryKey] });
+        queryClient.invalidateQueries({ queryKey: [entity, variables.id] });
+        MainNotification({
+          type: "success",
+          entity,
+          action: "document updated",
+        });
+      },
+      onError: () => {
+        MainNotification({
+          type: "error",
+          entity,
+          action: "document updated",
+        });
+      },
+    });
+
   return {
     data,
     fetchLoading,
@@ -119,5 +155,7 @@ export const useUser = ({ id }: { id: string }) => {
     onUpdateLoading,
     onPatchDocument,
     onPatchDocumentLoading,
+    onPatchCodeUnique,
+    onPatchDocumentUnique,
   };
 };
