@@ -94,7 +94,21 @@ export const UPDATE_USER = async (
   }
 
   if (password) {
-    data.password = await bcrypt.hash(password, 10);
+    let plainPassword: string | undefined;
+    if (typeof password === "string") {
+      plainPassword = password;
+    } else if (
+      typeof password === "object" &&
+      password !== null &&
+      "set" in password &&
+      typeof (password as { set?: unknown }).set === "string"
+    ) {
+      plainPassword = (password as { set: string }).set;
+    }
+
+    if (plainPassword) {
+      data.password = await bcrypt.hash(plainPassword, 10);
+    }
   }
 
   const result = await db.$transaction(async (tx) => {
@@ -179,3 +193,16 @@ export const UPDATE_NO_UNIQUE = async (user_id: string, payload: UserPayloadUpda
   });
   return result;
 }
+
+export const UPDATE_MEMBER_CARD = async (user_id: string, payload: UserPayloadUpdateModel) => {
+  const result = await db.user.update({
+    where: {
+      id: user_id,
+    },    
+    data: {
+      member_card_url: payload.member_card_url,
+    },
+  });
+  return result;
+}
+

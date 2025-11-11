@@ -116,7 +116,7 @@ export const useUser = ({ id }: { id: string }) => {
       },
     });
 
-  const { mutateAsync: onPatchCodeUnique, isPending: onPatchDocumentUnique } =
+  const { mutateAsync: onPatchCodeUnique, isPending: onPatchCodeUniqueLoading } =
     useMutation({
       mutationFn: async ({
         id,
@@ -148,6 +148,40 @@ export const useUser = ({ id }: { id: string }) => {
       },
     });
 
+     const {
+       mutateAsync: onPatchMemberCard,
+       isPending: onPatchMemberCardLoading,
+     } = useMutation({
+       mutationFn: async ({
+         id,
+         payload,
+       }: {
+         id: string;
+         payload: UserPayloadUpdateModel;
+       }) => {
+         return axios.patch(`${baseUrl}/${id}`, {
+           no_unique: payload.no_unique,
+         });
+       },
+       onSuccess: (_, variables) => {
+         // segarkan list & detail
+         queryClient.invalidateQueries({ queryKey: [queryKey] });
+         queryClient.invalidateQueries({ queryKey: [entity, variables.id] });
+         MainNotification({
+           type: "success",
+           entity,
+           action: "document updated",
+         });
+       },
+       onError: () => {
+         MainNotification({
+           type: "error",
+           entity,
+           action: "document updated",
+         });
+       },
+     });
+
   return {
     data,
     fetchLoading,
@@ -156,6 +190,8 @@ export const useUser = ({ id }: { id: string }) => {
     onPatchDocument,
     onPatchDocumentLoading,
     onPatchCodeUnique,
-    onPatchDocumentUnique,
+    onPatchCodeUniqueLoading,
+    onPatchMemberCard,
+    onPatchMemberCardLoading
   };
 };

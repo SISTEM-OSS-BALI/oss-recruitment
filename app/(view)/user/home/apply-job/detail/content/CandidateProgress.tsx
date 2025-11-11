@@ -141,16 +141,13 @@ export default function CandidateProgress({ applicant, meta }: Props) {
   });
   const currentStage = toProgressStage(applicant.stage);
   const applicantStageKey = coerceStage(applicant.stage);
-  const stageProcedureDocuments = useMemo(
-    () => {
-      if (!Array.isArray(procedureDocuments)) return [];
-      if (!applicantStageKey) return [];
-      return procedureDocuments.filter(
-        (doc) => coerceStage(doc.stage) === applicantStageKey
-      );
-    },
-    [procedureDocuments, applicantStageKey]
-  );
+  const stageProcedureDocuments = useMemo(() => {
+    if (!Array.isArray(procedureDocuments)) return [];
+    if (!applicantStageKey) return [];
+    return procedureDocuments.filter(
+      (doc) => coerceStage(doc.stage) === applicantStageKey
+    );
+  }, [procedureDocuments, applicantStageKey]);
   const procedureDocumentStageLabel = getStageLabel(
     applicantStageKey || currentStage
   );
@@ -548,8 +545,13 @@ export default function CandidateProgress({ applicant, meta }: Props) {
       }
 
       case "OFFERING": {
-        // OFFERING is the offer-sent stage (not the hiring/onboarding stage)
         const hasOfferDocument = Boolean(contractByApplicant?.filePath);
+        const isDecisionPending = decisionStatus === "PENDING";
+
+        // Toleransi salah eja "REFERRAL" vs "REFFERAL"
+        const isReferralJob = ["REFERRAL", "REFFERAL"].includes(
+          (applicant.job?.type_job ?? "").toUpperCase()
+        );
 
         const actions: ActionItem[] = [
           {
@@ -570,7 +572,7 @@ export default function CandidateProgress({ applicant, meta }: Props) {
               text: hasOfferDocument ? "View Offer" : "Offer Pending",
               onClick: () =>
                 hasOfferDocument &&
-                window.open(contractByApplicant!.filePath, "_blank"),
+                window.open(contractByApplicant!.filePath!, "_blank"),
               disabled: !hasOfferDocument,
               tooltip: hasOfferDocument ? "Open Offer" : "No offer link",
             },
@@ -579,16 +581,15 @@ export default function CandidateProgress({ applicant, meta }: Props) {
             key: "decision",
             label: `Offer decision — ${decisionMeta.label}`,
             button: {
-              text:
-                decisionStatus === "PENDING"
-                  ? "Review Decision"
-                  : "View Decision",
+              text: isDecisionPending ? "Review Decision" : "View Decision",
               onClick: handleOpenDecisionModal,
               tooltip: decisionMeta.helper,
-              disabled: !hasOfferDocument && decisionStatus === "PENDING",
+              // tombol hanya dikunci bila belum ada offer dan status masih pending
+              disabled: !hasOfferDocument && isDecisionPending,
             },
           },
         ];
+
         if (finalDocumentUrl) {
           actions.push({
             key: "final-documents",
@@ -614,23 +615,38 @@ export default function CandidateProgress({ applicant, meta }: Props) {
           });
         }
 
+        const memberCardItem: StageInfoItem | undefined = isReferralJob
+        ? {
+            label: "MEMBER CARD",
+            value: applicant.user.member_card_url != null ? (
+              <Link
+                href={applicant.user.member_card_url}
+                target="_blank"
+                rel="noreferrer"
+              >
+                View
+              </Link>
+            ) : (
+              <Text type="secondary">Not Uploaded</Text>
+            ),
+          }
+        : undefined;
+
         const infoItems: StageInfoItem[] = [
-          {
-            label: "STATUS",
-            value: "Offer Sent",
-          },
+          { label: "STATUS", value: "Offer Sent" },
           { label: "POSITION", value: applicant.job?.name ?? "-" },
           {
             label: "DECISION",
             value: (
               <Space size={6}>
                 <Tag color={decisionMeta.color}>{decisionMeta.label}</Tag>
-                {decisionStatus !== "PENDING" && decisionAtDisplay && (
+                {!isDecisionPending && decisionAtDisplay && (
                   <Text type="secondary">{decisionAtDisplay}</Text>
                 )}
               </Space>
             ),
           },
+          ...(memberCardItem ? [memberCardItem] : []),
         ];
 
         if (decisionStatus === "ACCEPTED" && signatureUrlFromServer) {
@@ -647,6 +663,7 @@ export default function CandidateProgress({ applicant, meta }: Props) {
             ),
           });
         }
+
         if (finalDocumentUrl) {
           infoItems.push({
             label: hasDirectorSignedDocument
@@ -1134,9 +1151,7 @@ export default function CandidateProgress({ applicant, meta }: Props) {
             title={
               <Space align="center">
                 <FileTextOutlined />
-                <span>
-                  Procedure Documents · {procedureDocumentStageLabel}
-                </span>
+                <span>Procedure Documents · {procedureDocumentStageLabel}</span>
               </Space>
             }
             bodyStyle={{ paddingTop: 16 }}
@@ -1191,9 +1206,7 @@ export default function CandidateProgress({ applicant, meta }: Props) {
                           title={<Text strong>{doc.name}</Text>}
                           description={
                             <Space size={8}>
-                              <Tag color="blue">
-                                {getStageLabel(doc.stage)}
-                              </Tag>
+                              <Tag color="blue">{getStageLabel(doc.stage)}</Tag>
                               {updatedAtLabel && (
                                 <Text type="secondary">
                                   Updated {updatedAtLabel}

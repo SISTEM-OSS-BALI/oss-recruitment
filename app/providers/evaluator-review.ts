@@ -165,11 +165,27 @@ export const SUBMIT_EVALUATOR_ASSIGNMENT_ANSWERS = async (
   id: string,
   answers: Array<{ questionId: string; value: unknown }>
 ) => {
-  if (!id) throw new GeneralError("id wajib diisi", 400);
+  if (!id)
+    throw new GeneralError({
+      code: 400,
+      details: "id wajib diisi",
+      error: "id wajib diisi",
+      error_code: "MISSING_ASSIGNMENT_ID",
+    });
   if (!Array.isArray(answers))
-    throw new GeneralError("answers harus array", 400);
+    throw new GeneralError({
+      code: 400,
+      details: "answers harus array",
+      error: "answers harus array",
+      error_code: "INVALID_ANSWERS_TYPE",
+    });
   if (answers.length === 0)
-    throw new GeneralError("answers tidak boleh kosong", 400);
+    throw new GeneralError({
+      code: 400,
+      details: "answers tidak boleh kosong",
+      error: "answers tidak boleh kosong",
+      error_code: "EMPTY_ANSWERS",
+    });
 
   return await db.$transaction(async (tx) => {
     // 1) Cek assignment
@@ -178,7 +194,12 @@ export const SUBMIT_EVALUATOR_ASSIGNMENT_ANSWERS = async (
       select: { id: true },
     });
     if (!assignment)
-      throw new GeneralError("EvaluatorAssignment tidak ditemukan", 404);
+      throw new GeneralError({
+        code: 404,
+        details: "EvaluatorAssignment tidak ditemukan",
+        error: "EvaluatorAssignment tidak ditemukan",
+        error_code: "ASSIGNMENT_NOT_FOUND",
+      });
 
     // 2) Validasi questionId
     const qids = answers.map((a) => a.questionId);

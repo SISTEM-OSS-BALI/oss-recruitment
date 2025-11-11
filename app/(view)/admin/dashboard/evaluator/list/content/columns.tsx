@@ -57,7 +57,7 @@ export const EvaluatorColumns = ({
       },
     },
     {
-      title: "Status",
+      title: "Default",
       dataIndex: "is_default",
       key: "is_default",
       render: (text) => {

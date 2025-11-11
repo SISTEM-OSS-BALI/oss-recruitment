@@ -212,12 +212,7 @@ export default function CandidatesPage() {
               <DraggableCandidateItem
                 key={item.id}
                 id={item.id}
-                name={item.user.name}
-                stage={item.stage}
-                image_url={item.user.photo_url || undefined}
-                email={item.user.email}
-                status={item.stage ?? "all"} // tampilkan stage sekarang
-                active={item.id === selectedId}
+                applicant={item}
                 onClick={() => setSelectedId(item.id)}
                 visibleIndex={(page - 1) * pageSize + idx}
                 onHoverMove={onHoverMove}

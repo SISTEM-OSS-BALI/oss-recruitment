@@ -16,6 +16,7 @@ import type { CardTemplateDataModel } from "@/app/models/card-template";
 const { Text } = Typography;
 
 type GenerateCardReferralProps = {
+  applicant_id: string;
   consultantName?: string;
   candidateName?: string;
   no_unique?: string;
@@ -40,6 +41,7 @@ const base64ToBlob = (base64: string, mime = "image/png") => {
 };
 
 export default function GenerateCardReferral({
+  applicant_id,
   candidateName,
   no_unique,
 }: GenerateCardReferralProps) {
@@ -71,18 +73,13 @@ export default function GenerateCardReferral({
       message.warning("Select a card template first.");
       return;
     }
-    const overlayUrl =
-      selectedTemplate.image_url_back || selectedTemplate.image_url_front;
-    if (!overlayUrl) {
-      message.warning(
-        "Selected template tidak memiliki gambar untuk diberi nama."
-      );
+    const templateFrontUrl = selectedTemplate.image_url_front;
+    const templateBackUrl = selectedTemplate.image_url_back;
+
+    if (!templateFrontUrl) {
+      message.warning("Selected template harus memiliki gambar depan.");
       return;
     }
-    const secondaryUrl =
-      overlayUrl === selectedTemplate.image_url_back
-        ? selectedTemplate.image_url_front
-        : selectedTemplate.image_url_back;
     try {
       setGenerating(true);
       const res = await fetch(
@@ -93,8 +90,9 @@ export default function GenerateCardReferral({
           body: JSON.stringify({
             name: candidateName,
             no_unique: no_unique,
-            templateFrontUrl: overlayUrl,
-            templateBackUrl: secondaryUrl || null,
+            applicant_id: applicant_id,
+            templateFrontUrl,
+            templateBackUrl: templateBackUrl || null,
           }),
         }
       );

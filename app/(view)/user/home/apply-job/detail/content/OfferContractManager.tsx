@@ -1,6 +1,12 @@
 "use client";
 
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import {
   Alert,
   Button,
@@ -34,7 +40,6 @@ import {
   LinkOutlined,
   PlusOutlined,
   ReloadOutlined,
-  SafetyCertificateOutlined,
   SaveOutlined,
   UsergroupAddOutlined,
 } from "@ant-design/icons";
@@ -157,10 +162,12 @@ const extractConsultantName = (
 
     const labels =
       row.selectedOptions
-        ?.map((sel) =>
-          row.question?.options?.find((opt) => opt.id === sel.optionId)?.label
+        ?.map(
+          (sel) =>
+            row.question?.options?.find((opt) => opt.id === sel.optionId)?.label
         )
-        .filter((label): label is string => Boolean(label && label.trim())) ?? [];
+        .filter((label): label is string => Boolean(label && label.trim())) ??
+      [];
 
     if (labels.length) return labels[0].trim();
   }
@@ -300,6 +307,10 @@ export function OfferContractManager({
     [candidate, schedules]
   );
   const isReferralJob = candidate?.job?.type_job === "REFFERAL";
+  const hasMemberCard = useMemo(
+    () => Boolean(candidate?.user?.member_card_url),
+    [candidate?.user?.member_card_url]
+  );
 
   const { data: screeningAnswers, fetchLoading: screeningAnswersLoading } =
     useAnswerQuestionScreeningByApplicantId({
@@ -411,8 +422,9 @@ export function OfferContractManager({
     Record<OfferChecklistKey, boolean>
   >({
     contractFinalized: hasExistingContract,
-    signatureDirectur: hasDirectorSigned,
+    signatureDirectur: isReferralJob ? true : hasDirectorSigned,
     decisionCandidate: hasAccepetedCandidate,
+    generateCard: isReferralJob ? hasMemberCard : true,
   });
   const [offerTriggeredAt, setOfferTriggeredAt] = useState<string | null>(null);
   const [sendingOffer, setSendingOffer] = useState(false);
@@ -434,12 +446,22 @@ export function OfferContractManager({
   }, [hasAccepetedCandidate]);
 
   useEffect(() => {
+    const nextDirectorValue = isReferralJob ? true : hasDirectorSigned;
     setOfferChecklist((prev) =>
-      prev.signatureDirectur === hasDirectorSigned
+      prev.signatureDirectur === nextDirectorValue
         ? prev
-        : { ...prev, signatureDirectur: hasDirectorSigned }
+        : { ...prev, signatureDirectur: nextDirectorValue }
     );
-  }, [hasDirectorSigned]);
+  }, [hasDirectorSigned, isReferralJob]);
+
+  useEffect(() => {
+    const nextCardValue = isReferralJob ? hasMemberCard : true;
+    setOfferChecklist((prev) =>
+      prev.generateCard === nextCardValue
+        ? prev
+        : { ...prev, generateCard: nextCardValue }
+    );
+  }, [isReferralJob, hasMemberCard]);
 
   const updateChecklist = useCallback(
     (key: OfferChecklistKey, value: boolean) => {
@@ -521,10 +543,17 @@ export function OfferContractManager({
     setOfferTriggeredAt(null);
     setOfferChecklist({
       contractFinalized: hasExistingContract,
-      signatureDirectur: hasDirectorSigned,
+      signatureDirectur: isReferralJob ? true : hasDirectorSigned,
       decisionCandidate: hasAccepetedCandidate,
+      generateCard: isReferralJob ? hasMemberCard : true,
     });
-  }, [hasExistingContract, hasAccepetedCandidate, hasDirectorSigned]);
+  }, [
+    hasExistingContract,
+    hasAccepetedCandidate,
+    hasDirectorSigned,
+    isReferralJob,
+    hasMemberCard,
+  ]);
 
   const handleTriggerOfferReady = useCallback(async () => {
     setSendingOffer(true);
@@ -552,13 +581,17 @@ export function OfferContractManager({
         ).format("MMM D, YYYY HH:mm")}`
       : "Send the contract to directors for signature.";
 
+    const memberCardUrl = candidate?.user?.member_card_url;
+
     // Item tanda tangan (kondisional)
     const signatureItem: OfferChecklistItem = isReferralJob
       ? {
           key: "generateCard",
-          title: "Generete Card Referral",
-          description: "Generate Card Referral for Sahabat Referral",
-          icon: <IdcardOutlined/>,
+          title: "Generate Card Referral",
+          description: memberCardUrl
+            ? "Referral member card has been generated and stored as PDF."
+            : "Generate Card Referral for Sahabat Referral",
+          icon: <IdcardOutlined />,
           disabled: true,
         }
       : {
@@ -605,6 +638,8 @@ export function OfferContractManager({
     hasAccepetedCandidate,
     hasExistingContract,
     candidateSignedPdfUrl,
+    hasMemberCard,
+    candidate?.user?.member_card_url,
   ]);
 
   const checklistValues = useMemo(
@@ -1063,12 +1098,77 @@ export function OfferContractManager({
           candidateSignedPdfUrl={candidateSignedPdfUrl}
         />
       ) : (
-        <GenerateCardReferral
-          consultantName={referralConsultantName}
-          candidateName={candidate.user?.name || ""}
-          no_unique={referralUniqueCode}
-          loading={screeningAnswersLoading}
-        />
+        <Space direction="vertical" size={16} style={{ width: "100%" }}>
+          {candidate.user?.member_card_url ? (
+            <Card
+              bordered={false}
+              style={{
+                borderRadius: 20,
+                marginTop: 12,
+                background: "#fff",
+                boxShadow: "0 4px 18px rgba(15, 23, 42, 0.08)",
+              }}
+              bodyStyle={{ padding: "20px 24px" }}
+            >
+              <Space
+                align="center"
+                style={{
+                  width: "100%",
+                  justifyContent: "space-between",
+                  marginBottom: 8,
+                }}
+              >
+                <Space>
+                  <IdcardOutlined style={{ fontSize: 18 }} />
+                  <Text strong style={{ fontSize: 16 }}>
+                    Member Card
+                  </Text>
+                </Space>
+                <Tag
+                  color="success"
+                  style={{
+                    borderRadius: 999,
+                    fontWeight: 600,
+                    padding: "0 12px",
+                  }}
+                >
+                  Created
+                </Tag>
+              </Space>
+              <Text
+                type="secondary"
+                style={{ display: "block", marginBottom: 12 }}
+              >
+                A referral member card PDF has been generated and stored by
+                admin.
+              </Text>
+              <Button
+                type="primary"
+                shape="round"
+                icon={<FilePdfOutlined />}
+                href={candidate.user.member_card_url}
+                target="_blank"
+                rel="noreferrer"
+                style={{
+                  borderColor: "#d13b3b",
+                  color: "#d13b3b",
+                  background: "#fff",
+                  borderWidth: 1.5,
+                }}
+              >
+                Open Member Card PDF
+              </Button>
+            </Card>
+          ) : (
+            <GenerateCardReferral
+              applicant_id={candidate.id}
+              consultantName={referralConsultantName}
+              candidateName={candidate.user?.name || ""}
+              no_unique={referralUniqueCode}
+              loading={screeningAnswersLoading}
+            />
+          )}
+        </Space>
       )}
 
       {/* <CandidateSignatureCard

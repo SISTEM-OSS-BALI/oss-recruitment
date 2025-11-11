@@ -1,6 +1,6 @@
 import { UserPayloadUpdateModel } from "@/app/models/user";
 import { DELETE_JOB } from "@/app/providers/job";
-import { GET_USER, UPDATE_NO_UNIQUE, UPDATE_USER, UPDATE_USER_DOCUMENT } from "@/app/providers/user";
+import { GET_USER, UPDATE_MEMBER_CARD, UPDATE_NO_UNIQUE, UPDATE_USER, UPDATE_USER_DOCUMENT } from "@/app/providers/user";
 import { GeneralError } from "@/app/utils/general-error";
 import { NextRequest, NextResponse } from "next/server";
 
@@ -134,12 +134,99 @@ export const PATCH = async (
 ) => {
   try {
     const id = params.id;
-    const payload: UserPayloadUpdateModel = await req.json();
+    const raw = await req.json();
 
-    const data =
-      payload.no_unique !== undefined
-        ? await UPDATE_NO_UNIQUE(id, { no_unique: payload.no_unique })
-        : await UPDATE_USER_DOCUMENT(id, payload);
+    // Definisi aksi
+    type Action =
+      | "UPDATE_NO_UNIQUE"
+      | "UPDATE_MEMBER_CARD"
+      | "UPDATE_USER_DOCUMENT";
+
+    // Fallback penentuan aksi jika client tidak mengirim `action`
+    const inferAction = (): Action => {
+      if (typeof raw?.action === "string") {
+        const a = raw.action as Action;
+        if (
+          [
+            "UPDATE_NO_UNIQUE",
+            "UPDATE_MEMBER_CARD",
+            "UPDATE_USER_DOCUMENT",
+          ].includes(a)
+        ) {
+          return a;
+        }
+        // action tak dikenal
+        throw new GeneralError({
+          code: 400,
+          details: "action tak dikenal",
+          error: "action tak dikenal",
+          error_code: "INVALID_ACTION",
+        });
+      }
+      if (raw?.no_unique !== undefined) return "UPDATE_NO_UNIQUE";
+      if (
+        typeof raw?.member_card_url === "string" ||
+        typeof raw?.member_card_id === "string"
+      ) {
+        return "UPDATE_MEMBER_CARD";
+      }
+      return "UPDATE_USER_DOCUMENT";
+    };
+
+    const action = inferAction();
+    let data: unknown;
+
+    switch (action) {
+      case "UPDATE_NO_UNIQUE": {
+        const no_unique = raw?.no_unique;
+        const emptyString = (v: unknown) =>
+          typeof v === "string" && v.trim() === "";
+        if (
+          no_unique === undefined ||
+          no_unique === null ||
+          emptyString(no_unique)
+        ) {
+          return NextResponse.json(
+            { success: false, message: "Field 'no_unique' wajib diisi." },
+            { status: 400 }
+          );
+        }
+        data = await UPDATE_NO_UNIQUE(id, { no_unique });
+        break;
+      }
+
+      case "UPDATE_MEMBER_CARD": {
+        // Minimal salah satu terisi
+        const member_card_url =
+          typeof raw?.member_card_url === "string" &&
+          raw.member_card_url.trim() !== ""
+            ? raw.member_card_url.trim()
+            : undefined;
+
+        if (!member_card_url) {
+          return NextResponse.json(
+            {
+              success: false,
+              message:
+                "Minimal salah satu dari 'member_card_url' atau 'member_card_id' wajib diisi.",
+            },
+            { status: 400 }
+          );
+        }
+
+        // Ganti fungsi ini sesuai implementasi kamu
+        data = await UPDATE_MEMBER_CARD(id, {
+          member_card_url,
+        });
+        break;
+      }
+
+      case "UPDATE_USER_DOCUMENT":
+      default: {
+        data = await UPDATE_USER_DOCUMENT(id, raw as UserPayloadUpdateModel);
+        break;
+      }
+    }
 
     return NextResponse.json(
       {
@@ -171,4 +258,4 @@ export const PATCH = async (
       { status: 500 }
     );
   }
-}
+};

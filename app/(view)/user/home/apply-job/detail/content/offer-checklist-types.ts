@@ -3,7 +3,8 @@ import type { ReactNode } from "react";
 export type OfferChecklistKey =
   | "contractFinalized"
   | "signatureDirectur"
-  | "decisionCandidate";
+  | "decisionCandidate"
+  | "generateCard";
 
 export type OfferChecklistItem = {
   key: OfferChecklistKey;

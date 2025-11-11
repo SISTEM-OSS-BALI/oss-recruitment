@@ -144,6 +144,7 @@ model User {
   photo_url           String?
   portfolio_url       String?
   no_unique           String?
+  member_card_url     String?
 
   interestTags UserInterestTag[]
   job_id       String?
@@ -391,8 +392,8 @@ model Evaluator {
 
   is_active  Boolean
   is_default Boolean? @default(false)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 
   schedule ScheduleEvaluator[] @relation("Schedule")
 

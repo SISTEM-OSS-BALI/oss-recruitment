@@ -8,15 +8,12 @@ import { useDrag, useDrop } from "react-dnd";
 import { DND_ITEM, DragItem } from "./types";
 import getInitials from "./username-helper";
 import { useRouter } from "next/navigation";
+import { openWhatsAppTemplate } from "./whatsaap";
+import { ApplicantDataModel } from "../models/applicant";
 
 type Props = {
   id: string;
-  name: string;
-  email: string;
-  status: string;
-  active: boolean;
-  stage: string | null;
-  image_url?: string | null;
+  applicant: ApplicantDataModel;
   onClick: () => void;
   visibleIndex: number;
   onHoverMove: (dragId: string, overId: string) => void;
@@ -24,11 +21,7 @@ type Props = {
 
 export default function DraggableCandidateItem({
   id,
-  name,
-  email,
-  image_url,
-  status,
-  active,
+  applicant,
   onClick,
   visibleIndex,
   onHoverMove,
@@ -79,8 +72,8 @@ export default function DraggableCandidateItem({
 
   const style: CSSProperties = {
     border: "1px solid",
-    borderColor: active ? "#2370ff" : "#f0f0f0",
-    background: active ? "#f5f9ff" : "#fff",
+    borderColor: applicant.stage ? "#2370ff" : "#f0f0f0",
+    background: applicant.stage ? "#f5f9ff" : "#fff",
     borderRadius: 12,
     padding: 12,
     marginBottom: 10,
@@ -95,14 +88,33 @@ export default function DraggableCandidateItem({
       label: "Chat",
       icon: <MessageOutlined />,
     },
+    {
+      key: "chatViaWhatsaap",
+      label: "Chat via Whatsapp",
+      icon: <MessageOutlined />,
+    },
   ];
 
   const onMenuClick: MenuProps["onClick"] = ({ key }) => {
-    if (key === "chat") {
-      router.push(`/admin/dashboard/chat?applicant_id=${id}`);
+    switch (key) {
+      case "chat":
+        router.push(`/admin/dashboard/chat?applicant_id=${id}`);
+        break;
+
+      case "chatViaWhatsaap": {
+        openWhatsAppTemplate({
+          to: applicant?.user?.phone ?? "",
+          name: applicant?.user?.name ?? "",
+          position: applicant?.job?.name ?? "",
+          message: "Halo, saya ingin bertanya tentang posisi ini", // kalau ada
+        });
+        break;
+      }
+
+      default:
+        break;
     }
   };
-
   return (
     <div ref={ref} style={style}>
       <List.Item
@@ -128,18 +140,18 @@ export default function DraggableCandidateItem({
               size={40}
               style={{ background: "#e6f0ff", color: "#2458e6" }}
             >
-              {image_url ? (
-                <Image src={image_url} alt="avatar" />
+              {applicant.user?.photo_url ? (
+                <Image src={applicant.user?.photo_url} alt="avatar" />
               ) : (
-                getInitials(name)
+                getInitials(applicant.user?.name ?? "")
               )}
             </Avatar>
           }
-          title={<span style={{ fontWeight: 600 }}>{name}</span>}
+          title={<span style={{ fontWeight: 600 }}>{applicant.user?.name}</span>}
           description={
             <Space size={8} wrap>
               <Tag>{status}</Tag>
-              <span style={{ color: "#999", fontSize: 12 }}>{email}</span>
+              <span style={{ color: "#999", fontSize: 12 }}>{applicant.user?.email}</span>
             </Space>
           }
         />
