@@ -1,7 +1,7 @@
 import { db } from "@/lib/prisma";
 import type { Prisma } from "@prisma/client";
 import { GeneralError } from "../utils/general-error";
-import { applyCandidateSignatureToContract } from "../utils/contract-signature";
+import { applyCandidateSignatureToContract } from "../vendor/contract-signature";
 import type {
   OfferDecisionValue,
   OfferingContractPayloadCreateModel,

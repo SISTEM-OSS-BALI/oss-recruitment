@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { generateMemberCard } from "@/app/utils/generate-member-card";
-import { supabase } from "@/app/utils/supabase-client";
+import { generateMemberCard } from "@/app/vendor/generate-member-card";
+import { supabase } from "@/app/vendor/supabase-client";
 import {
   GET_USER_BY_APPLICANT_ID,
   UPDATE_MEMBER_CARD,

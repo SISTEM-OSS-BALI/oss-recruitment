@@ -5,6 +5,7 @@ import {
   faUserTie,
   faChartLine,
   faCalendarCheck,
+  faHome,
 } from "@fortawesome/free-solid-svg-icons";
 import menuLabel from "@/app/utils/label";
 
@@ -12,6 +13,12 @@ export const SidebarMenuMainAdmin = (): MenuProps["items"] => {
   const router = useRouter();
 
   const sidebarMenu: MenuProps["items"] = [
+    {
+      key: "/admin/dashboard/home",
+      label: menuLabel("Dashboard"),
+      icon: <FontAwesomeIcon icon={faHome} />,
+      onClick: () => router.push("/admin/dashboard/home"),
+    },
     {
       key: "/admin/dashboard/recruitment",
       label: menuLabel("Recruitment"),

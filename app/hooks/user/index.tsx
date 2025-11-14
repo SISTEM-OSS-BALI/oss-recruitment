@@ -116,71 +116,73 @@ export const useUser = ({ id }: { id: string }) => {
       },
     });
 
-  const { mutateAsync: onPatchCodeUnique, isPending: onPatchCodeUniqueLoading } =
-    useMutation({
-      mutationFn: async ({
-        id,
-        payload,
-      }: {
-        id: string;
-        payload: UserPayloadUpdateModel;
-      }) => {
-        return axios.patch(`${baseUrl}/${id}`, {
-          no_unique : payload.no_unique,
-        });
-      },
-      onSuccess: (_, variables) => {
-        // segarkan list & detail
-        queryClient.invalidateQueries({ queryKey: [queryKey] });
-        queryClient.invalidateQueries({ queryKey: [entity, variables.id] });
-        MainNotification({
-          type: "success",
-          entity,
-          action: "document updated",
-        });
-      },
-      onError: () => {
-        MainNotification({
-          type: "error",
-          entity,
-          action: "document updated",
-        });
-      },
-    });
+  const {
+    mutateAsync: onPatchCodeUnique,
+    isPending: onPatchCodeUniqueLoading,
+  } = useMutation({
+    mutationFn: async ({
+      id,
+      payload,
+    }: {
+      id: string;
+      payload: UserPayloadUpdateModel;
+    }) => {
+      return axios.patch(`${baseUrl}/${id}`, {
+        no_unique: payload.no_unique,
+      });
+    },
+    onSuccess: (_, variables) => {
+      // segarkan list & detail
+      queryClient.invalidateQueries({ queryKey: [queryKey] });
+      queryClient.invalidateQueries({ queryKey: [entity, variables.id] });
+      MainNotification({
+        type: "success",
+        entity,
+        action: "document updated",
+      });
+    },
+    onError: () => {
+      MainNotification({
+        type: "error",
+        entity,
+        action: "document updated",
+      });
+    },
+  });
 
-     const {
-       mutateAsync: onPatchMemberCard,
-       isPending: onPatchMemberCardLoading,
-     } = useMutation({
-       mutationFn: async ({
-         id,
-         payload,
-       }: {
-         id: string;
-         payload: UserPayloadUpdateModel;
-       }) => {
-         return axios.patch(`${baseUrl}/${id}`, {
-           no_unique: payload.no_unique,
-         });
-       },
-       onSuccess: (_, variables) => {
-         // segarkan list & detail
-         queryClient.invalidateQueries({ queryKey: [queryKey] });
-         queryClient.invalidateQueries({ queryKey: [entity, variables.id] });
-         MainNotification({
-           type: "success",
-           entity,
-           action: "document updated",
-         });
-       },
-       onError: () => {
-         MainNotification({
-           type: "error",
-           entity,
-           action: "document updated",
-         });
-       },
-     });
+  const {
+    mutateAsync: onPatchMemberCard,
+    isPending: onPatchMemberCardLoading,
+  } = useMutation({
+    mutationFn: async ({
+      id,
+      payload,
+    }: {
+      id: string;
+      payload: UserPayloadUpdateModel;
+    }) => {
+      return axios.patch(`${baseUrl}/${id}`, {
+        no_unique: payload.no_unique,
+      });
+    },
+    onSuccess: (_, variables) => {
+      // segarkan list & detail
+      queryClient.invalidateQueries({ queryKey: [queryKey] });
+      queryClient.invalidateQueries({ queryKey: [entity, variables.id] });
+      MainNotification({
+        type: "success",
+        entity,
+        action: "document updated",
+      });
+    },
+    onError: () => {
+      MainNotification({
+        type: "error",
+        entity,
+        action: "document updated",
+      });
+    },
+  });
 
   return {
     data,
@@ -192,6 +194,26 @@ export const useUser = ({ id }: { id: string }) => {
     onPatchCodeUnique,
     onPatchCodeUniqueLoading,
     onPatchMemberCard,
-    onPatchMemberCardLoading
+    onPatchMemberCardLoading,
+  };
+};
+
+export const useUserByApplicantId = ({ id }: { id: string }) => {
+  const {
+    data,
+    isLoading: fetchLoading,
+    error,
+  } = useQuery({
+    queryKey: [entity, id],
+    queryFn: async () => {
+      const result = await axios.get(`${baseUrl}/by-applicant/${id}`);
+      return result.data.result as UserDataModel;
+    },
+    enabled: Boolean(id),
+  });
+  return {
+    data,
+    fetchLoading,
+    error,
   };
 };

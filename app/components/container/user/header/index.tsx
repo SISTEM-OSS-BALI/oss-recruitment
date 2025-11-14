@@ -5,7 +5,6 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
   Layout,
-  Menu,
   Typography,
   Grid,
   Button,
@@ -31,12 +30,12 @@ import { useChatUnread } from "@/app/hooks/chat";
 const { Header } = Layout;
 const { useBreakpoint } = Grid;
 
-const BASE_NAV = [
-  { key: "home", label: "Home", href: "/" },
-  { key: "about", label: "About", href: "/about" },
-  { key: "jobseeker", label: "Job Seeker", href: "/job-seeker" },
-  { key: "contact", label: "Contact", href: "/contact" },
-];
+// const BASE_NAV = [
+//   { key: "home", label: "Home", href: "/" },
+//   { key: "about", label: "About", href: "/about" },
+//   { key: "jobseeker", label: "Job Seeker", href: "/job-seeker" },
+//   { key: "contact", label: "Contact", href: "/contact" },
+// ];
 
 export default function MainHeader({
   backLabel = "Back to Jobs",
@@ -136,8 +135,9 @@ export default function MainHeader({
     if (backHref) return backHref;
     if (pathname.startsWith("/job-seeker")) return "/job-seeker";
     if (pathname.startsWith("/jobs")) return "/jobs";
-    return "/";
+    return "/user";
   };
+  const hideBackLink = pathname === "/user";
 
   // ------ Right area: Login button atau Avatar dropdown ------
   const RightAuthArea = () => {
@@ -167,16 +167,10 @@ export default function MainHeader({
 
     const menuItems = [
       {
-        key: "profile",
-        icon: <UserOutlined />,
-        label: "Profile",
-        onClick: () => router.push("/user/profile"),
-      },
-      {
         key: "dashboard",
         icon: <DashboardOutlined />,
         label: "Dashboard",
-        onClick: () => router.push("/user/home"), // ganti ke admin dashboard jika kamu cek role di sini
+        onClick: () => router.push("/user/home/apply-job"), // ganti ke admin dashboard jika kamu cek role di sini
       },
       {
         type: "divider" as const,
@@ -238,7 +232,7 @@ export default function MainHeader({
   // --- NAV normal di halaman "/" ---
   const nav = (
     <>
-      {screens.md && (
+      {/* {screens.md && (
         <Menu
           mode="horizontal"
           selectable={false}
@@ -260,8 +254,16 @@ export default function MainHeader({
             ),
           }))}
         />
-      )}
-      <div style={{ flex: 1, display: "flex", justifyContent: "flex-end" }}>
+      )} */}
+      <div
+        style={{
+          flex: 1,
+          display: "flex",
+          justifyContent: "flex-end",
+          alignItems: "center",
+          gap: 12,
+        }}
+      >
         <RightAuthArea />
       </div>
     </>
@@ -274,32 +276,36 @@ export default function MainHeader({
         flex: 1,
         display: "flex",
         alignItems: "center",
-        justifyContent: "space-between",
+        justifyContent: hideBackLink ? "flex-end" : "space-between",
       }}
     >
-      <Link
-        href={getBackLink()}
-        style={{
-          display: "inline-flex",
-          alignItems: "center",
-          gap: 8,
-          color: "#445066",
-          fontSize: 16,
-          textDecoration: "none",
-          padding: "6px 8px",
-          borderRadius: 8,
-        }}
-      >
-        <ArrowLeftOutlined style={{ fontSize: 18 }} />
-        <span>{backLabel}</span>
-      </Link>
-      <RightAuthArea />
+      {!hideBackLink && (
+        <Link
+          href={getBackLink()}
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 8,
+            color: "#445066",
+            fontSize: 16,
+            textDecoration: "none",
+            padding: "6px 8px",
+            borderRadius: 8,
+          }}
+        >
+          <ArrowLeftOutlined style={{ fontSize: 18 }} />
+          <span>{backLabel}</span>
+        </Link>
+      )}
+      <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+        <RightAuthArea />
+      </div>
     </div>
   );
 
   return (
     <Header style={headerStyle}>
-      {pathname === "/" ? (
+      {pathname === "/user" ? (
         <>
           {/* LOGO + NAV */}
           <div style={{ flex: 1 }}>

@@ -3,7 +3,7 @@ import { PDFDocument } from "pdf-lib";
 import type { OfferingContract } from "@prisma/client";
 
 import { db } from "@/lib/prisma";
-import { supabase } from "@/app/utils/supabase-client";
+import { supabase } from "@/app/vendor/supabase-client";
 
 export async function fetchArrayBuffer(url: string) {
   const res = await axios.get<ArrayBuffer>(url, {

@@ -10,26 +10,24 @@ export function normalizeIDPhone(raw?: string) {
 
 export function openWhatsAppTemplate(opts: {
   to: string;
+  message?: string;
   name?: string;
   position?: string;
-  message: string
 }) {
   const to = normalizeIDPhone(opts.to);
-  // Rakit pesan (pakai \n untuk baris baru, *...* = bold)
-  const text = [
-    `*Halo, ${opts.name || "Kandidat"}!*`,
-    `Kami dari OSS Bali.`,
-    `Status lamaran untuk posisi *${opts.position || "-"}* saat ini: *${
-      opts.status || "-"
-    }*.`,
-    "",
-    opts.offerUrl ? `Penawaran/berkas: ${opts.offerUrl}` : undefined,
-    opts.noUnique ? `Kode unik: ${opts.noUnique}` : undefined,
-    "",
-    `Silakan balas pesan ini jika ada pertanyaan. Terima kasih 🙏`,
-  ]
-    .filter(Boolean)
-    .join("\n");
+
+  const text =
+    (opts.message ?? "").trim() ||
+    [
+      `*Halo, ${opts.name ?? "Kandidat"}!*`,
+      `Status lamaran untuk posisi *${opts.position ?? "-"}*.`,
+      "",
+      "Silakan balas pesan ini jika ada pertanyaan.",
+    ].join("\n");
+
+  if (!to || !text) {
+    return;
+  }
 
   const encoded = encodeURIComponent(text);
 

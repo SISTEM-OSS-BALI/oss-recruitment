@@ -106,7 +106,7 @@ export default function DraggableCandidateItem({
           to: applicant?.user?.phone ?? "",
           name: applicant?.user?.name ?? "",
           position: applicant?.job?.name ?? "",
-          message: "Halo, saya ingin bertanya tentang posisi ini", // kalau ada
+          message: "Halo, saya ingin bertanya tentang posisi ini",
         });
         break;
       }

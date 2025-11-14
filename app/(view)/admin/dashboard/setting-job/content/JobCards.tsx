@@ -28,6 +28,7 @@ type Props = {
   onDelete: (id: string) => void;
   onTogglePublish: (id: string, next: boolean) => void;
   goToPage: () => void;
+  onShowRecommendations: (job: JobDataModel) => void;
 };
 
 const EMPLOYMENT_LABEL: Record<string, string> = {
@@ -61,6 +62,7 @@ export default function JobCard({
   onDelete,
   onTogglePublish,
   goToPage,
+  onShowRecommendations,
 }: Props) {
   const published = Boolean(job.is_published);
 
@@ -150,9 +152,18 @@ export default function JobCard({
 
       {/* Stats panel */}
       <Flex gap={12} wrap="wrap">
-        <StatBox label="Chat Started" value={0} />
-        <StatBox label="Connected" value={0} />
-        <StatBox label="Not Suitable" value={0} />
+        <StatBox
+          label="Chat Started"
+          value={job.stats?.chatStarted ?? 0}
+        />
+        <StatBox
+          label="Connected"
+          value={job.stats?.connected ?? 0}
+        />
+        <StatBox
+          label="Not Suitable"
+          value={job.stats?.notSuitable ?? 0}
+        />
       </Flex>
 
       <Divider style={{ margin: "12px 0" }} />
@@ -164,7 +175,9 @@ export default function JobCard({
         <Button type="primary" onClick={() => goToPage()}>
           Manage Candidates
         </Button>
-        <Button>Recommended Talents</Button>
+        <Button onClick={() => onShowRecommendations(job)}>
+          Recommended Candidates
+        </Button>
       </Flex>
     </Card>
   );

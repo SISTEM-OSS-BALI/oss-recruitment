@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { GET_OFFERING_CONTRACT } from "@/app/providers/offering-contract";
 import { GeneralError } from "@/app/utils/general-error";
-import { applyCandidateSignatureToContract } from "@/app/utils/contract-signature";
+import { applyCandidateSignatureToContract } from "@/app/vendor/contract-signature";
 
 export async function POST(
   _req: NextRequest,

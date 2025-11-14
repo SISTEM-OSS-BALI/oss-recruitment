@@ -3,7 +3,7 @@ import { DeleteOutlined, InboxOutlined } from "@ant-design/icons";
 import { Button, message, Upload, Popconfirm, UploadProps, Image } from "antd";
 import { UploadRequestOption as RcCustomRequestOptions } from "rc-upload/lib/interface";
 import React, { useEffect, useState } from "react";
-import { supabase } from "./supabase-client";
+import { supabase } from "@/app/vendor/supabase-client";
 
 type Variant = "thumbnail" | "profile";
 

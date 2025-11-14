@@ -15,6 +15,7 @@ import CustomButton from "@/app/components/common/custom-buttom";
 import JobModal from "@/app/components/common/modal/admin/job";
 import JobCard from "./JobCards";
 import { useRouter } from "next/navigation";
+import ModalRecommendedCandidate from "./ModalRecommendedCandidate";
 
 const { Text } = Typography;
 
@@ -33,6 +34,7 @@ export default function SettingJobContent() {
   const [modalOpen, setModalOpen] = useState(false);
   const [modalType, setModalType] = useState<"create" | "update">("create");
   const [selectedJob, setSelectedJob] = useState<JobDataModel | null>(null);
+  const [recommendedJob, setRecommendedJob] = useState<JobDataModel | null>(null);
   const [search, setSearch] = useState("");
   const [tab, setTab] = useState<"all" | "active" | "inactive" | "draft">(
     "all"
@@ -286,6 +288,7 @@ export default function SettingJobContent() {
               onDelete={onDeleteJob}
               onTogglePublish={handleTogglePublish}
               goToPage={() => goToManageCandidate(job.id)}
+              onShowRecommendations={(job) => setRecommendedJob(job)}
             />
           ))}
         </div>
@@ -307,6 +310,13 @@ export default function SettingJobContent() {
         handleFinish={handleFinish}
         loadingCreate={jobLoadingCreate}
         loadingUpdate={jobLoadingUpdate}
+      />
+
+      <ModalRecommendedCandidate
+        open={Boolean(recommendedJob)}
+        jobId={recommendedJob?.id}
+        jobName={recommendedJob?.name}
+        onClose={() => setRecommendedJob(null)}
       />
     </div>
   );

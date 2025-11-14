@@ -6,7 +6,7 @@ import {
 } from "@/app/providers/applicant";
 import { GET_JOB } from "@/app/providers/job";
 import { GeneralError } from "@/app/utils/general-error";
-import { sendRecruitmentEmail } from "@/app/utils/send-email";
+import { sendRecruitmentEmail } from "@/app/vendor/send-email";
 import { NextRequest, NextResponse } from "next/server";
 
 export const POST = async (req: NextRequest) => {

@@ -16,7 +16,7 @@ import {
   UploadProps,
 } from "antd";
 import type { UploadRequestOption as RcCustomRequestOptions } from "rc-upload/lib/interface";
-import { supabase } from "./supabase-client";
+import { supabase } from "@/app/vendor/supabase-client";
 
 const { Text } = Typography;
 const { Dragger } = Upload;

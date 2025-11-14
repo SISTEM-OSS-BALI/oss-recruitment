@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { GET_OFFERING_CONTRACT } from "@/app/providers/offering-contract";
-import { sendRecruitmentEmail } from "@/app/utils/send-email";
+import { sendRecruitmentEmail } from "@/app/vendor/send-email";
 import { GeneralError } from "@/app/utils/general-error";
 
 export async function POST(

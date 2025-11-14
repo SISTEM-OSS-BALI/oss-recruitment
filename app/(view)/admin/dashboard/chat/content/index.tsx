@@ -8,7 +8,7 @@ import { ChatPayload } from "@/app/utils/socket-type";
 import { useAuth } from "@/app/utils/useAuth";
 import { useSearchParams } from "next/navigation";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { uploadChatFiles } from "@/app/utils/chat-upload";
+import { uploadChatFiles } from "@/app/vendor/chat-upload";
 import { message } from "antd";
 
 const generateId = () =>

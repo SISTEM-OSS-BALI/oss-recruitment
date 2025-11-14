@@ -1,22 +1,71 @@
+import { RecruitmentStage } from "@prisma/client";
+
 import { db } from "@/lib/prisma";
-import { JobPayloadCreateModel, JobPayloadUpdateModel } from "../models/job";
+import {
+  JobDataModel,
+  JobPayloadCreateModel,
+  JobPayloadUpdateModel,
+  JobStats,
+} from "../models/job";
 
 type JobFilter = {
   is_published?: boolean;
 };
 
-export const GET_JOBS = async (filter?: JobFilter) => {
-  const result = await db.job.findMany({
+const CONNECTED_STAGES: RecruitmentStage[] = [
+  "INTERVIEW",
+  "OFFERING",
+  "HIRED",
+  "WAITING",
+];
+
+function buildStats(applicants: Array<{ stage: RecruitmentStage | null; Conversation: { id: string }[] }>): JobStats {
+  let chatStarted = 0;
+  let connected = 0;
+  let notSuitable = 0;
+
+  applicants.forEach((app) => {
+    if (Array.isArray(app.Conversation) && app.Conversation.length > 0) {
+      chatStarted += 1;
+    }
+    if (app.stage && CONNECTED_STAGES.includes(app.stage)) {
+      connected += 1;
+    }
+    if (app.stage === "REJECTED") {
+      notSuitable += 1;
+    }
+  });
+
+  return { chatStarted, connected, notSuitable };
+}
+
+const selectApplicantsForStats = {
+  stage: true,
+  Conversation: { select: { id: true } },
+};
+
+export const GET_JOBS = async (filter?: JobFilter): Promise<JobDataModel[]> => {
+  const rows = await db.job.findMany({
     where:
       filter?.is_published === undefined
         ? undefined
         : { is_published: filter.is_published },
     include: {
       location: true,
+      Applicant: {
+        select: selectApplicantsForStats,
+      },
     },
     orderBy: { createdAt: "desc" },
   });
-  return result;
+
+  return rows.map((row) => {
+    const { Applicant, ...rest } = row;
+    return {
+      ...rest,
+      stats: buildStats(Applicant),
+    };
+  });
 };
 
 export const GET_JOB = async (id: string) => {
@@ -26,9 +75,18 @@ export const GET_JOB = async (id: string) => {
     },
     include: {
       location: true,
+      Applicant: {
+        select: selectApplicantsForStats,
+      },
     },
   });
-  return result;
+
+  if (!result) return result;
+  const { Applicant, ...rest } = result;
+  return {
+    ...rest,
+    stats: buildStats(Applicant),
+  };
 };
 export const CREATE_JOB = async (payload: JobPayloadCreateModel) => {
   const result = await db.job.create({

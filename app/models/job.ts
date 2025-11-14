@@ -3,8 +3,15 @@
 import { Prisma, Job, Location } from "@prisma/client";
 import { GeneralOmitModel } from "./general-omit";
 
+export type JobStats = {
+  chatStarted: number;
+  connected: number;
+  notSuitable: number;
+};
+
 export interface JobDataModel extends Job {
   location: Location;
+  stats?: JobStats;
 }
 
 export interface JobPayloadCreateModel

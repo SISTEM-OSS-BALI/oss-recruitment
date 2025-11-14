@@ -1,22 +1,26 @@
 import { MailOutlined, PhoneOutlined, UserOutlined } from "@ant-design/icons";
 import {
   Button,
+  Card,
   Col,
   DatePicker,
   Divider,
   Form,
+  Grid,
   Input,
   Row,
   Space,
   Select,
+  Typography,
 } from "antd";
-import Paragraph from "antd/es/typography/Paragraph";
 import dayjs from "dayjs";
 import { UserPayloadUpdateModel } from "@/app/models/user";
 import { useUser } from "@/app/hooks/user";
 import { useAuth } from "@/app/utils/useAuth";
 import { useEffect, useMemo } from "react";
 
+const { Title, Text } = Typography;
+const { useBreakpoint } = Grid;
 
 type SubmitProps = {
   loading?: boolean;
@@ -31,6 +35,7 @@ function toFileList(url?: string) {
 export default function PersonalInformationDocuments({ loading }: SubmitProps) {
   const [form] = Form.useForm<UserPayloadUpdateModel>();
   const { user_id } = useAuth();
+  const screens = useBreakpoint();
 
   const { data: detailUserData, onUpdate: onUpdateUser } = useUser({
     id: user_id!,
@@ -86,7 +91,23 @@ export default function PersonalInformationDocuments({ loading }: SubmitProps) {
   // ===== Preview ringkas jika data sudah ada =====
 
   return (
-    <div>
+    <Card
+      bordered={false}
+      style={{
+        borderRadius: 20,
+        boxShadow: "0 18px 45px rgba(15,23,42,0.07)",
+      }}
+      bodyStyle={{ padding: screens.md ? 32 : 20 }}
+    >
+      <Space direction="vertical" size={4} style={{ marginBottom: 20 }}>
+        <Title level={4} style={{ margin: 0 }}>
+          Personal Information
+        </Title>
+        <Text type="secondary">
+          Keep your details accurate so our recruiters can reach out swiftly.
+        </Text>
+      </Space>
+
       <Form
         form={form}
         layout="vertical"
@@ -95,13 +116,8 @@ export default function PersonalInformationDocuments({ loading }: SubmitProps) {
         onFinish={updateUser}
         initialValues={initialValues}
       >
-        {/* Personal Information */}
-        <Paragraph style={{ margin: "0 0 8px", fontWeight: 600 }}>
-          Personal Information
-        </Paragraph>
-
         <Row gutter={[16, 8]}>
-          <Col xs={24} md={24}>
+          <Col xs={24}>
             <Form.Item
               label="Full Name"
               name="name"
@@ -188,6 +204,6 @@ export default function PersonalInformationDocuments({ loading }: SubmitProps) {
           </Button>
         </Space>
       </Form>
-    </div>
+    </Card>
   );
 }

@@ -4,8 +4,9 @@ import {
 } from "@/app/providers/applicant";
 import { CREATE_HISTORY_CANDIDATE } from "@/app/providers/history-candidate";
 import { GET_USER_BY_APPLICANT_ID } from "@/app/providers/user";
+import { enqueueWa } from "@/app/queue/wa-queue";
 import { toRecruitmentStage } from "@/app/utils/recruitment-stage";
-import { formatPhoneNumber, sendWhatsAppMessage } from "@/app/utils/send-message-helper";
+import { formatPhoneNumber } from "@/app/vendor/send-message-helper";
 import { NextRequest, NextResponse } from "next/server";
 
 export const GET = async (
@@ -35,6 +36,7 @@ export const GET = async (
   }
 };
 
+
 export const PATCH = async (
   req: NextRequest,
   { params }: { params: { id: string } }
@@ -42,33 +44,34 @@ export const PATCH = async (
   try {
     const id = params.id;
     const body = await req.json();
-    // Normalize stage string to a valid RecruitmentStage enum value
-    const stageRaw = body.stage as string | undefined;
-    const stage = toRecruitmentStage(stageRaw ?? "");
 
+    const stage = toRecruitmentStage(String(body.stage ?? ""));
     const data = await UPDATE_STATUS_CANDIDATE(id, stage);
 
-    const user = await GET_USER_BY_APPLICANT_ID(id)
+    const user = await GET_USER_BY_APPLICANT_ID(id);
 
-    await CREATE_HISTORY_CANDIDATE({
-      applicantId: id,
-      stage,
-    });
+    await CREATE_HISTORY_CANDIDATE({ applicantId: id, stage });
 
-    const waMessage = `Hi ${user?.name}, your status has been updated to ${stage}.`;
-
+    // Rangkai pesan + format nomor
     const phone = formatPhoneNumber(user?.phone || "");
+    const waMessage = `Hi ${user?.name}, your status has been updated to ${stage}. Please check your dashboard to see the latest updates.`;
+
+    // Enqueue WA (jangan blokir response)
     if (phone) {
-      await sendWhatsAppMessage(phone, waMessage);
+      await enqueueWa({
+        type: "status-update",
+        applicantId: id,
+        phone,
+        message: waMessage,
+        stage,
+      });
+
+      // (opsional) tandai status PENDING di DB Applicant
+      // await db.applicant.update({ where: { id }, data: { whatsapp_status: "PENDING", whatsapp_error: null } });
     }
 
-
     return NextResponse.json(
-      {
-        success: true,
-        message: "Successfully updated!",
-        result: data,
-      },
+      { success: true, message: "Successfully updated!", result: data },
       { status: 200 }
     );
   } catch (error: unknown) {

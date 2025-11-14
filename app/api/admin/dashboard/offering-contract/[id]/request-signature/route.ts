@@ -3,7 +3,7 @@ import {
   MARK_DIRECTOR_SIGNATURE_REQUESTED,
 } from "@/app/providers/offering-contract";
 import { GeneralError } from "@/app/utils/general-error";
-import { sendDirectorSignatureEmail } from "@/app/utils/send-email";
+import { sendDirectorSignatureEmail } from "@/app/vendor/send-email";
 import { NextRequest, NextResponse } from "next/server";
 
 export async function POST(

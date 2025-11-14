@@ -2,40 +2,31 @@ import { Collapse, Button, Space } from "antd";
 import {
   FilterOutlined,
   CloseCircleOutlined,
-  AppstoreOutlined,
-  UserOutlined,
-  ApartmentOutlined,
-  ProfileOutlined,
 } from "@ant-design/icons";
-import FilterOptions from "@/app/components/select/user/filter-option-job";
+import FilterOptions, {
+  type FilterOption,
+} from "@/app/components/select/user/filter-option-job";
+import type { ReactNode } from "react";
 
 const { Panel } = Collapse;
 
-const dummyStatus = ["Open", "Closed"];
-const dummyClients = ["MSC Cruise", "Bulgaria"];
-const dummyDepartments = ["Galley", "Rooms"];
-const dummyPositions = ["Butcher", "Housekeeping Public Area"];
+export type FilterSidebarSection = {
+  key: string;
+  title: string;
+  icon: ReactNode;
+  options: FilterOption[];
+  value: string[];
+  onChange: (v: string[]) => void;
+};
 
 export default function FilterSidebar({
-  status,
-  setStatus,
-  client,
-  setClient,
-  department,
-  setDepartment,
-  position,
-  setPosition,
+  sections,
   clearFilters,
+  onApplyFilters,
 }: {
-  status: string[];
-  setStatus: (v: string[]) => void;
-  client: string[];
-  setClient: (v: string[]) => void;
-  department: string[];
-  setDepartment: (v: string[]) => void;
-  position: string[];
-  setPosition: (v: string[]) => void;
+  sections: FilterSidebarSection[];
   clearFilters: () => void;
+  onApplyFilters: () => void;
 }) {
   return (
     <div style={{ width: "100%", maxWidth: 320 }}>
@@ -73,69 +64,35 @@ export default function FilterSidebar({
           ghost
           expandIconPosition="end"
           style={{ background: "transparent" }}
-          defaultActiveKey={[]}
         >
-          <Panel
-            header={
-              <span style={{ color: "#2262e7", fontWeight: 600, fontSize: 17 }}>
-                <AppstoreOutlined style={{ marginRight: 10 }} />
-                Status
-              </span>
-            }
-            key="1"
-          >
-            <FilterOptions
-              options={dummyStatus}
-              value={status}
-              onChange={setStatus}
-            />
-          </Panel>
-          <Panel
-            header={
-              <span style={{ color: "#2262e7", fontWeight: 600, fontSize: 17 }}>
-                <UserOutlined style={{ marginRight: 10 }} />
-                Client
-              </span>
-            }
-            key="2"
-          >
-            <FilterOptions
-              options={dummyClients}
-              value={client}
-              onChange={setClient}
-            />
-          </Panel>
-          <Panel
-            header={
-              <span style={{ color: "#2262e7", fontWeight: 600, fontSize: 17 }}>
-                <ApartmentOutlined style={{ marginRight: 10 }} />
-                Department
-              </span>
-            }
-            key="3"
-          >
-            <FilterOptions
-              options={dummyDepartments}
-              value={department}
-              onChange={setDepartment}
-            />
-          </Panel>
-          <Panel
-            header={
-              <span style={{ color: "#2262e7", fontWeight: 600, fontSize: 17 }}>
-                <ProfileOutlined style={{ marginRight: 10 }} />
-                Position
-              </span>
-            }
-            key="4"
-          >
-            <FilterOptions
-              options={dummyPositions}
-              value={position}
-              onChange={setPosition}
-            />
-          </Panel>
+          {sections.map((section) => (
+            <Panel
+              header={
+                <span
+                  style={{ color: "#2262e7", fontWeight: 600, fontSize: 17 }}
+                >
+                  <span style={{ marginRight: 10 }}>{section.icon}</span>
+                  {section.title}
+                </span>
+              }
+              key={section.key}
+            >
+              <FilterOptions
+                options={section.options}
+                value={section.value}
+                onChange={section.onChange}
+              />
+            </Panel>
+          ))}
         </Collapse>
+        <Button
+          type="primary"
+          block
+          style={{ marginTop: 16, height: 46, borderRadius: 12 }}
+          onClick={onApplyFilters}
+        >
+          Apply Filters
+        </Button>
       </div>
     </div>
   );

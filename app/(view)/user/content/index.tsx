@@ -1,76 +1,208 @@
 "use client";
 
 import { useJobs } from "@/app/hooks/job";
-import { useState } from "react";
-import { Row, Col, Typography, Input, Button } from "antd";
+import { useMemo, useState } from "react";
+import { Row, Col, Typography, Input, Button, Card, Empty } from "antd";
 import { sanitizeHtml } from "@/app/utils/sanitize-html";
-import FilterSidebar from "@/app/components/common/sidebar/user/filter-sidebar-job";
+import FilterSidebar, {
+  type FilterSidebarSection,
+} from "@/app/components/common/sidebar/user/filter-sidebar-job";
 import JobCard from "@/app/components/common/card/user/job";
+import { JobDataModel } from "@/app/models/job";
 import dayjs from "dayjs";
+import {
+  AppstoreOutlined,
+  DeploymentUnitOutlined,
+  TeamOutlined,
+  EnvironmentOutlined,
+} from "@ant-design/icons";
+import { toCapitalized } from "@/app/utils/capitalized";
 
 const { Title, Text } = Typography;
 
 export default function JobList() {
   const { data: jobData } = useJobs({ queryString: "status=active" });
   const [search, setSearch] = useState("");
-  const [status, setStatus] = useState<string[]>([]);
-  const [client, setClient] = useState<string[]>([]);
-  const [department, setDepartment] = useState<string[]>([]);
-  const [position, setPosition] = useState<string[]>([]);
+  const [statusFilters, setStatusFilters] = useState<string[]>([]);
+  const [workTypeFilters, setWorkTypeFilters] = useState<string[]>([]);
+  const [employmentFilters, setEmploymentFilters] = useState<string[]>([]);
+  const [locationFilters, setLocationFilters] = useState<string[]>([]);
+  const [appliedFilters, setAppliedFilters] = useState({
+    status: [] as string[],
+    workType: [] as string[],
+    employment: [] as string[],
+    location: [] as string[],
+  });
 
   const clearFilters = () => {
-    setStatus([]);
-    setClient([]);
-    setDepartment([]);
-    setPosition([]);
+    setStatusFilters([]);
+    setWorkTypeFilters([]);
+    setEmploymentFilters([]);
+    setLocationFilters([]);
+    setAppliedFilters({
+      status: [],
+      workType: [],
+      employment: [],
+      location: [],
+    });
     setSearch("");
   };
+
+  const applyFilters = () => {
+    setAppliedFilters({
+      status: statusFilters,
+      workType: workTypeFilters,
+      employment: employmentFilters,
+      location: locationFilters,
+    });
+  };
+
+  const getJobStatus = (job: JobDataModel) =>
+    dayjs(job.until_at).diff(dayjs(), "hour") > 0 ? "Open" : "Closed";
+
+  const formatEnum = (value?: string | null) =>
+    value ? toCapitalized(value.replace(/_/g, " ")) : "";
+
+  const uniqueOptions = <T,>(values: (T | null | undefined)[]) => {
+    const set = new Set(
+      values
+        .map((val) => (typeof val === "string" ? val : null))
+        .filter((val): val is string => Boolean(val))
+    );
+    return Array.from(set);
+  };
+
+  const statusOptions = useMemo(
+    () =>
+      uniqueOptions((jobData ?? []).map((job) => getJobStatus(job))).map(
+        (value) => ({ value, label: value })
+      ),
+    [jobData]
+  );
+
+  const workTypeOptions = useMemo(
+    () =>
+      uniqueOptions((jobData ?? []).map((job) => job.work_type)).map(
+        (value) => ({
+          value,
+          label: formatEnum(value),
+        })
+      ),
+    [jobData]
+  );
+
+  const employmentOptions = useMemo(
+    () =>
+      uniqueOptions((jobData ?? []).map((job) => job.employment)).map(
+        (value) => ({
+          value,
+          label: formatEnum(value),
+        })
+      ),
+    [jobData]
+  );
+
+  const locationOptions = useMemo(
+    () =>
+      uniqueOptions((jobData ?? []).map((job) => job.location?.name)).map(
+        (value) => ({
+          value,
+          label: value,
+        })
+      ),
+    [jobData]
+  );
+
+  const filterSections = useMemo<FilterSidebarSection[]>(
+    () => [
+      {
+        key: "status",
+        title: "Status",
+        icon: <AppstoreOutlined />,
+        options: statusOptions,
+        value: statusFilters,
+        onChange: setStatusFilters,
+      },
+      {
+        key: "work_type",
+        title: "Work Type",
+        icon: <DeploymentUnitOutlined />,
+        options: workTypeOptions,
+        value: workTypeFilters,
+        onChange: setWorkTypeFilters,
+      },
+      {
+        key: "employment",
+        title: "Employment",
+        icon: <TeamOutlined />,
+        options: employmentOptions,
+        value: employmentFilters,
+        onChange: setEmploymentFilters,
+      },
+      {
+        key: "location",
+        title: "Location",
+        icon: <EnvironmentOutlined />,
+        options: locationOptions,
+        value: locationFilters,
+        onChange: setLocationFilters,
+      },
+    ],
+    [
+      employmentFilters,
+      employmentOptions,
+      locationFilters,
+      locationOptions,
+      statusFilters,
+      statusOptions,
+      workTypeFilters,
+      workTypeOptions,
+    ]
+  );
 
   // Filter logic
   const filteredJobs =
     jobData?.filter((job) => {
+      const jobStatus = getJobStatus(job);
+      const workTypeValue = job.work_type ?? "";
+      const employmentValue = job.employment ?? "";
+      const locationName = job.location?.name ?? "";
+
       // Status
       const statusMatch =
-        status.length === 0 ||
-        status.includes(
-          dayjs(job.until_at).diff(dayjs(), "hour") > 0 ? "Open" : "Closed"
-        );
-      // Client
-      const clientMatch =
-        client.length === 0 ||
-        client.some((c) =>
-          sanitizeHtml(job.description).toLowerCase().includes(c.toLowerCase())
-        );
-      // Department
-      const departmentMatch =
-        department.length === 0 ||
-        department.some((d) =>
-          sanitizeHtml(job.description).toLowerCase().includes(d.toLowerCase())
-        );
-      // Position
-      const positionMatch =
-        position.length === 0 ||
-        position.some((p) =>
-          sanitizeHtml(job.description).toLowerCase().includes(p.toLowerCase())
-        );
+        appliedFilters.status.length === 0 ||
+        appliedFilters.status.includes(jobStatus);
+      // Work type
+      const workTypeMatch =
+        appliedFilters.workType.length === 0 ||
+        (!!workTypeValue && appliedFilters.workType.includes(workTypeValue));
+      // Employment
+      const employmentMatch =
+        appliedFilters.employment.length === 0 ||
+        (!!employmentValue &&
+          appliedFilters.employment.includes(employmentValue));
+      // Location
+      const locationMatch =
+        appliedFilters.location.length === 0 ||
+        (!!locationName && appliedFilters.location.includes(locationName));
       // Search
       const searchMatch =
         search.trim() === "" ||
         job.name.toLowerCase().includes(search.toLowerCase()) ||
-        sanitizeHtml(job.description)
-          .toLowerCase()
-          .includes(search.toLowerCase());
+        sanitizeHtml(job.description).toLowerCase().includes(search.toLowerCase()) ||
+        locationName.toLowerCase().includes(search.toLowerCase());
       return (
         statusMatch &&
-        clientMatch &&
-        departmentMatch &&
-        positionMatch &&
+        workTypeMatch &&
+        employmentMatch &&
+        locationMatch &&
         searchMatch
       );
     }) || [];
 
   return (
-    <div style={{ maxWidth: 1440, margin: "0 auto", padding: "40px 16px" }}>
+    <div style={{ minHeight: "100vh" }}>
+      <div style={{ maxWidth: 1280, margin: "0 auto", padding: "32px 16px" }}>
       {/* JUDUL & SEARCH */}
       <div
         style={{
@@ -145,34 +277,31 @@ export default function JobList() {
           style={{ display: "flex", justifyContent: "center" }}
         >
           <FilterSidebar
-            status={status}
-            setStatus={setStatus}
-            client={client}
-            setClient={setClient}
-            department={department}
-            setDepartment={setDepartment}
-            position={position}
-            setPosition={setPosition}
+            sections={filterSections}
             clearFilters={clearFilters}
+            onApplyFilters={applyFilters}
           />
         </Col>
         {/* JOB LIST */}
         <Col xs={24} sm={17} md={17} lg={18} xl={19}>
           <div style={{ display: "flex", flexDirection: "column", gap: 28 }}>
-            {filteredJobs.length === 0 && (
-              <Text
-                type="secondary"
-                style={{ fontSize: 17, textAlign: "center" }}
+            {filteredJobs.length === 0 ? (
+              <Card
+                style={{
+                  borderRadius: 16,
+                  borderColor: "#e2e8f0",
+                  textAlign: "center",
+                }}
               >
-                No jobs found.
-              </Text>
+                <Empty description="No jobs match your criteria" />
+              </Card>
+            ) : (
+              filteredJobs.map((job) => <JobCard key={job.id} job={job} />)
             )}
-            {filteredJobs.map((job) => (
-              <JobCard key={job.id} job={job} />
-            ))}
           </div>
         </Col>
       </Row>
+      </div>
     </div>
   );
 }

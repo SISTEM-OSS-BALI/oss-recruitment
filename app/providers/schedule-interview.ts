@@ -1,9 +1,9 @@
 // services/interview.ts
 import dayjs, { Dayjs } from "dayjs";
 import db from "@/lib/prisma";
-import { sendRecruitmentEmail } from "../utils/send-email";
-import { sendWhatsAppMessage } from "../utils/send-message-helper";
-import { createZoomMeeting } from "../utils/meeting-helper";
+import { sendRecruitmentEmail } from "../vendor/send-email";
+import { sendWhatsAppMessage } from "../vendor/send-message-helper";
+import { createZoomMeeting } from "../vendor/meeting-helper";
 
 /* =========================
    Types

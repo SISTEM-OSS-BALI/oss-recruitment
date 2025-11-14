@@ -15,17 +15,17 @@ export default function FormLogin({
         <Form.Item
           name="email"
           label="Email"
-          rules={[{ required: true, message: "Email tidak boleh kosong!" }]}
+          rules={[{ required: true, message: "Email is required." }]}
         >
-          <Input placeholder="Masukkan email Anda" size="large" />
+          <Input placeholder="Enter your email" size="large" />
         </Form.Item>
 
         <Form.Item
           name="password"
-          label="Kata Sandi"
-          rules={[{ required: true, message: "Kata sandi wajib diisi!" }]}
+          label="Password"
+          rules={[{ required: true, message: "Password is required." }]}
         >
-          <Input.Password placeholder="Masukkan kata sandi" size="large" />
+          <Input.Password placeholder="Enter your password" size="large" />
         </Form.Item>
 
         <Form.Item>
@@ -40,7 +40,7 @@ export default function FormLogin({
               borderColor: primaryColor,
             }}
           >
-            Masuk
+            Sign In
           </Button>
         </Form.Item>
       </Form>
