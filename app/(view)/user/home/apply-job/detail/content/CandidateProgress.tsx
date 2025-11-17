@@ -1,6 +1,12 @@
 "use client";
 
-import React, { useCallback, useMemo, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { useRouter } from "next/navigation";
 import {
   Avatar,
@@ -133,6 +139,14 @@ export default function CandidateProgress({ applicant, meta }: Props) {
   const [signatureUrl, setSignatureUrl] = useState<string | null>(null);
   const [signaturePath, setSignaturePath] = useState<string | null>(null);
   const [rejectionReason, setRejectionReason] = useState("");
+  const sigBoxDecisionRef = useRef<HTMLDivElement | null>(null);
+  const sigBoxPreviewRef = useRef<HTMLDivElement | null>(null);
+  const [activeSigBox, setActiveSigBox] = useState<"decision" | "preview" | null>(
+    null
+  );
+  const [sigPos, setSigPos] = useState({ x: 20, y: 20 });
+  const [isDraggingSig, setIsDraggingSig] = useState(false);
+  const dragOffset = useRef({ x: 0, y: 0 });
   const router = useRouter();
   const { data: procedureDocuments, fetchLoading: procedureDocumentsLoading } =
     useProcedureDocuments({});
@@ -154,8 +168,6 @@ export default function CandidateProgress({ applicant, meta }: Props) {
   const nowStageIndex = stageOrder.findIndex((s) => s === currentStage);
   const normalizedStageIndex = nowStageIndex === -1 ? 0 : nowStageIndex;
   const { data: locations } = useLocations({});
-
-  console.log(scheduleHired);
 
   const {
     data: contractByApplicant,
@@ -243,6 +255,7 @@ export default function CandidateProgress({ applicant, meta }: Props) {
     setSignatureUrl(signatureUrlFromServer);
     setSignaturePath(signaturePathFromServer);
     setRejectionReason(contractByApplicant?.candidateRejectionReason || "");
+    setSigPos({ x: 20, y: 20 });
     setIsDecisionModalOpen(true);
   }, [
     contractByApplicant?.candidateRejectionReason,
@@ -286,6 +299,7 @@ export default function CandidateProgress({ applicant, meta }: Props) {
         decision: CandidateDecisionState;
         signatureUrl: string;
         signaturePath?: string | null;
+        signaturePosition?: { x: number; y: number };
       } = {
         decision: "ACCEPTED",
         signatureUrl,
@@ -293,6 +307,7 @@ export default function CandidateProgress({ applicant, meta }: Props) {
       if (signaturePath) {
         payload.signaturePath = signaturePath;
       }
+      payload.signaturePosition = sigPos;
 
       await onSubmitDecision(payload);
       message.success("Thank you! Your acceptance has been submitted.");
@@ -308,6 +323,7 @@ export default function CandidateProgress({ applicant, meta }: Props) {
     onSubmitDecision,
     signaturePath,
     signatureUrl,
+    sigPos,
   ]);
 
   const handleSubmitDecline = useCallback(async () => {
@@ -338,6 +354,36 @@ export default function CandidateProgress({ applicant, meta }: Props) {
     onSubmitDecision,
     rejectionReason,
   ]);
+
+  // drag handler untuk signature placement
+  useEffect(() => {
+    const getActiveBox = () => {
+      if (activeSigBox === "decision") return sigBoxDecisionRef.current;
+      if (activeSigBox === "preview") return sigBoxPreviewRef.current;
+      return null;
+    };
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!isDraggingSig) return;
+      const box = getActiveBox();
+      if (!box) return;
+      const rect = box.getBoundingClientRect();
+      const imgWidth = 180;
+      const imgHeight = 90;
+      const nextX = e.clientX - rect.left - dragOffset.current.x;
+      const nextY = e.clientY - rect.top - dragOffset.current.y;
+      setSigPos({
+        x: Math.min(Math.max(0, nextX), rect.width - imgWidth),
+        y: Math.min(Math.max(0, nextY), rect.height - imgHeight),
+      });
+    };
+    const handleMouseUp = () => setIsDraggingSig(false);
+    window.addEventListener("mousemove", handleMouseMove);
+    window.addEventListener("mouseup", handleMouseUp);
+    return () => {
+      window.removeEventListener("mousemove", handleMouseMove);
+      window.removeEventListener("mouseup", handleMouseUp);
+    };
+  }, [activeSigBox, isDraggingSig]);
 
   const headOffice = useMemo(() => {
     if (!Array.isArray(locations)) return null;
@@ -616,21 +662,22 @@ export default function CandidateProgress({ applicant, meta }: Props) {
         }
 
         const memberCardItem: StageInfoItem | undefined = isReferralJob
-        ? {
-            label: "MEMBER CARD",
-            value: applicant.user.member_card_url != null ? (
-              <Link
-                href={applicant.user.member_card_url}
-                target="_blank"
-                rel="noreferrer"
-              >
-                View
-              </Link>
-            ) : (
-              <Text type="secondary">Not Uploaded</Text>
-            ),
-          }
-        : undefined;
+          ? {
+              label: "MEMBER CARD",
+              value:
+                applicant.user.member_card_url != null ? (
+                  <Link
+                    href={applicant.user.member_card_url}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    View
+                  </Link>
+                ) : (
+                  <Text type="secondary">Not Uploaded</Text>
+                ),
+            }
+          : undefined;
 
         const infoItems: StageInfoItem[] = [
           { label: "STATUS", value: "Offer Sent" },
@@ -1247,9 +1294,15 @@ export default function CandidateProgress({ applicant, meta }: Props) {
             title="Offer Decision"
             width={720}
             footer={null}
+            bodyStyle={{ padding: 16, paddingTop: 12 }}
+            style={{ top: 24 }}
           >
-            <Space direction="vertical" size={16} style={{ display: "block" }}>
-              <Space align="center" size={8}>
+            <Space
+              direction="vertical"
+              size={16}
+              style={{ display: "block", width: "100%" }}
+            >
+              <Space align="center" size={8} style={{ marginTop: 4 }}>
                 <Tag
                   color={decisionMeta.color}
                   style={{ marginRight: 0, fontSize: 16, marginBottom: 12 }}
@@ -1276,7 +1329,7 @@ export default function CandidateProgress({ applicant, meta }: Props) {
 
               <Text>{decisionMeta.helper}</Text>
 
-              <Space size={12} style={{ marginBottom: 12, marginTop: 12 }}>
+              <Space size={12} style={{ margin: "8px 0 12px" }}>
                 <Button
                   type={decisionMode === "ACCEPT" ? "primary" : "default"}
                   onClick={() => handleSelectDecision("ACCEPT")}
@@ -1298,7 +1351,13 @@ export default function CandidateProgress({ applicant, meta }: Props) {
                 <Space
                   direction="vertical"
                   size={16}
-                  style={{ display: "block" }}
+                  style={{
+                    display: "block",
+                    background: "#fafafa",
+                    padding: 16,
+                    borderRadius: 12,
+                    border: "1px solid #f0f0f0",
+                  }}
                 >
                   <div>
                     <Text strong>Review the contract</Text>
@@ -1330,43 +1389,141 @@ export default function CandidateProgress({ applicant, meta }: Props) {
                   </div>
 
                   <Row gutter={[16, 16]}>
-                    <Col xs={24} md={10}>
-                      <div
-                        style={{
-                          background: "#f9fafc",
-                          borderRadius: 14,
-                          padding: 16,
-                          height: "100%",
-                        }}
-                      >
-                        <Text strong>Pihak Pertama</Text>
-                        <div style={{ marginTop: 12 }}>
-                          <Text>{firstPartyRepresentative}</Text>
-                        </div>
-                        <Text type="secondary">{firstPartyRole}</Text>
-                        <Text type="secondary">{firstPartyName}</Text>
-                        <Text
-                          type="secondary"
-                          style={{ display: "block", marginTop: 16 }}
+                    {applicant.job.type_job?.toString().toUpperCase() ===
+                      "REFERRAL" && (
+                      <Col xs={24} md={10}>
+                        <div
+                          style={{
+                            background: "#f9fafc",
+                            borderRadius: 14,
+                            padding: 16,
+                            height: "100%",
+                          }}
                         >
-                          Tanda tangan pihak pertama akan dibubuhkan setelah
-                          proses verifikasi internal.
-                        </Text>
-                      </div>
-                    </Col>
+                          <Text strong>Pihak Pertama</Text>
+                          <div style={{ marginTop: 12 }}>
+                            <Text>{firstPartyRepresentative}</Text>
+                          </div>
+                          <Text type="secondary">{firstPartyRole}</Text>
+                          <Text type="secondary">{firstPartyName}</Text>
+                          <Text
+                            type="secondary"
+                            style={{ display: "block", marginTop: 16 }}
+                          >
+                            Tanda tangan pihak pertama akan dibubuhkan setelah
+                            proses verifikasi internal.
+                          </Text>
+                        </div>
+                      </Col>
+                    )}
                     <Col xs={24} md={14}>
                       <Space
                         direction="vertical"
                         size={12}
                         style={{ width: "100%" }}
                       >
-                        <Text strong>
-                          Pihak Kedua — {applicant.user?.name || "Candidate"}
-                        </Text>
+                        {applicant.job.type_job?.toString().toUpperCase() ===
+                          "REFERRAL" && (
+                          <Text strong>
+                            Pihak Kedua — {applicant.user?.name || "Candidate"}
+                          </Text>
+                        )}
                         <Text type="secondary">
-                          Gunakan kotak di bawah untuk menandatangani kontrak
-                          secara digital. PNG atau JPG hingga 5MB.
+                          Pratinjau dokumen di bawah, lalu tarik tanda tangan ke
+                          posisi kolom yang sesuai. PNG/JPG hingga 5MB.
                         </Text>
+                        <div
+                          ref={sigBoxDecisionRef}
+                          style={{
+                            position: "relative",
+                            width: "100%",
+                            minHeight: 320,
+                            border: "1px dashed #d9d9d9",
+                            borderRadius: 12,
+                            background: "#fff",
+                            overflow: "hidden",
+                          }}
+                        >
+                          {contractUrl ? (
+                            isContractPdf ? (
+                              <iframe
+                                src={`${contractUrl}#toolbar=0`}
+                                title="Contract preview"
+                                style={{
+                                  width: "100%",
+                                  height: 320,
+                                  border: "none",
+                                }}
+                              />
+                            ) : (
+                              <div
+                                style={{
+                                  height: 320,
+                                  display: "grid",
+                                  placeItems: "center",
+                                  padding: 24,
+                                }}
+                              >
+                                <Text type="secondary">
+                                  Kontrak bukan PDF. Unduh untuk melihat isi
+                                  lengkap.
+                                </Text>
+                              </div>
+                            )
+                          ) : (
+                            <div
+                              style={{
+                                height: 320,
+                                display: "grid",
+                                placeItems: "center",
+                                padding: 24,
+                              }}
+                            >
+                              <Text type="secondary">
+                                Kontrak belum tersedia.
+                              </Text>
+                            </div>
+                          )}
+
+                          {signatureUrl ? (
+                            <div
+                              onMouseDown={(e) => {
+                                const box = sigBoxDecisionRef.current;
+                                if (!box) return;
+                                setIsDraggingSig(true);
+                                setActiveSigBox("decision");
+                                const rect = box.getBoundingClientRect();
+                                dragOffset.current = {
+                                  x: e.clientX - rect.left - sigPos.x,
+                                  y: e.clientY - rect.top - sigPos.y,
+                                };
+                              }}
+                              style={{
+                                position: "absolute",
+                                left: sigPos.x,
+                                top: sigPos.y,
+                                cursor: "grab",
+                                width: 180,
+                                boxShadow: "0 6px 14px rgba(0,0,0,0.12)",
+                                borderRadius: 8,
+                                border: "1px solid #f0f0f0",
+                                background: "#fff",
+                                padding: 4,
+                              }}
+                            >
+                              <Image
+                                src={signatureUrl}
+                                alt="Candidate signature"
+                                preview={false}
+                                style={{
+                                  width: "100%",
+                                  display: "block",
+                                  borderRadius: 6,
+                                }}
+                              />
+                            </div>
+                          ) : null}
+                        </div>
                         <SignaturePadUploader
                           bucket="web-oss-recruitment"
                           folder={`candidate-signatures/${applicant.id}`}
@@ -1375,9 +1532,19 @@ export default function CandidateProgress({ applicant, meta }: Props) {
                             setSignatureUrl(url);
                             setSignaturePath(path);
                           }}
+                          onSaved={(path, url) => {
+                            if (isDecisionLocked) return;
+                            setSignatureUrl(url);
+                            setSignaturePath(path);
+                            setSigPos({ x: 20, y: 20 });
+                            setDecisionMode("ACCEPT");
+                            setIsDecisionModalOpen(true);
+                            setIsContractPreviewOpen(true);
+                          }}
                           onDelete={() => {
                             setSignatureUrl(null);
                             setSignaturePath(null);
+                            setSigPos({ x: 20, y: 20 });
                           }}
                           maxSizeMB={5}
                           width={360}
@@ -1501,55 +1668,107 @@ export default function CandidateProgress({ applicant, meta }: Props) {
             bodyStyle={{ padding: 0, height: "70vh" }}
             destroyOnClose
           >
-            {contractUrl ? (
-              isContractPdf ? (
-                <iframe
-                  src={`${contractUrl}#toolbar=0`}
-                  title="Contract document preview"
-                  style={{
-                    width: "100%",
-                    height: "100%",
-                    border: "none",
-                  }}
-                />
+            <div
+              ref={sigBoxPreviewRef}
+              style={{
+                position: "relative",
+                width: "100%",
+                height: "100%",
+                minHeight: "70vh",
+                borderRadius: 12,
+                overflow: "hidden",
+                background: "#fff",
+              }}
+            >
+              {contractUrl ? (
+                isContractPdf ? (
+                  <iframe
+                    src={`${contractUrl}#toolbar=0`}
+                    title="Contract document preview"
+                    style={{
+                      width: "100%",
+                      height: "100%",
+                      border: "none",
+                    }}
+                  />
+                ) : (
+                  <div
+                    style={{
+                      height: "100%",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      padding: 32,
+                    }}
+                  >
+                    <Space direction="vertical" size={16} align="center">
+                      <Text type="secondary">
+                        Contract preview is available in DOCX format. Download
+                        the document to review the content.
+                      </Text>
+                      <Button
+                        icon={<DownloadOutlined />}
+                        href={contractUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        Download Contract
+                      </Button>
+                    </Space>
+                  </div>
+                )
               ) : (
                 <div
                   style={{
                     height: "100%",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    padding: 32,
+                    display: "grid",
+                    placeItems: "center",
+                    padding: 24,
                   }}
                 >
-                  <Space direction="vertical" size={16} align="center">
-                    <Text type="secondary">
-                      Contract preview is available in DOCX format. Download the
-                      document to review the content.
-                    </Text>
-                    <Button
-                      icon={<DownloadOutlined />}
-                      href={contractUrl}
-                      target="_blank"
-                      rel="noreferrer"
-                    >
-                      Download Contract
-                    </Button>
-                  </Space>
+                  <Empty description="Contract not available yet" />
                 </div>
-              )
-            ) : (
-              <div
-                style={{
-                  height: "100%",
-                  display: "grid",
-                  placeItems: "center",
-                  padding: 24,
-                }}
-              >
-                <Empty description="Contract not available yet" />
-              </div>
-            )}
+              )}
+
+              {signatureUrl ? (
+                <div
+                  onMouseDown={(e) => {
+                    const box = sigBoxPreviewRef.current;
+                    if (!box) return;
+                    setIsDraggingSig(true);
+                    setActiveSigBox("preview");
+                    const rect = box.getBoundingClientRect();
+                    dragOffset.current = {
+                      x: e.clientX - rect.left - sigPos.x,
+                      y: e.clientY - rect.top - sigPos.y,
+                    };
+                  }}
+                  style={{
+                    position: "absolute",
+                    left: sigPos.x,
+                    top: sigPos.y,
+                    cursor: "grab",
+                    width: 180,
+                    boxShadow: "0 6px 14px rgba(0,0,0,0.12)",
+                    borderRadius: 8,
+                    border: "1px solid #f0f0f0",
+                    background: "#fff",
+                    padding: 4,
+                  }}
+                >
+                  <Image
+                    src={signatureUrl}
+                    alt="Candidate signature"
+                    preview={false}
+                    style={{
+                      width: "100%",
+                      display: "block",
+                      borderRadius: 6,
+                    }}
+                  />
+                </div>
+              ) : null}
+            </div>
           </Modal>
         </Space>
       </div>
