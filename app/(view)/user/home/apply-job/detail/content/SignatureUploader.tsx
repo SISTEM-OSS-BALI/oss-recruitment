@@ -19,6 +19,7 @@ type Props = {
   folder: string;
   value?: string;
   onUpload?: (path: string, publicUrl: string) => void;
+  onSaved?: (path: string, publicUrl: string) => void;
   onDelete?: () => void;
   maxSizeMB?: number;
   width?: number;
@@ -45,6 +46,7 @@ export default function SignaturePadUploader({
   folder,
   value,
   onUpload,
+  onSaved,
   onDelete,
   maxSizeMB = 5,
   width = 560,
@@ -336,13 +338,14 @@ export default function SignaturePadUploader({
 
       const { path, publicUrl } = await uploadToSupabase(blob);
       onUpload?.(path, publicUrl);
+      onSaved?.(path, publicUrl);
       message.success("Tanda tangan tersimpan ke Supabase.");
     } catch (error: any) {
       message.error(error?.message || "Gagal menyimpan tanda tangan.");
     } finally {
       setIsUploading(false);
     }
-  }, [maxSizeMB, onUpload]);
+  }, [maxSizeMB, onSaved, onUpload]);
 
   return (
     <div>

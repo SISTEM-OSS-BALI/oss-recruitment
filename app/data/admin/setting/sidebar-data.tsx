@@ -41,14 +41,22 @@ export const SidebarMenuSettingAdmin = (): MenuProps["items"] => {
           key: "/admin/dashboard/template/contract-template",
           label: menuLabel("Contract Template"),
           icon: <FontAwesomeIcon icon={faFileContract} />,
-          onClick: () => router.push("/admin/dashboard/template/contract-template"),
+          onClick: () =>
+            router.push("/admin/dashboard/template/contract-template"),
         },
         {
           key: "/admin/dashboard/template/card-template",
-          label: menuLabel("Card Template"),
+          label: menuLabel("Card Referral Template"),
           icon: <FontAwesomeIcon icon={faClipboardList} />,
           onClick: () => router.push("/admin/dashboard/template/card-template"),
-        }
+        },
+        {
+          key: "/admin/dashboard/template/employee-setup-template",
+          label: menuLabel("Employee Setup Template"),
+          icon: <FontAwesomeIcon icon={faClipboardList} />,
+          onClick: () =>
+            router.push("/admin/dashboard/template/employee-setup-template"),
+        },
       ],
     },
     {

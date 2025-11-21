@@ -4,7 +4,7 @@ import React, { useMemo } from "react";
 import { Card, Col, Empty, Row, Skeleton, Space } from "antd";
 
 import type { ApplicantDataModel } from "@/app/models/applicant";
-import { ScheduleHiredDataModel } from "@/app/models/hired";
+import { ScheduleHiredDataModel } from "@/app/models/schedule-hired";
 import ScheduleHiredForm, {
   ScheduleHiredFormValues,
 } from "@/app/components/common/form/admin/hired";

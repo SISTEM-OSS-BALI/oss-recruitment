@@ -17,7 +17,6 @@ import { SearchOutlined } from "@ant-design/icons";
 
 import { reorderImmutable } from "@/app/utils/reoder";
 import DraggableCandidateItem from "@/app/utils/dnd-helper";
-import { CandidateDataModel } from "@/app/models/applicant";
 import { useCandidate, useCandidates } from "@/app/hooks/applicant";
 import { useRecruitment } from "../../context";
 import { RecruitmentStage } from "@prisma/client";
@@ -27,6 +26,7 @@ import {
   toRecruitmentStage,
 } from "@/app/utils/recruitment-stage";
 import type { SummaryStageKey } from "@/app/utils/recruitment-stage";
+import { ApplicantDataModel } from "@/app/models/applicant";
 
 const { Title, Text } = Typography;
 
@@ -49,7 +49,7 @@ export default function CandidatesPage() {
     useRecruitment();
 
   const { data: candidatesData = [] } = useCandidates({});
-  const { onUpdateStatus: updateStatus } = useCandidate();
+  const { onUpdateStatus: updateStatus } = useCandidate({ id: "" });
 
   // hanya tampilkan kandidat di stage NEW_APLICANT (halaman Screening)
   const screening = useMemo(
@@ -58,7 +58,7 @@ export default function CandidatesPage() {
   );
 
   // sumber kebenaran untuk DnD list (lokal)
-  const [list, setList] = useState<CandidateDataModel[]>([]);
+  const [list, setList] = useState<ApplicantDataModel[]>([]);
   useEffect(() => {
     // inisialisasi / merge aman saat data berubah
     setList((prev) => {
@@ -71,15 +71,12 @@ export default function CandidatesPage() {
   // Summary (tampilan header di layout)
   const counts = useMemo<StageCounts>(() => {
     const total = candidatesData.length;
-    const detail = SUMMARY_STAGE_CONFIG.reduce(
-      (acc, item) => {
-        acc[item.key] = candidatesData.filter((c) =>
-          stageMatches(c.stage, ...item.stages)
-        ).length;
-        return acc;
-      },
-      {} as Record<SummaryStageKey, number>
-    );
+    const detail = SUMMARY_STAGE_CONFIG.reduce((acc, item) => {
+      acc[item.key] = candidatesData.filter((c) =>
+        stageMatches(c.stage, ...item.stages)
+      ).length;
+      return acc;
+    }, {} as Record<SummaryStageKey, number>);
     return { all: total, ...detail };
   }, [candidatesData]);
 
@@ -107,9 +104,9 @@ export default function CandidatesPage() {
     const q = query.trim().toLowerCase();
     if (!q) return list;
     return list.filter((c) => {
-      const n = c.name?.toLowerCase() ?? "";
-      const e = c.email?.toLowerCase() ?? "";
-      const p = c.phone?.toLowerCase() ?? "";
+      const n = c.user.name?.toLowerCase() ?? "";
+      const e = c.user.email?.toLowerCase() ?? "";
+      const p = c.user.phone?.toLowerCase() ?? "";
       return n.includes(q) || e.includes(q) || p.includes(q);
     });
   }, [list, query]);
@@ -204,10 +201,7 @@ export default function CandidatesPage() {
               <DraggableCandidateItem
                 key={item.id}
                 id={item.id}
-                name={item.name}
-                email={item.email}
-                status={item.stage} // tampilkan stage sekarang
-                active={item.id === selectedId}
+                applicant={item}
                 onClick={() => setSelectedId(item.id)}
                 visibleIndex={(page - 1) * pageSize + idx}
                 onHoverMove={onHoverMove}

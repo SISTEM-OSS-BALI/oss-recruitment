@@ -90,6 +90,13 @@ enum TypeJob {
   REFFERAL
 }
 
+enum MethodEmployeeSetupQuestion {
+  CHECK
+  INPUT
+  LINK
+  UPLOAD
+}
+
 model Job {
   id          String         @id @default(cuid())
   name        String
@@ -707,4 +714,59 @@ model MessageRead {
   @@id([messageId, userId])
   @@index([userId, messageId])
   @@map("message_read")
+}
+
+model EmployeeSetup {
+  id        String   @id @default(cuid())
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  employeeSetupQuestion EmployeeSetupQuestion[]
+
+  @@map("employee_setup")
+}
+
+model EmployeeSetupQuestion {
+  id            String @id @default(cuid())
+  name_activity String
+  executor      String
+
+  method MethodEmployeeSetupQuestion
+
+  description  String?
+  default_link String?
+  input_label  String?
+  config       Json?
+
+  employeeSetup   EmployeeSetup? @relation(fields: [employeeSetupId], references: [id])
+  employeeSetupId String?
+
+  employeeSetupAnswers EmployeeSetupAnswer[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("employee_setup_question")
+}
+
+model EmployeeSetupAnswer {
+  id String @id @default(cuid())
+
+  employeeSetupQuestionId String
+  employeeSetupQuestion   EmployeeSetupQuestion @relation(fields: [employeeSetupQuestionId], references: [id])
+  employeeId              String?
+  is_done                 Boolean               @default(false)
+  implementation_date     DateTime?
+
+  value_text     String?
+  value_link     String?
+  value_file_url String?
+
+  notes String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("employee_setup_answer")
 }

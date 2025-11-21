@@ -57,7 +57,7 @@ export default function CandidatesPage() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
   const { data: candidatesData = [] } = useCandidates({});
-  const { onUpdateStatus: updateStatus } = useCandidate({id: selectedId!});
+  const { onUpdateStatus: updateStatus } = useCandidate({ id: selectedId! });
 
   // const { onCreate: createInterview } = useScheduleInterviews();
 
@@ -81,15 +81,12 @@ export default function CandidatesPage() {
   // Summary (tampilan header di layout)
   const counts = useMemo<StageCounts>(() => {
     const total = candidatesData.length;
-    const detail = SUMMARY_STAGE_CONFIG.reduce(
-      (acc, item) => {
-        acc[item.key] = candidatesData.filter((c) =>
-          stageMatches(c.stage, ...item.stages)
-        ).length;
-        return acc;
-      },
-      {} as Record<SummaryStageKey, number>
-    );
+    const detail = SUMMARY_STAGE_CONFIG.reduce((acc, item) => {
+      acc[item.key] = candidatesData.filter((c) =>
+        stageMatches(c.stage, ...item.stages)
+      ).length;
+      return acc;
+    }, {} as Record<SummaryStageKey, number>);
     return { all: total, ...detail };
   }, [candidatesData]);
 
@@ -258,12 +255,7 @@ export default function CandidatesPage() {
               <DraggableCandidateItem
                 key={item.id}
                 id={item.id}
-                stage={item.stage || ""}
-                name={item.user.name || "No Name"}
-                image_url={item.user.photo_url || undefined}
-                email={item.user.email || ""}
-                status={item.stage || ""}
-                active={item.id === selectedId}
+                applicant={item}
                 onClick={() => setSelectedId(item.id)}
                 visibleIndex={(page - 1) * pageSize + idx}
                 onHoverMove={onHoverMove}

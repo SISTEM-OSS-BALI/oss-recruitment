@@ -256,6 +256,7 @@ export default function CandidateProgress({ applicant, meta }: Props) {
     setSignaturePath(signaturePathFromServer);
     setRejectionReason(contractByApplicant?.candidateRejectionReason || "");
     setSigPos({ x: 20, y: 20 });
+    setActiveSigBox("decision");
     setIsDecisionModalOpen(true);
   }, [
     contractByApplicant?.candidateRejectionReason,
@@ -270,6 +271,7 @@ export default function CandidateProgress({ applicant, meta }: Props) {
     setRejectionReason("");
     setSignatureUrl(null);
     setSignaturePath(null);
+    setActiveSigBox(null);
     setIsContractPreviewOpen(false);
   }, []);
 
@@ -1368,7 +1370,10 @@ export default function CandidateProgress({ applicant, meta }: Props) {
                     <Space wrap style={{ marginTop: 8 }}>
                       <Button
                         icon={<FileTextOutlined />}
-                        onClick={() => setIsContractPreviewOpen(true)}
+                        onClick={() => {
+                          setActiveSigBox("preview");
+                          setIsContractPreviewOpen(true);
+                        }}
                         disabled={!contractUrl}
                       >
                         View Contract
@@ -1490,6 +1495,7 @@ export default function CandidateProgress({ applicant, meta }: Props) {
                               onMouseDown={(e) => {
                                 const box = sigBoxDecisionRef.current;
                                 if (!box) return;
+                                e.preventDefault();
                                 setIsDraggingSig(true);
                                 setActiveSigBox("decision");
                                 const rect = box.getBoundingClientRect();
@@ -1504,11 +1510,12 @@ export default function CandidateProgress({ applicant, meta }: Props) {
                                 top: sigPos.y,
                                 cursor: "grab",
                                 width: 180,
-                                boxShadow: "0 6px 14px rgba(0,0,0,0.12)",
-                                borderRadius: 8,
-                                border: "1px solid #f0f0f0",
-                                background: "#fff",
-                                padding: 4,
+                                zIndex: 5,
+                                pointerEvents: "auto",
+                                userSelect: "none",
+                                borderRadius: 0,
+                                border: "1px solid rgba(0,0,0,0.05)",
+                                background: "transparent",
                               }}
                             >
                               <Image
@@ -1518,7 +1525,8 @@ export default function CandidateProgress({ applicant, meta }: Props) {
                                 style={{
                                   width: "100%",
                                   display: "block",
-                                  borderRadius: 6,
+                                  borderRadius: 0,
+                                  background: "transparent",
                                 }}
                               />
                             </div>
@@ -1533,12 +1541,11 @@ export default function CandidateProgress({ applicant, meta }: Props) {
                             setSignaturePath(path);
                           }}
                           onSaved={(path, url) => {
-                            if (isDecisionLocked) return;
                             setSignatureUrl(url);
                             setSignaturePath(path);
                             setSigPos({ x: 20, y: 20 });
                             setDecisionMode("ACCEPT");
-                            setIsDecisionModalOpen(true);
+                            setActiveSigBox("preview");
                             setIsContractPreviewOpen(true);
                           }}
                           onDelete={() => {
@@ -1661,7 +1668,10 @@ export default function CandidateProgress({ applicant, meta }: Props) {
 
           <Modal
             open={isContractPreviewOpen}
-            onCancel={() => setIsContractPreviewOpen(false)}
+            onCancel={() => {
+              setIsContractPreviewOpen(false);
+              setActiveSigBox(null);
+            }}
             footer={null}
             title="Contract Preview"
             width={960}
@@ -1735,6 +1745,7 @@ export default function CandidateProgress({ applicant, meta }: Props) {
                   onMouseDown={(e) => {
                     const box = sigBoxPreviewRef.current;
                     if (!box) return;
+                    e.preventDefault();
                     setIsDraggingSig(true);
                     setActiveSigBox("preview");
                     const rect = box.getBoundingClientRect();
@@ -1749,11 +1760,12 @@ export default function CandidateProgress({ applicant, meta }: Props) {
                     top: sigPos.y,
                     cursor: "grab",
                     width: 180,
-                    boxShadow: "0 6px 14px rgba(0,0,0,0.12)",
-                    borderRadius: 8,
-                    border: "1px solid #f0f0f0",
-                    background: "#fff",
-                    padding: 4,
+                    zIndex: 5,
+                    pointerEvents: "auto",
+                    userSelect: "none",
+                    borderRadius: 0,
+                    border: "1px solid rgba(0,0,0,0.05)",
+                    background: "transparent",
                   }}
                 >
                   <Image
@@ -1763,11 +1775,35 @@ export default function CandidateProgress({ applicant, meta }: Props) {
                     style={{
                       width: "100%",
                       display: "block",
-                      borderRadius: 6,
+                      borderRadius: 0,
+                      background: "transparent",
                     }}
                   />
                 </div>
               ) : null}
+            </div>
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "flex-end",
+                gap: 8,
+                padding: "10px 16px",
+                borderTop: "1px solid #f0f0f0",
+                background: "#fafafa",
+              }}
+            >
+              <Button onClick={() => setIsContractPreviewOpen(false)}>
+                Close
+              </Button>
+              <Button
+                type="primary"
+                icon={<FileDoneOutlined />}
+                onClick={handleSubmitAcceptance}
+                loading={onSubmitDecisionLoading}
+                disabled={!signatureUrl || isDecisionLocked}
+              >
+                Submit Application
+              </Button>
             </div>
           </Modal>
         </Space>

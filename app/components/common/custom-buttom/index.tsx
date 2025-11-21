@@ -12,13 +12,16 @@ export default function CustomButton({
   title,
   icon,
   color,
+  style,
+  ...rest
 }: CustomButtonProps) {
   return (
     <Button
       onClick={onClick}
       icon={icon}
-      style={{ backgroundColor: "#C62828", color: color }}
+      style={{ backgroundColor: "#C62828", color: color, ...style }}
       type="primary"
+      {...rest}
     >
       {title}
     </Button>

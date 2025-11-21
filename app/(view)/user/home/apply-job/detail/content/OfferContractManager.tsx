@@ -1142,22 +1142,43 @@ export function OfferContractManager({
                 A referral member card PDF has been generated and stored by
                 admin.
               </Text>
-              <Button
-                type="primary"
-                shape="round"
-                icon={<FilePdfOutlined />}
-                href={candidate.user.member_card_url}
-                target="_blank"
-                rel="noreferrer"
-                style={{
-                  borderColor: "#d13b3b",
-                  color: "#d13b3b",
-                  background: "#fff",
-                  borderWidth: 1.5,
-                }}
-              >
-                Open Member Card PDF
-              </Button>
+              <Space direction="vertical" style={{ width: "100%" }} size="small">
+                {/\.(png|jpe?g|gif|webp)$/i.test(
+                  candidate.user.member_card_url.split("?")[0] || ""
+                ) ? (
+                  <img
+                    src={candidate.user.member_card_url}
+                    alt="Member card"
+                    style={{
+                      width: "100%",
+                      maxWidth: 420,
+                      borderRadius: 12,
+                      boxShadow: "0 6px 20px rgba(0,0,0,0.08)",
+                    }}
+                  />
+                ) : (
+                  <iframe
+                    src={candidate.user.member_card_url}
+                    title="Member card preview"
+                    style={{
+                      width: "100%",
+                      height: 420,
+                      borderRadius: 12,
+                      border: "1px solid #f0f0f0",
+                    }}
+                  />
+                )}
+                <Button
+                  type="link"
+                  icon={<FilePdfOutlined />}
+                  href={candidate.user.member_card_url}
+                  target="_blank"
+                  rel="noreferrer"
+                  style={{ paddingLeft: 0 }}
+                >
+                  Download Member Card
+                </Button>
+              </Space>
             </Card>
           ) : (
             <GenerateCardReferral

@@ -1,7 +1,5 @@
+import { Queue, QueueEvents } from "bullmq";
 import { redis } from "@/lib/redis";
-import BullMQ from "bullmq";
-
-const { Queue, QueueEvents } = BullMQ;
 
 export type WaJobData = {
   applicantId: string;

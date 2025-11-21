@@ -22,7 +22,7 @@ import { useCandidate, useCandidates } from "@/app/hooks/applicant";
 import { useRecruitment } from "../../context";
 import { RecruitmentStage } from "@prisma/client";
 import HiredSchedulePage from "./HiredCandidate";
-import { ScheduleHiredPayloadCreateModel } from "@/app/models/hired";
+import { ScheduleHiredPayloadCreateModel } from "@/app/models/schedule-hired";
 import { ApplicantDataModel } from "@/app/models/applicant";
 import { useScheduleHireds } from "@/app/hooks/schedule-hired";
 import type { ScheduleHiredFormValues } from "@/app/components/common/form/admin/hired";
@@ -78,15 +78,12 @@ export default function CandidatesPage() {
   // Summary (tampilan header di layout)
   const counts = useMemo<StageCounts>(() => {
     const total = candidatesData.length;
-    const detail = SUMMARY_STAGE_CONFIG.reduce(
-      (acc, item) => {
-        acc[item.key] = candidatesData.filter((c) =>
-          stageMatches(c.stage, ...item.stages)
-        ).length;
-        return acc;
-      },
-      {} as Record<SummaryStageKey, number>
-    );
+    const detail = SUMMARY_STAGE_CONFIG.reduce((acc, item) => {
+      acc[item.key] = candidatesData.filter((c) =>
+        stageMatches(c.stage, ...item.stages)
+      ).length;
+      return acc;
+    }, {} as Record<SummaryStageKey, number>);
     return { all: total, ...detail };
   }, [candidatesData]);
 
@@ -177,8 +174,6 @@ export default function CandidatesPage() {
     // setOnUpdateStatus stabil dari context; updateStatus stabil dari react-query
   }, [setOnUpdateStatus, updateStatus]);
 
-
-
   const handleCreateSceheduleHired = async (
     values: ScheduleHiredFormValues
   ) => {
@@ -187,8 +182,7 @@ export default function CandidatesPage() {
       return;
     }
 
-    const locationId =
-      values.location_id ?? selected.job?.location_id ?? "";
+    const locationId = values.location_id ?? selected.job?.location_id ?? "";
 
     if (!locationId) {
       message.error("Please select a location for the schedule.");
@@ -257,12 +251,7 @@ export default function CandidatesPage() {
               <DraggableCandidateItem
                 key={item.id}
                 id={item.id}
-                name={item.user.name}
-                stage={item.stage}
-                image_url={item.user.photo_url || undefined}
-                email={item.user.email}
-                status={item.stage ?? "all"} // tampilkan stage sekarang
-                active={item.id === selectedId}
+                applicant={item}
                 onClick={() => setSelectedId(item.id)}
                 visibleIndex={(page - 1) * pageSize + idx}
                 onHoverMove={onHoverMove}
