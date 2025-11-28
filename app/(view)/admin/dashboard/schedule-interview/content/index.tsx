@@ -55,7 +55,7 @@ function hm(d: string | Dayjs) {
 /* ---------- Event pill untuk grid kalender ---------- */
 const EventPill: React.FC<{ ev: Interview }> = ({ ev }) => {
   const who = ev.applicant?.user?.name || "Candidate";
-  const role = ev.applicant?.job?.name || "Interview";
+  const role = ev.applicant?.job?.job_title || "Interview";
   const leftColor = ev.is_online ? "#2F88FF" : "#E64A3B";
   return (
     <Tooltip
@@ -314,7 +314,7 @@ export default function ScheduleCalendarPage() {
     ev,
     highlighted,
   }) => {
-    const role = ev.applicant?.job?.name || "Interview";
+    const role = ev.applicant?.job?.job_title || "Interview";
     const who = ev.applicant?.user?.name || "Candidate";
     const accent = highlighted ? "#2F88FF" : "#E6EAF0";
     return (

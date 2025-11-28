@@ -141,9 +141,9 @@ export default function CandidateProgress({ applicant, meta }: Props) {
   const [rejectionReason, setRejectionReason] = useState("");
   const sigBoxDecisionRef = useRef<HTMLDivElement | null>(null);
   const sigBoxPreviewRef = useRef<HTMLDivElement | null>(null);
-  const [activeSigBox, setActiveSigBox] = useState<"decision" | "preview" | null>(
-    null
-  );
+  const [activeSigBox, setActiveSigBox] = useState<
+    "decision" | "preview" | null
+  >(null);
   const [sigPos, setSigPos] = useState({ x: 20, y: 20 });
   const [isDraggingSig, setIsDraggingSig] = useState(false);
   const dragOffset = useRef({ x: 0, y: 0 });
@@ -418,7 +418,7 @@ export default function CandidateProgress({ applicant, meta }: Props) {
               label: "Submitted On",
               value: dayjs(applicant.createdAt).format("MMMM D, YYYY"),
             },
-            { label: "Position", value: applicant.job?.name ?? "-" },
+            { label: "Position", value: applicant.job?.job_title ?? "-" },
           ],
           actions: [
             {
@@ -683,7 +683,7 @@ export default function CandidateProgress({ applicant, meta }: Props) {
 
         const infoItems: StageInfoItem[] = [
           { label: "STATUS", value: "Offer Sent" },
-          { label: "POSITION", value: applicant.job?.name ?? "-" },
+          { label: "POSITION", value: applicant.job?.job_title ?? "-" },
           {
             label: "DECISION",
             value: (
@@ -737,7 +737,7 @@ export default function CandidateProgress({ applicant, meta }: Props) {
 
         const actions: ActionItem[] = [
           {
-            key: "",
+            key: "upload-identity",
             label: "Upload identity document",
             button: {
               text: applicant.user?.no_identity_url
@@ -747,6 +747,18 @@ export default function CandidateProgress({ applicant, meta }: Props) {
               disabled: !!applicant.user?.no_identity_url,
             },
           },
+          {
+            key: "employyee-setup",
+            label: "Complete employee setup procedure documents",
+            button: {
+              text: "Employee Setup Documents",
+              onClick: () =>
+                window.open(
+                  `/user/home/apply-job/detail/employee-setup?applicant_id=${applicant.id}`,
+                  "_blank"
+                ),
+            },
+          },
         ];
 
         const infoItems: StageInfoItem[] = [
@@ -754,7 +766,7 @@ export default function CandidateProgress({ applicant, meta }: Props) {
             label: "STATUS",
             value: "Hiring",
           },
-          { label: "POSITION", value: applicant.job?.name ?? "-" },
+          { label: "POSITION", value: applicant.job?.job_title ?? "-" },
           {
             label: "SCHEDULE ONBOARDING",
             value: scheduleHired ? (
@@ -966,7 +978,7 @@ export default function CandidateProgress({ applicant, meta }: Props) {
                     <Space direction="vertical" size={4}>
                       <Title level={3} style={{ margin: 0, color: "#fff" }}>
                         {applicant.user?.name || "Candidate"} ·{" "}
-                        {applicant.job?.name || "—"}
+                        {applicant.job?.job_title || "—"}
                       </Title>
                       <Text style={{ color: "rgba(255,255,255,0.75)" }}>
                         Application ID: #

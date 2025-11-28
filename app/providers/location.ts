@@ -1,11 +1,13 @@
 import { db } from "@/lib/prisma";
-import { LocationPayloadCreateModel, LocationPayloadUpdateModel } from "../models/location";
+import {
+  LocationPayloadCreateModel,
+  LocationPayloadUpdateModel,
+} from "../models/location";
 
 export const GET_LOCATIONS = async () => {
   const result = await db.location.findMany({});
   return result;
 };
-
 
 export const GET_LOCATION = async (id: string) => {
   const result = await db.location.findUnique({
@@ -15,6 +17,16 @@ export const GET_LOCATION = async (id: string) => {
   });
   return result;
 };
+
+export const GET_LOCATION_BY_USER_ID = async (user_id: string) => {
+  const result = await db.location.findMany({
+    where: {
+      user_id,
+    },
+  });
+  return result;
+}
+
 export const CREATE_LOCATION = async (payload: LocationPayloadCreateModel) => {
   const result = await db.location.create({
     data: payload,

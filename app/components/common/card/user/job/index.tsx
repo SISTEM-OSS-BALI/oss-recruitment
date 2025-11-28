@@ -34,7 +34,7 @@ export default function JobCard({ job }: { job: JobDataModel }) {
         style={{ marginBottom: 12, flexWrap: "wrap" }}
       >
         <Col>
-          <Text style={{ fontSize: 16, fontWeight: 700 }}>{job.name}</Text>
+          <Text style={{ fontSize: 16, fontWeight: 700 }}>{job.job_title}</Text>
           <div
             style={{ marginTop: 8, display: "flex", gap: 7, flexWrap: "wrap" }}
           >

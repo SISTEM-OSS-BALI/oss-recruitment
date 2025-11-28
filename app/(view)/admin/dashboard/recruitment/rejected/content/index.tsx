@@ -118,10 +118,10 @@ export default function CandidatesPage() {
     return filtered.slice(start, start + pageSize);
   }, [filtered, page]);
 
-  const selected = useMemo(
-    () => filtered.find((c) => c.id === selectedId) ?? null,
-    [filtered, selectedId]
-  );
+  // const selected = useMemo(
+  //   () => filtered.find((c) => c.id === selectedId) ?? null,
+  //   [filtered, selectedId]
+  // );
 
   // Reorder saat hover item lain
   const onHoverMove = useCallback((dragId: string, overId: string) => {
@@ -202,6 +202,7 @@ export default function CandidatesPage() {
                 key={item.id}
                 id={item.id}
                 applicant={item}
+                isSelected={item.id === selectedId}
                 onClick={() => setSelectedId(item.id)}
                 visibleIndex={(page - 1) * pageSize + idx}
                 onHoverMove={onHoverMove}

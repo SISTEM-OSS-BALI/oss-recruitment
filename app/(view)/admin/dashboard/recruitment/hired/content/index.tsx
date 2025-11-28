@@ -252,6 +252,7 @@ export default function CandidatesPage() {
                 key={item.id}
                 id={item.id}
                 applicant={item}
+                isSelected={item.id === selectedId}
                 onClick={() => setSelectedId(item.id)}
                 visibleIndex={(page - 1) * pageSize + idx}
                 onHoverMove={onHoverMove}

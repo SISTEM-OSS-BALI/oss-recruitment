@@ -32,7 +32,7 @@ export async function POST(
       contract.applicant?.user?.name ?? "Candidate",
       {
         type: "applied", // atau buat type baru, mis. "offerSent"
-        jobTitle: contract.applicant?.job?.name ?? "Offer",
+        jobTitle: contract.applicant?.job?.job_title ?? "Offer",
         idApply: contract.applicant?.id,
       }
     );

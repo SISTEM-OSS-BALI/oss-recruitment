@@ -137,7 +137,11 @@ export default function MainHeader({
     if (pathname.startsWith("/jobs")) return "/jobs";
     return "/user";
   };
-  const hideBackLink = pathname === "/user";
+  const hideBackLink =
+    pathname === "/user" ||
+    pathname === "/user/home/apply-job/detail/employee-setup";
+
+  const isUserRoot = pathname === "/user";
 
   // ------ Right area: Login button atau Avatar dropdown ------
   const RightAuthArea = () => {
@@ -305,7 +309,7 @@ export default function MainHeader({
 
   return (
     <Header style={headerStyle}>
-      {pathname === "/user" ? (
+      {isUserRoot ? (
         <>
           {/* LOGO + NAV */}
           <div style={{ flex: 1 }}>

@@ -1,11 +1,11 @@
 /* eslint-disable @typescript-eslint/no-empty-object-type */
 
-import { Prisma, ScheduleHired } from "@prisma/client";
+import { Prisma, ScheduleHired, Applicant, Location } from "@prisma/client";
 import { GeneralOmitModel } from "./general-omit";
 
 export interface ScheduleHiredDataModel extends ScheduleHired {
-  applicant: true;
-  location: true;
+  applicant: Applicant;
+  location: Location;
 }
 
 export interface ScheduleHiredPayloadCreateModel

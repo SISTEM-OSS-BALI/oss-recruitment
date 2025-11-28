@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import {
   getConversationForRecruitment,
-  getConversationMessages,
+  getConversationMessagesWithSender,
 } from "@/app/providers/chat";
 
 export const GET = async (req: NextRequest) => {
@@ -34,7 +34,7 @@ export const GET = async (req: NextRequest) => {
       );
     }
 
-    const messages = await getConversationMessages(conversation.id);
+    const messages = await getConversationMessagesWithSender(conversation.id);
 
     return NextResponse.json(
       {

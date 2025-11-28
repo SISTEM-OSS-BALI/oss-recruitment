@@ -99,11 +99,11 @@ export default function ApplyJobContent() {
   const metaItems: MetaItem[] = [
     {
       label: "Employment Type",
-      value: formatLabel(data?.employment),
+      value: formatLabel(data?.commitment),
     },
     {
       label: "Work Arrangement",
-      value: formatLabel(data?.work_type),
+      value: formatLabel(data?.arrangement),
     },
     {
       label: "Job Category",
@@ -111,7 +111,9 @@ export default function ApplyJobContent() {
     },
     {
       label: "Salary Range",
-      value: data?.show_salary ? formatSalary(data?.salary) : "Confidential",
+      value: data?.show_salary
+        ? formatSalary(data?.salary_min, data?.salary_max)
+        : "Confidential",
     },
     {
       label: "Application Deadline",
@@ -148,7 +150,7 @@ export default function ApplyJobContent() {
       <Space direction="vertical" size={24} style={{ width: "100%" }}>
         <HeroCard
           isLoading={isLoading}
-          jobName={data?.name}
+          jobName={data?.job_title}
           locationLabel={formattedLocation}
           closingDate={formattedClosingDate}
           onApply={() => goToQuestinScreening(id)}

@@ -82,7 +82,7 @@ export default function JobList() {
 
   const workTypeOptions = useMemo(
     () =>
-      uniqueOptions((jobData ?? []).map((job) => job.work_type)).map(
+      uniqueOptions((jobData ?? []).map((job) => job.arrangement)).map(
         (value) => ({
           value,
           label: formatEnum(value),
@@ -93,7 +93,7 @@ export default function JobList() {
 
   const employmentOptions = useMemo(
     () =>
-      uniqueOptions((jobData ?? []).map((job) => job.employment)).map(
+      uniqueOptions((jobData ?? []).map((job) => job.commitment)).map(
         (value) => ({
           value,
           label: formatEnum(value),
@@ -164,8 +164,8 @@ export default function JobList() {
   const filteredJobs =
     jobData?.filter((job) => {
       const jobStatus = getJobStatus(job);
-      const workTypeValue = job.work_type ?? "";
-      const employmentValue = job.employment ?? "";
+      const workTypeValue = job.arrangement ?? "";
+      const employmentValue = job.commitment ?? "";
       const locationName = job.location?.name ?? "";
 
       // Status
@@ -188,7 +188,7 @@ export default function JobList() {
       // Search
       const searchMatch =
         search.trim() === "" ||
-        job.name.toLowerCase().includes(search.toLowerCase()) ||
+        job.job_title.toLowerCase().includes(search.toLowerCase()) ||
         sanitizeHtml(job.description).toLowerCase().includes(search.toLowerCase()) ||
         locationName.toLowerCase().includes(search.toLowerCase());
       return (

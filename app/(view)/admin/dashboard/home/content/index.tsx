@@ -107,12 +107,17 @@ export default function DashboardContent() {
     if (!candidates || !jobs) return [];
     const counts = new Map<
       string,
-      { id: string; name: string; applicants: number; isPublished: boolean }
+      {
+        id: string;
+        name: string;
+        applicants: number;
+        isPublished: boolean;
+      }
     >();
 
     candidates.forEach((candidate) => {
       const jobId = candidate.job?.id ?? candidate.job_id ?? "unassigned";
-      const jobName = candidate.job?.name ?? "Unassigned";
+      const jobName = candidate.job?.job_title ?? "Unassigned";
       const published =
         candidate.job?.is_published ??
         jobs.find((job) => job.id === jobId)?.is_published ??
@@ -132,7 +137,7 @@ export default function DashboardContent() {
         ?.slice(0, 5)
         .map((job) => ({
           id: job.id,
-          name: job.name,
+          name: job.job_title,
           applicants: 0,
           isPublished: job.is_published,
         })) ?? [];
@@ -171,7 +176,7 @@ export default function DashboardContent() {
           entries.push({
             id: schedule.id,
             name: candidate.user?.name ?? "Candidate",
-            job: candidate.job?.name ?? "Role",
+            job: candidate.job?.job_title ?? "Role",
             date: start,
             isOnline: Boolean(schedule.is_online),
           });
@@ -410,7 +415,7 @@ export default function DashboardContent() {
                       title={
                         <Space>
                           <Text strong>{candidate.user?.name ?? "Candidate"}</Text>
-                          <Tag>{candidate.job?.name ?? "—"}</Tag>
+                          <Tag>{candidate.job?.job_title ?? "—"}</Tag>
                         </Space>
                       }
                       description={

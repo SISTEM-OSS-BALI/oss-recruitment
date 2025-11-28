@@ -45,15 +45,28 @@ const WORK_TYPE_LABEL: Record<string, string> = {
   REMOTE: "Remote",
 };
 
-function formatCurrency(value?: string | null) {
-  if (!value) return "-";
+function formatCurrency(value?: number | null) {
+  if (value === null || value === undefined) return "-";
   const numeric = Number(value);
-  if (Number.isNaN(numeric)) return value;
+  if (!Number.isFinite(numeric)) return "-";
   return new Intl.NumberFormat("id-ID", {
     style: "currency",
     currency: "IDR",
     maximumFractionDigits: 0,
   }).format(numeric);
+}
+
+function formatSalaryRange(min?: number | null, max?: number | null) {
+  if (min === null || min === undefined) {
+    return formatCurrency(max);
+  }
+  if (max === null || max === undefined) {
+    return formatCurrency(min);
+  }
+  if (min === max) {
+    return formatCurrency(min);
+  }
+  return `${formatCurrency(min)} - ${formatCurrency(max)}`;
 }
 
 export default function JobCard({
@@ -78,10 +91,11 @@ export default function JobCard({
     ],
   };
 
-  const employmentLabel = EMPLOYMENT_LABEL[job.employment] ?? job.employment;
-  const workTypeLabel = WORK_TYPE_LABEL[job.work_type] ?? job.work_type;
+  const employmentLabel =
+    EMPLOYMENT_LABEL[job.commitment] ?? job.commitment;
+  const workTypeLabel = WORK_TYPE_LABEL[job.arrangement] ?? job.arrangement;
   const salaryLabel = job.show_salary
-    ? formatCurrency(job.salary)
+    ? formatSalaryRange(job.salary_min, job.salary_max)
     : "Hidden for candidates";
   const typeLabel = job.type_job === "REFFERAL" ? "Referral" : "Team Member";
   const salaryPrefix = job.type_job === "REFFERAL" ? "Reward" : "Salary";
@@ -92,7 +106,7 @@ export default function JobCard({
         {/* Left: Title + meta */}
         <Space direction="vertical" size={6} style={{ minWidth: 280 }}>
           <Title level={4} style={{ margin: 0 }}>
-            {job.name}
+            {job.job_title}
           </Title>
 
           <Space size="small">

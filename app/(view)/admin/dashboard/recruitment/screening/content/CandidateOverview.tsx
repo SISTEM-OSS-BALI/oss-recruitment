@@ -132,7 +132,7 @@ export default function CandidateOverview({
           email={candidate.user?.email}
           phone={candidate.user?.phone}
           dateOfBirth={candidate.user?.date_of_birth}
-          jobName={candidate.job?.name}
+          jobName={candidate.job?.job_title}
           appliedAt={candidate?.createdAt}
           updatedAt={candidate?.updatedAt}
           link_test_mbti={candidate.mbti_test?.link_url}

@@ -26,9 +26,7 @@ export default function EmployeeSetupModal({
   return (
     <Modal
       open={open}
-      title={
-        type === "create" ? "Tambah Employee Setup" : "Edit Employee Setup"
-      }
+      title={type === "create" ? "Add Employee Setup" : "Edit Employee Setup"}
       footer={null}
       onCancel={onClose}
       destroyOnClose

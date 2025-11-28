@@ -208,7 +208,7 @@ export default function EmployeeSetupTemplateContent() {
         <Flex justify="space-between" wrap gap={16}>
           <SearchBar onSearch={handleSearch} value={searchValue} width={320} />
           <CustomButton
-            title="Tambah Employee Setup"
+            title="Add Employee Setup"
             onClick={handleOpenModal}
             icon={<PlusOutlined />}
           />

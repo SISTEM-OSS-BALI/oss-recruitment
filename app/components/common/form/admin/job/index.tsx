@@ -4,11 +4,13 @@ import {
   Alert,
   Button,
   Checkbox,
+  Col,
   DatePicker,
   Form,
   FormInstance,
   Input,
   InputNumber,
+  Row,
   Select,
   Segmented,
 } from "antd";
@@ -52,10 +54,6 @@ export default function JobForm({
     form.resetFields();
 
     if (type === "update" && initialValues) {
-      const salaryNumeric = initialValues.salary
-        ? Number(initialValues.salary.toString().replace(/[^\d]/g, ""))
-        : undefined;
-
       const nextType =
         initialValues.type_job &&
         TYPE_JOB_OPTIONS.includes(
@@ -68,25 +66,32 @@ export default function JobForm({
 
       form.setFieldsValue({
         ...initialValues,
-        salary:
-          nextType === "REFFERAL" || Number.isNaN(salaryNumeric)
-            ? undefined
-            : salaryNumeric,
         type_job: nextType,
         show_salary:
           nextType === "REFFERAL" ? false : Boolean(initialValues.show_salary),
-        work_type: initialValues.work_type ?? WORK_TYPE_OPTIONS[0],
-        employment: initialValues.employment ?? EMPLOYMENT_TYPE_OPTIONS[0],
+        arrangement:
+          nextType === "REFFERAL"
+            ? WORK_TYPE_OPTIONS[0]
+            : initialValues.arrangement ?? WORK_TYPE_OPTIONS[0],
+        commitment:
+          nextType === "REFFERAL"
+            ? EMPLOYMENT_TYPE_OPTIONS[0]
+            : initialValues.commitment ?? EMPLOYMENT_TYPE_OPTIONS[0],
+        salary_min:
+          nextType === "REFFERAL" ? undefined : initialValues.salary_min,
+        salary_max:
+          nextType === "REFFERAL" ? undefined : initialValues.salary_max,
         until_at: initialValues.until_at
           ? dayjs(initialValues.until_at)
           : undefined,
       });
     } else {
-      setSelectedType(TYPE_JOB_OPTIONS[0]);
+      const defaultType = TYPE_JOB_OPTIONS[0];
+      setSelectedType(defaultType);
       form.setFieldsValue({
-        type_job: TYPE_JOB_OPTIONS[0],
-        work_type: WORK_TYPE_OPTIONS[0],
-        employment: EMPLOYMENT_TYPE_OPTIONS[0],
+        type_job: defaultType,
+        arrangement: WORK_TYPE_OPTIONS[0],
+        commitment: EMPLOYMENT_TYPE_OPTIONS[0],
         show_salary: true,
       });
     }
@@ -98,10 +103,11 @@ export default function JobForm({
 
     if (selectedType === "REFFERAL") {
       form.setFieldsValue({
-        salary: undefined,
+        salary_min: undefined,
+        salary_max: undefined,
         show_salary: false,
-        work_type: WORK_TYPE_OPTIONS[0],
-        employment: EMPLOYMENT_TYPE_OPTIONS[0],
+        arrangement: WORK_TYPE_OPTIONS[0],
+        commitment: EMPLOYMENT_TYPE_OPTIONS[0],
       });
     } else if (form.getFieldValue("show_salary") === undefined) {
       form.setFieldValue("show_salary", true);
@@ -144,37 +150,66 @@ export default function JobForm({
         />
       )}
       <Form.Item
-        name="name"
-        label="Name Job"
-        rules={[{ required: true, message: "Name Job is required" }]}
+        name="job_title"
+        label="Job Title"
+        rules={[{ required: true, message: "Job title is required" }]}
       >
-        <Input placeholder="Add Name Job" size="large" />
+        <Input placeholder="Add job title" size="large" />
+      </Form.Item>
+      <Form.Item
+        name="job_role"
+        label="Job Role"
+        rules={[{ required: true, message: "Job role is required" }]}
+      >
+        <Input placeholder="Add job role" size="large" />
       </Form.Item>
       <Form.Item
         name="description"
-        label="Description"
-        rules={[{ required: true, message: "Description is required" }]}
+        label="Job Summary"
+        rules={[{ required: true, message: "Job summary is required" }]}
       >
         <ReactQuill placeholder="Add Description" theme="snow" />
       </Form.Item>
       {selectedType === "TEAM_MEMBER" ? (
         <>
-          <Form.Item
-            name="salary"
-            label="Salary"
-            rules={[{ required: true, message: "Salary is required" }]}
-          >
-            <InputNumber
-              style={{ width: "100%" }}
-              min={0}
-              formatter={(value) =>
-                value ? `Rp ${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ".") : ""
-              }
-              parser={(value) => value?.replace(/[Rp.\s]/g, "") ?? ""}
-              placeholder="Enter salary amount"
-              size="large"
-            />
-          </Form.Item>
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item
+                name="salary_min"
+                label="Minimum Salary"
+                rules={[{ required: true, message: "Minimum salary is required" }]}
+              >
+                <InputNumber
+                  style={{ width: "100%" }}
+                  min={0}
+                  formatter={(value) =>
+                    value ? `Rp ${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ".") : ""
+                  }
+                  parser={(value) => value?.replace(/[Rp.\s]/g, "") ?? ""}
+                  placeholder="Enter minimum salary"
+                  size="large"
+                />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item
+                name="salary_max"
+                label="Maximum Salary"
+                rules={[{ required: true, message: "Maximum salary is required" }]}
+              >
+                <InputNumber
+                  style={{ width: "100%" }}
+                  min={0}
+                  formatter={(value) =>
+                    value ? `Rp ${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ".") : ""
+                  }
+                  parser={(value) => value?.replace(/[Rp.\s]/g, "") ?? ""}
+                  placeholder="Enter maximum salary"
+                  size="large"
+                />
+              </Form.Item>
+            </Col>
+          </Row>
           <Form.Item
             name="show_salary"
             valuePropName="checked"
@@ -183,9 +218,9 @@ export default function JobForm({
             <Checkbox>Show salary in job listing</Checkbox>
           </Form.Item>
           <Form.Item
-            name="work_type"
-            label="Work Type"
-            rules={[{ required: true, message: "Work type is required" }]}
+            name="arrangement"
+            label="Work Arrangement"
+            rules={[{ required: true, message: "Work arrangement is required" }]}
           >
             <Select placeholder="Select work arrangement" size="large">
               {WORK_TYPE_OPTIONS.map((type) => (
@@ -196,9 +231,9 @@ export default function JobForm({
             </Select>
           </Form.Item>
           <Form.Item
-            name="employment"
-            label="Employment Type"
-            rules={[{ required: true, message: "Employment type is required" }]}
+            name="commitment"
+            label="Commitment Type"
+            rules={[{ required: true, message: "Commitment type is required" }]}
           >
             <Select placeholder="Select employment type" size="large">
               {EMPLOYMENT_TYPE_OPTIONS.map((type) => (
@@ -214,13 +249,16 @@ export default function JobForm({
           <Form.Item name="show_salary" hidden valuePropName="checked">
             <Checkbox />
           </Form.Item>
-          <Form.Item name="work_type" hidden>
+          <Form.Item name="arrangement" hidden>
             <Input />
           </Form.Item>
-          <Form.Item name="employment" hidden>
+          <Form.Item name="commitment" hidden>
             <Input />
           </Form.Item>
-          <Form.Item name="salary" hidden>
+          <Form.Item name="salary_min" hidden>
+            <Input />
+          </Form.Item>
+          <Form.Item name="salary_max" hidden>
             <Input />
           </Form.Item>
         </>

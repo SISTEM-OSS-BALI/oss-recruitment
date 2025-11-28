@@ -1,4 +1,4 @@
-import { RecruitmentStage } from "@prisma/client";
+import { Prisma, RecruitmentStage } from "@prisma/client";
 
 import { db } from "@/lib/prisma";
 import {
@@ -10,6 +10,7 @@ import {
 
 type JobFilter = {
   is_published?: boolean;
+  includeDrafts?: boolean;
 };
 
 const CONNECTED_STAGES: RecruitmentStage[] = [
@@ -44,12 +45,26 @@ const selectApplicantsForStats = {
   Conversation: { select: { id: true } },
 };
 
-export const GET_JOBS = async (filter?: JobFilter): Promise<JobDataModel[]> => {
+export const GET_JOBS = async (
+  filter?: JobFilter,
+  user_id?: string
+): Promise<JobDataModel[]> => {
+  const where: Record<string, unknown> = {};
+
+  if (filter?.is_published !== undefined) {
+    where.is_published = filter.is_published;
+  }
+
+  if (!filter?.includeDrafts) {
+    where.is_draft = false;
+  }
+
+  if (user_id) {
+    where.user_id = user_id;
+  }
+
   const rows = await db.job.findMany({
-    where:
-      filter?.is_published === undefined
-        ? undefined
-        : { is_published: filter.is_published },
+    where: Object.keys(where).length ? (where as Prisma.JobWhereInput) : undefined,
     include: {
       location: true,
       Applicant: {
@@ -119,3 +134,17 @@ export const DELETE_JOB = async (id: string) => {
   });
   return result;
 };
+
+export const PUBLISH_JOB = async (id: string) => {
+  const result = await db.job.update({
+    where: {
+      id,
+    },
+    data: {
+      is_published: true,
+      is_draft: false,
+    },
+    include: { location: true },
+  });
+  return result;
+}

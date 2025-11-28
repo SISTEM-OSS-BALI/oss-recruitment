@@ -5,7 +5,7 @@ export type Candidate = {
   interestTags: Interest[]; // relasi User.interestTags
 };
 
-export type JobLite = { name: string; description: string };
+export type JobLite = { job_title: string; description: string };
 
 export type ScoredCandidate = Candidate & {
   score: number;
@@ -171,7 +171,7 @@ const SYN = buildSynonymIndex(SYNONYMS);
  * - +1 per token interest yang muncul di token job (maks 3 per interest)
  */
 function scoreCandidate(job: JobLite, cand: Candidate): ScoredCandidate {
-  const jobText = normalize(`${job.name} ${job.description}`);
+  const jobText = normalize(`${job.job_title} ${job.description}`);
   const jobTokens = new Set(tokenize(jobText));
   const matched: string[] = [];
   let score = 0;

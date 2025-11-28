@@ -16,6 +16,7 @@ import {
   Empty,
   Form,
   FormInstance,
+  Image,
   Input,
   Modal,
   Row,
@@ -387,18 +388,18 @@ export function OfferContractManager({
   const directorSignatureSignedAt =
     contractByApplicant?.directorSignatureSignedAt || null;
   const directorSignedPdfUrl =
-    contractByApplicant?.directorSignedPdfUrl || null;
+    contractByApplicant?.directorSignedPdfUrl ?? undefined;
   const hasDirectorSigned = Boolean(
     directorSignatureSignedAt || directorSignedPdfUrl
   );
   const directorSignatureRequestedAt =
     contractByApplicant?.directorSignatureRequestedAt || null;
   const directorSignatureUrl =
-    contractByApplicant?.directorSignatureUrl || null;
+    contractByApplicant?.directorSignatureUrl ?? undefined;
   // const candidateSignatureUrl =
-  //   contractByApplicant?.candidateSignatureUrl || null;
+  //   contractByApplicant?.candidateSignatureUrl ?? undefined;
   const candidateSignedPdfUrl =
-    contractByApplicant?.candidateSignedPdfUrl || null;
+    contractByApplicant?.candidateSignedPdfUrl ?? undefined;
   // const candidateSignedPdfAt =
   //   contractByApplicant?.candidateSignedPdfAt || null;
   // const candidateNotifyEmail = contractByApplicant?.notifyEmail || "";
@@ -1093,9 +1094,9 @@ export function OfferContractManager({
           onDirectorEmailChange={setDirectorEmail}
           onRequestSignature={handleRequestSignature}
           requestLoading={onRequestDirectorSignatureLoading}
-          directorSignatureUrl={directorSignatureUrl}
-          directorSignedPdfUrl={directorSignedPdfUrl}
-          candidateSignedPdfUrl={candidateSignedPdfUrl}
+          directorSignatureUrl={directorSignatureUrl!}
+          directorSignedPdfUrl={directorSignedPdfUrl!}
+          candidateSignedPdfUrl={candidateSignedPdfUrl!}
         />
       ) : (
         <Space direction="vertical" size={16} style={{ width: "100%" }}>
@@ -1146,7 +1147,7 @@ export function OfferContractManager({
                 {/\.(png|jpe?g|gif|webp)$/i.test(
                   candidate.user.member_card_url.split("?")[0] || ""
                 ) ? (
-                  <img
+                  <Image
                     src={candidate.user.member_card_url}
                     alt="Member card"
                     style={{

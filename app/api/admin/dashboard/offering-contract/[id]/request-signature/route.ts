@@ -51,7 +51,7 @@ export async function POST(
     }
 
     const candidateName = contract.applicant?.user?.name ?? "Candidate";
-    const jobTitle = contract.applicant?.job?.name ?? "Requested Position";
+    const jobTitle = contract.applicant?.job?.job_title ?? "Requested Position";
     const contractUrl =
       contract.candidateSignedPdfUrl && contract.candidateSignedPdfUrl.trim()
         ? contract.candidateSignedPdfUrl

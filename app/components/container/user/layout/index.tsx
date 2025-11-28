@@ -37,9 +37,15 @@ export default function UserLayout({
   const router = useRouter();
   const { unreadCount, conversations, isFetching } = useChatUnread();
 
-  const showHeader = !pathname.startsWith("/user/home");
-  const showSider = pathname.startsWith("/user/home");
-  const showHeaderDashboard = pathname.startsWith("/user/home");
+  const showHeaderHome =
+    pathname === "/user" ||
+    pathname.startsWith("/user/home/apply-job/detail/employee-setup");
+  const showSider =
+    pathname.startsWith("/user/home") &&
+    !pathname.startsWith("/user/home/apply-job/detail/employee-setup");
+  const showHeaderDashboard =
+    pathname.startsWith("/user/home") &&
+    !pathname.startsWith("/user/home/apply-job/detail/employee-setup");
 
   const headerStyle = {
     background: "#fff",
@@ -132,7 +138,7 @@ export default function UserLayout({
     <Layout style={{ minHeight: "100vh" }}>
       {showSider && <SiderUser />}
       <Layout>
-        {showHeader && <MainHeader />}
+        {showHeaderHome && <MainHeader />}
         {showHeaderDashboard && (
           <Header style={headerStyle}>
             <div style={{ padding: 24 }}>

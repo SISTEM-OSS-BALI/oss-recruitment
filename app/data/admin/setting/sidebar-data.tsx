@@ -13,6 +13,7 @@ import {
   faCircleQuestion,
   faBookOpen,
   faFileLines,
+  faGear,
 } from "@fortawesome/free-solid-svg-icons";
 import menuLabel from "@/app/utils/label";
 
@@ -25,12 +26,6 @@ export const SidebarMenuSettingAdmin = (): MenuProps["items"] => {
       label: menuLabel("Setting Job"),
       icon: <FontAwesomeIcon icon={faBriefcase} />,
       onClick: () => router.push("/admin/dashboard/setting-job"),
-    },
-    {
-      key: "/admin/dashboard/location",
-      label: menuLabel("Location"),
-      icon: <FontAwesomeIcon icon={faLocationDot} />,
-      onClick: () => router.push("/admin/dashboard/location"),
     },
     {
       key: "/admin/dashboard/template",
@@ -119,6 +114,27 @@ export const SidebarMenuSettingAdmin = (): MenuProps["items"] => {
     //   icon: <FontAwesomeIcon icon={faUserTie} />,
     //   onClick: () => router.push("/admin/dashboard/consultant"),
     // },
+    {
+      key: "/admin/dashboard/company-setting",
+      label: menuLabel("Company Setting"),
+      icon: <FontAwesomeIcon icon={faGear} />,
+      children: [
+        {
+          key: "/admin/dashboard/company-setting/profile",
+          label: menuLabel("Company Profile"),
+          icon: <FontAwesomeIcon icon={faBriefcase} />,
+          onClick: () =>
+            router.push("/admin/dashboard/company-setting/profile"),
+        },
+        {
+          key: "/admin/dashboard/company-setting/location",
+          label: menuLabel("Location"),
+          icon: <FontAwesomeIcon icon={faLocationDot} />,
+          onClick: () =>
+            router.push("/admin/dashboard/company-setting/location"),
+        },
+      ],
+    },
   ];
 
   return sidebarMenu;

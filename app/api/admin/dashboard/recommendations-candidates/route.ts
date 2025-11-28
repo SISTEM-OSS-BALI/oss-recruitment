@@ -25,7 +25,7 @@ export async function GET(req: NextRequest) {
   try {
     const job = await db.job.findUnique({
       where: { id: jobId },
-      select: { name: true, description: true },
+      select: { job_title: true, description: true },
     });
 
     if (!job) {
@@ -45,7 +45,7 @@ export async function GET(req: NextRequest) {
     });
 
     const result = recommendCandidates(
-      { name: job.name, description: job.description },
+      { job_title: job.job_title, description: job.description },
       candidates.map((candidate) => ({
         ...candidate,
         interestTags: candidate.interestTags.map((tag) => ({

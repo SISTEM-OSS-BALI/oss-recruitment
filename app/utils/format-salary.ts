@@ -1,11 +1,26 @@
-export default function formatSalary(salary: string | number) {
-    const value =
-        typeof salary === "string"
-            ? Number(salary.replace(/[^0-9.-]+/g, ""))
-            : salary;
-    const normalized = Number.isFinite(Number(value)) ? Number(value) : 0;
-    return new Intl.NumberFormat("id-ID", {
-        style: "currency",
-        currency: "IDR",
-    }).format(normalized);
+export default function formatSalary(
+    min?: number | null,
+    max?: number | null,
+) {
+    const formatValue = (value?: number | null) => {
+        if (value === null || value === undefined) return "-";
+        const numeric = Number(value);
+        if (!Number.isFinite(numeric)) return "-";
+        return new Intl.NumberFormat("id-ID", {
+            style: "currency",
+            currency: "IDR",
+        }).format(numeric);
+    };
+
+    if (
+        min !== null &&
+        min !== undefined &&
+        max !== null &&
+        max !== undefined &&
+        min !== max
+    ) {
+        return `${formatValue(min)} - ${formatValue(max)}`;
+    }
+
+    return formatValue(min ?? max);
 }

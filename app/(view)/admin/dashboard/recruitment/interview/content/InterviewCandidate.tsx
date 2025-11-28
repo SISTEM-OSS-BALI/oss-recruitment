@@ -88,7 +88,7 @@ export default function InterviewSchedulePage({
           email={candidate.user.email}
           phone={candidate.user.phone}
           dateOfBirth={candidate.user.date_of_birth}
-          jobName={candidate.job.name}
+          jobName={candidate.job?.job_title}
           appliedAt={candidate.createdAt}
           updatedAt={candidate.updatedAt}
           cvUrl={candidate.user.curiculum_vitae_url}

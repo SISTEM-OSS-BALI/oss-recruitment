@@ -27,8 +27,8 @@ export default function EmployeeSetupQuestionModal({
       open={open}
       title={
         type === "create"
-          ? "Tambah Aktivitas Employee Setup"
-          : "Edit Aktivitas Employee Setup"
+          ? "Add Activity Employee Setup"
+          : "Edit Activity Employee Setup"
       }
       footer={null}
       onCancel={onClose}

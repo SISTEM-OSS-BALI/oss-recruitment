@@ -564,7 +564,9 @@ const ChatWidget: React.FC<ChatWidgetProps> = ({
                   flexWrap: "wrap",
                 }}
               >
-                {applicant?.job?.name && <span>{applicant.job.name}</span>}
+                {applicant?.job?.job_title && (
+                  <span>{applicant.job.job_title}</span>
+                )}
                 <PresenceBadge online={peer.online} typing={peer.typing} />
               </div>
             </div>

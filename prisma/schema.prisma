@@ -98,25 +98,32 @@ enum MethodEmployeeSetupQuestion {
 }
 
 model Job {
-  id          String         @id @default(cuid())
-  name        String
-  until_at    DateTime
-  description String         @db.LongText
-  createdAt   DateTime       @default(now())
-  updatedAt   DateTime       @updatedAt
-  salary      String
-  type_job    TypeJob
-  work_type   WorkType
-  employment  EmploymentType
+  id                   String         @id @default(cuid())
+  job_title            String
+  job_role             String
+  until_at             DateTime
+  description          String         @db.LongText
+  description_sections Json?
+  requirement          Json?
+  createdAt            DateTime       @default(now())
+  updatedAt            DateTime       @updatedAt
+  salary_min           Int
+  salary_max           Int
+  type_job             TypeJob        @default(TEAM_MEMBER)
+  arrangement          WorkType
+  commitment           EmploymentType
+  is_have_domicile     Boolean        @default(false)
+  is_draft             Boolean        @default(true)
+  show_salary          Boolean        @default(false)
+  is_published         Boolean        @default(false)
+  step                 Int            @default(0)
+  user_id              String?
+  owner                User?          @relation("JobOwner", fields: [user_id], references: [id], onDelete: SetNull, onUpdate: Cascade)
 
-  is_published Boolean @default(false)
-  show_salary  Boolean @default(false)
-
-  location_id String
-  location    Location @relation(fields: [location_id], references: [id], onDelete: Cascade, onUpdate: Cascade)
-
-  candidate User[]
-  Applicant Applicant[]
+  location_id String?
+  location    Location? @relation(fields: [location_id], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  candidate   User[]   @relation("CandidateJobs")
+  Applicant   Applicant[]
 
   @@map("job")
 }
@@ -127,8 +134,14 @@ model Location {
   maps_url      String
   type          LocationType    @default(HEAD_OFFICE)
   address       String
+  district      String
+  province      String
+  country       String
   createdAt     DateTime        @default(now())
   updatedAt     DateTime        @updatedAt
+  user_id       String
+
+  user          User            @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: Cascade)
   job           Job[]
   scheduleHired ScheduleHired[]
 
@@ -155,15 +168,18 @@ model User {
 
   interestTags UserInterestTag[]
   job_id       String?
-  job          Job?              @relation(fields: [job_id], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  job          Job?              @relation("CandidateJobs", fields: [job_id], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  location     Location[]
+  jobsOwned    Job[]             @relation("JobOwner")
 
-  createdAt    DateTime      @default(now())
-  updatedAt    DateTime      @updatedAt
-  Applicant    Applicant[]
-  Participant  Participant[]
-  MessageRead  MessageRead[]
-  Message      Message[]     @relation("MessagesByRecipient")
-  messagesSent Message[]     @relation("MessagesBySender")
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+  Applicant        Applicant[]
+  Participant      Participant[]
+  MessageRead      MessageRead[]
+  Message          Message[]        @relation("MessagesByRecipient")
+  messagesSent     Message[]        @relation("MessagesBySender")
+  profileCompanies ProfileCompany[]
 
   @@map("user")
 }
@@ -195,16 +211,17 @@ model Applicant {
 
   screeningSubmittedAt DateTime?
 
-  mbti_test_id        String?               @unique
-  mbti_test           MbtiTest?             @relation("ApplicantMbti", fields: [mbti_test_id], references: [id], onDelete: SetNull, onUpdate: Cascade)
-  historyCandidate    HistoryCandidate[]
-  scheduleInterview   ScheduleInterview[]
-  noteInterview       NoteInterview[]
-  matriksAnswer       MatriksAnswer[]
-  evaluatorAssignment EvaluatorAssignment[]
-  OfferingContract    OfferingContract[]
-  ScheduleHired       ScheduleHired[]
-  Conversation        Conversation[]
+  mbti_test_id            String?                  @unique
+  mbti_test               MbtiTest?                @relation("ApplicantMbti", fields: [mbti_test_id], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  historyCandidate        HistoryCandidate[]
+  scheduleInterview       ScheduleInterview[]
+  noteInterview           NoteInterview[]
+  matriksAnswer           MatriksAnswer[]
+  evaluatorAssignment     EvaluatorAssignment[]
+  OfferingContract        OfferingContract[]
+  ScheduleHired           ScheduleHired[]
+  Conversation            Conversation[]
+  applicantEmployeeSetups ApplicantEmployeeSetup[]
 
   @@map("applicant")
 }
@@ -342,6 +359,8 @@ model CardTemplate {
   image_url_back  String
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
+
+  @@map("card_template")
 }
 
 model Contract {
@@ -722,7 +741,8 @@ model EmployeeSetup {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  employeeSetupQuestion EmployeeSetupQuestion[]
+  employeeSetupQuestion   EmployeeSetupQuestion[]
+  applicantEmployeeSetups ApplicantEmployeeSetup[]
 
   @@map("employee_setup")
 }
@@ -769,4 +789,38 @@ model EmployeeSetupAnswer {
   updatedAt DateTime @updatedAt
 
   @@map("employee_setup_answer")
+}
+
+model ApplicantEmployeeSetup {
+  id              String @id @default(cuid())
+  applicantId     String
+  employeeSetupId String
+
+  applicant     Applicant     @relation(fields: [applicantId], references: [id], onDelete: Cascade)
+  employeeSetup EmployeeSetup @relation(fields: [employeeSetupId], references: [id], onDelete: Cascade)
+
+  @@unique([applicantId, employeeSetupId])
+  @@map("applicant_employee_setup")
+}
+
+model ProfileCompany {
+  id           String @id @default(cuid())
+  company_name String
+  user_id      String
+  user         User   @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  description String @db.LongText
+
+  total_employee Int
+  industry       String
+  website_url    String?
+  instagram_url  String?
+  facebook_url   String?
+  linkedin_url   String?
+  twitter_url    String?
+  logo_url       String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@map("profil_company")
 }

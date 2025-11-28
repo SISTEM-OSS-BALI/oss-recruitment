@@ -17,6 +17,7 @@ type Props = {
   onClick: () => void;
   visibleIndex: number;
   onHoverMove: (dragId: string, overId: string) => void;
+  isSelected?: boolean;
 };
 
 export default function DraggableCandidateItem({
@@ -25,6 +26,7 @@ export default function DraggableCandidateItem({
   onClick,
   visibleIndex,
   onHoverMove,
+  isSelected = false,
 }: Props) {
   const ref = useRef<HTMLDivElement | null>(null);
   const router = useRouter();
@@ -72,8 +74,8 @@ export default function DraggableCandidateItem({
 
   const style: CSSProperties = {
     border: "1px solid",
-    borderColor: applicant.stage ? "#2370ff" : "#f0f0f0",
-    background: applicant.stage ? "#f5f9ff" : "#fff",
+    borderColor: isSelected ? "#2370ff" : "#f0f0f0",
+    background: isSelected ? "#f5f9ff" : "#fff",
     borderRadius: 12,
     padding: 12,
     marginBottom: 10,
@@ -98,14 +100,14 @@ export default function DraggableCandidateItem({
   const onMenuClick: MenuProps["onClick"] = ({ key }) => {
     switch (key) {
       case "chat":
-        router.push(`/admin/dashboard/chat?applicant_id=${id}`);
+        router.push(`/admin/dashboard/chat-user?applicant_id=${id}`);
         break;
 
       case "chatViaWhatsaap": {
         openWhatsAppTemplate({
           to: applicant?.user?.phone ?? "",
           name: applicant?.user?.name ?? "",
-          position: applicant?.job?.name ?? "",
+          position: applicant?.job?.job_title ?? "",
           message: "Halo, saya ingin bertanya tentang posisi ini",
         });
         break;

@@ -10,7 +10,7 @@ export type JobStats = {
 };
 
 export interface JobDataModel extends Job {
-  location: Location;
+  location: Location | null;
   stats?: JobStats;
 }
 

@@ -29,7 +29,7 @@ export const useJobs = ({ queryString }: { queryString?: string }) => {
       axios.post(baseUrl, payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [queryKey] });
-      MainNotification({ type: "success", entity, action: "created" });
+      // MainNotification({ type: "success", entity, action: "created" });
     },
     onError: () => {
       MainNotification({ type: "error", entity, action: "created" });
@@ -42,9 +42,9 @@ export const useJobs = ({ queryString }: { queryString?: string }) => {
       queryClient.invalidateQueries({ queryKey: [queryKey] });
       MainNotification({ type: "success", entity, action: "deleted" });
     },
-    onError: () => {
-      MainNotification({ type: "error", entity, action: "deleted" });
-    },
+    // onError: () => {
+    //   MainNotification({ type: "error", entity, action: "deleted" });
+    // },
   });
 
   return {
@@ -60,7 +60,6 @@ export const useJobs = ({ queryString }: { queryString?: string }) => {
 export const useJob = ({ id }: { id: string }) => {
   const queryClient = useQueryClient();
 
-  // Query data berdasarkan ID
   const { data, isLoading: fetchLoading } = useQuery({
     queryKey: [entity, id],
     queryFn: async () => {
@@ -70,7 +69,6 @@ export const useJob = ({ id }: { id: string }) => {
     enabled: Boolean(id),
   });
 
-  // Mutasi untuk update
   const { mutateAsync: onUpdate, isPending: onUpdateLoading } = useMutation({
     mutationFn: async ({
       id,
@@ -82,10 +80,23 @@ export const useJob = ({ id }: { id: string }) => {
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: [queryKey] });
       queryClient.invalidateQueries({ queryKey: [entity, variables.id] });
-      MainNotification({ type: "success", entity, action: "updated" });
+      // MainNotification({ type: "success", entity, action: "updated" });
+    },
+    // onError: () => {
+    //   MainNotification({ type: "error", entity, action: "updated" });
+    // },
+  });
+
+  const { mutateAsync: onPublish, isPending: onPublishLoading } = useMutation({
+    mutationFn: async (jobId: string) =>
+      axios.post(`${baseUrl}/publish`, { id: jobId }),
+    onSuccess: (_, jobId) => {
+      queryClient.invalidateQueries({ queryKey: [queryKey] });
+      queryClient.invalidateQueries({ queryKey: [entity, jobId] });
+      MainNotification({ type: "success", entity, action: "published" });
     },
     onError: () => {
-      MainNotification({ type: "error", entity, action: "updated" });
+      MainNotification({ type: "error", entity, action: "published" });
     },
   });
 
@@ -94,5 +105,7 @@ export const useJob = ({ id }: { id: string }) => {
     fetchLoading,
     onUpdate,
     onUpdateLoading,
+    onPublish,
+    onPublishLoading,
   };
 };

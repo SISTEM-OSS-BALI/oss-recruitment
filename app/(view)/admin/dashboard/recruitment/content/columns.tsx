@@ -46,7 +46,7 @@ export default function Columns({
     {
       title: "Apply For",
       render: (_: unknown, record: ApplicantDataModel) => (
-        <span>{record.job?.name ?? "-"}</span>
+        <span>{record.job?.job_title ?? "-"}</span>
       ),
     },
     {

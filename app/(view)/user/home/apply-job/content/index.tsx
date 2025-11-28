@@ -100,7 +100,7 @@ export default function Content() {
       const matchesSearch = normalizedSearch
         ? [
             app?.user?.name,
-            app?.job?.name,
+            app?.job?.job_title,
             app?.id,
             app?.job?.location?.name,
           ]
@@ -187,7 +187,7 @@ export default function Content() {
                 .slice(0, 2)
                 .join("")
                 .toUpperCase() || "C";
-            const jobName = app?.job?.name || "—";
+            const jobName = app?.job?.job_title || "—";
             const created = app?.createdAt ? dayjs(app.createdAt) : null;
             const since = created ? dayjs().to(created) : "—";
             const pct = stagePercent(app?.stage ?? "");

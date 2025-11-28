@@ -140,7 +140,7 @@ export const CREATE_SCHEDULE_INTERVIEW = async (payload: RawPayload) => {
     const name = applicant.user?.name ?? "Candidate";
     const email = applicant.user?.email ?? null;
     const phone = applicant.user?.phone ?? null;
-    const jobTitle = applicant.job?.name ?? "Interview";
+    const jobTitle = applicant.job?.job_title ?? "Interview";
 
     const dateText = dayjs(start_time).format("dddd, DD MMM YYYY");
     const timeText = dayjs(start_time).format("HH:mm");

@@ -34,8 +34,10 @@ export const getConversationForRecruitment = async (
   });
 };
 
-export const getConversationMessages = async (conversationId: string) => {
-  const messages = await db.message.findMany({
+export const getConversationMessagesWithSender = async (
+  conversationId: string
+) => {
+  return db.message.findMany({
     where: { conversationId },
     orderBy: { createdAt: "asc" },
     include: {
@@ -50,10 +52,15 @@ export const getConversationMessages = async (conversationId: string) => {
           size: true,
         },
       },
+      sender: {
+        select: {
+          id: true,
+          name: true,
+          email: true,
+        },
+      },
     },
   });
-
-  return messages;
 };
 
 export const getUnreadSummaryByUser = async (userId: string) => {

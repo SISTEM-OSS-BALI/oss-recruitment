@@ -27,7 +27,7 @@ export default function OfferingCandidate({ candidate }: Props) {
           email={candidate.user.email}
           phone={candidate.user.phone}
           dateOfBirth={candidate.user.date_of_birth}
-          jobName={candidate.job?.name}
+          jobName={candidate.job?.job_title}
           appliedAt={candidate.createdAt}
           stage={candidate.stage}
           updatedAt={candidate.updatedAt}

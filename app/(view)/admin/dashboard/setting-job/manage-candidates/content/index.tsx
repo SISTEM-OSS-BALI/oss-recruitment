@@ -159,7 +159,7 @@ export default function Content() {
           r?.user?.name,
           r?.user?.email,
           r?.user?.phone,
-          r?.job?.name,
+          r?.job?.job_title,
         ]
           .filter(Boolean)
           .join(" ")
@@ -367,7 +367,7 @@ export default function Content() {
       key: "job",
       render: (_: ApplicantDataModel, row: ApplicantDataModel) => (
         <Space direction="vertical" size={2}>
-          <Text>{row?.job?.name || "-"}</Text>
+          <Text>{row?.job?.job_title || "-"}</Text>
           <Text type="secondary" style={{ fontSize: 12 }}>
             created: {dayjs(row?.createdAt).format("DD MMM YYYY HH:mm")}
           </Text>

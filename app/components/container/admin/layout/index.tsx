@@ -122,7 +122,7 @@ export default function AdminLayout({
     const applicantId =
       target.conversation?.applicant?.id ?? target.conversation?.applicantId;
     if (applicantId) {
-      router.push(`/admin/dashboard/chat?applicant_id=${applicantId}`);
+      router.push(`/admin/dashboard/chat-user?applicant_id=${applicantId}`);
     } else {
       router.push(`/admin/dashboard/chat`);
     }

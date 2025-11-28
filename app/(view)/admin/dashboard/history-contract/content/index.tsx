@@ -48,7 +48,7 @@ export default function HistoryContractContent() {
     const qNorm = q.trim().toLowerCase();
     return (data || []).filter((c) => {
       const name = c?.applicant?.user?.name || "";
-      const job = c?.applicant?.job?.name || "";
+      const job = c?.applicant?.job?.job_title || "";
 
       const matchQ =
         !qNorm ||
@@ -120,7 +120,7 @@ export default function HistoryContractContent() {
           renderItem={(contract) => {
             const id = contract?.id;
             const name = contract?.applicant?.user?.name || "-";
-            const job = contract?.applicant?.job?.name || "-";
+            const job = contract?.applicant?.job?.job_title || "-";
             const stage = contract?.applicant?.stage || "UNKNOWN";
             const filePath = contract?.filePath || "";
 

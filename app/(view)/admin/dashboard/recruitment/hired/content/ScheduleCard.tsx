@@ -302,10 +302,3 @@ export default function SchedulePretty({
   );
 }
 
-/* Contoh pakai:
-<SchedulePretty
-  date="2025-10-27"
-  time="2025-10-27T10:43:00+08:00"
-  location={{ name: "-", headline: "", description: "" }}
-/>
-*/

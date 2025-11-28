@@ -95,3 +95,21 @@ export const useLocation = ({ id }: { id: string }) => {
     onUpdateLoading,
   };
 };
+
+export const useLocationByUserId = ({ id }: { id?: string }) => {
+  const { data, isLoading: fetchLoading } = useQuery({
+    queryKey: [entity, id],
+    queryFn: async () => {
+      const result = await axios.get(
+        `${baseUrl}/location-by-userId?userId=${id}`
+      );
+      return result.data.result as LocationDataModel[];
+    },
+    enabled: Boolean(id),
+  });
+
+  return {
+    data,
+    fetchLoading,
+  };
+};

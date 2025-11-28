@@ -72,6 +72,9 @@ export default function FormScreeningQuestionAll({
     queryString: `type=${job_type}`,
   });
   const bases = useMemo(() => coerceBases(data), [data]);
+  const selectedBaseId = bases.find((base) =>
+    base.questions?.some((question) => question.job_id === job_id)
+  )?.id;
 
   // form global untuk SEMUA base
   const [form] = Form.useForm();
@@ -114,6 +117,14 @@ export default function FormScreeningQuestionAll({
   // SUBMIT: validasi semua tab + kirim semua base
   async function handleSubmitAll() {
     try {
+      if (!job_id || !user_id) {
+        Modal.error({
+          title: "Missing information",
+          content: "Pastikan kamu sudah login dan memilih pekerjaan.",
+        });
+        return;
+      }
+
       setSubmitting(true);
       // validasi semua field dari seluruh base
       const raw = await form.validateFields();
@@ -158,9 +169,17 @@ export default function FormScreeningQuestionAll({
               : Array.isArray(a.optionIds) && a.optionIds.length > 0
           ) != null;
 
-        if (!hasAny) continue;
+      if (!hasAny) continue;
 
-        payloads.push({ job_id, user_id, base_id: b.id, answers });
+      payloads.push({ job_id, user_id, base_id: b.id, answers });
+    }
+
+      if (payloads.length === 0) {
+        Modal.error({
+          title: "No answers detected",
+          content: "Isi setidaknya satu jawaban sebelum mengirimkan screening.",
+        });
+        return;
       }
 
       for (const payload of payloads) {
@@ -218,8 +237,10 @@ export default function FormScreeningQuestionAll({
             // siapkan object untuk setiap base → { bases: { [id]: { entries: [{}] } } }
             initialValues={{
               bases: Object.fromEntries(
-                bases.map((b) => [b.id, { entries: [{}] }])
+                bases.map((b) => [b.id, { entries: [{}], base_id: b.id }])
               ),
+              job_id,
+              user_id,
             }}
             style={{ maxWidth: 920 }}
           >

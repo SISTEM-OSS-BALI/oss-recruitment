@@ -6,6 +6,7 @@ import {
   faChartLine,
   faCalendarCheck,
   faHome,
+  faMessage,
 } from "@fortawesome/free-solid-svg-icons";
 import menuLabel from "@/app/utils/label";
 
@@ -36,6 +37,12 @@ export const SidebarMenuMainAdmin = (): MenuProps["items"] => {
       label: menuLabel("Schedule Interview"),
       icon: <FontAwesomeIcon icon={faCalendarCheck} />,
       onClick: () => router.push("/admin/dashboard/schedule-interview"),
+    },
+    {
+      key: "/admin/dashboard/chat",
+      label: menuLabel("Chat"),
+      icon: <FontAwesomeIcon icon={faMessage} />,
+      onClick: () => router.push("/admin/dashboard/chat"),
     },
   ];
 

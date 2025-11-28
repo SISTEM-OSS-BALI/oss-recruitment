@@ -1,6 +1,7 @@
 import { LocationPayloadCreateModel } from "@/app/models/location";
 import { CREATE_LOCATION, GET_LOCATIONS } from "@/app/providers/location";
 import { GeneralError } from "@/app/utils/general-error";
+import { Prisma } from "@prisma/client";
 import { NextRequest, NextResponse } from "next/server";
 
 export const GET = async () => {
@@ -26,6 +27,15 @@ export const GET = async () => {
         { status: error.code }
       );
     }
+
+    console.error("[LOCATION][GET] unexpected error:", error);
+    return NextResponse.json(
+      {
+        success: false,
+        message: "Internal server error",
+      },
+      { status: 500 }
+    );
   }
 };
 
@@ -55,5 +65,27 @@ export const POST = async (req: NextRequest) => {
         { status: error.code }
       );
     }
+
+    if (
+      error instanceof Prisma.PrismaClientKnownRequestError &&
+      error.code === "P2003"
+    ) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "User ID tidak ditemukan, pastikan memilih user yang valid.",
+          error_code: error.code,
+        },
+        { status: 400 }
+      );
+    }
+
+    return NextResponse.json(
+      {
+        success: false,
+        message: "Internal server error",
+      },
+      { status: 500 }
+    );
   }
 };

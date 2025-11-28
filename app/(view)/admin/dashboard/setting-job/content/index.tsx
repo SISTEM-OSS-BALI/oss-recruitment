@@ -5,29 +5,21 @@ import { PlusOutlined, SearchOutlined } from "@ant-design/icons";
 import dayjs from "dayjs";
 
 import { useJob, useJobs } from "@/app/hooks/job";
-import {
-  JobDataModel,
-  JobPayloadCreateModel,
-  JobPayloadUpdateModel,
-} from "@/app/models/job";
+import { JobDataModel, JobPayloadUpdateModel } from "@/app/models/job";
 
 import CustomButton from "@/app/components/common/custom-buttom";
 import JobModal from "@/app/components/common/modal/admin/job";
 import JobCard from "./JobCards";
 import { useRouter } from "next/navigation";
 import ModalRecommendedCandidate from "./ModalRecommendedCandidate";
+import {
+  EMPLOYMENT_TYPE_OPTIONS,
+  TYPE_JOB_OPTIONS,
+  WORK_TYPE_OPTIONS,
+  buildJobPayload,
+} from "@/app/(view)/admin/dashboard/setting-job/utils";
 
 const { Text } = Typography;
-
-const WORK_TYPE_OPTIONS = ["ONSITE", "HYBRID", "REMOTE"] as const;
-const EMPLOYMENT_TYPE_OPTIONS = [
-  "FULL_TIME",
-  "PART_TIME",
-  "CONTRACT",
-  "INTERNSHIP",
-  "FREELANCE",
-] as const;
-const TYPE_JOB_OPTIONS = ["TEAM_MEMBER", "REFFERAL"] as const;
 
 export default function SettingJobContent() {
   const [form] = Form.useForm<JobDataModel>();
@@ -63,7 +55,7 @@ export default function SettingJobContent() {
 
   const filtered = useMemo(() => {
     const bySearch = (j: JobDataModel) =>
-      j.name.toLowerCase().includes(search.toLowerCase());
+      j.job_title.toLowerCase().includes(search.toLowerCase());
 
     const byTab = (j: JobDataModel) => {
       if (tab === "active") return j.is_published === true;
@@ -86,73 +78,22 @@ export default function SettingJobContent() {
     form.setFieldsValue({
       ...jobEdit,
       type_job: jobEdit.type_job ?? TYPE_JOB_OPTIONS[0],
-      salary:
-        isReferral || !jobEdit.salary
-          ? undefined
-          : Number(jobEdit.salary.replace(/[^\d]/g, "")),
-      work_type: isReferral
+      salary_min: isReferral ? undefined : jobEdit.salary_min,
+      salary_max: isReferral ? undefined : jobEdit.salary_max,
+      arrangement: isReferral
         ? WORK_TYPE_OPTIONS[0]
-        : jobEdit.work_type ?? WORK_TYPE_OPTIONS[0],
-      employment: isReferral
+        : jobEdit.arrangement ?? WORK_TYPE_OPTIONS[0],
+      commitment: isReferral
         ? EMPLOYMENT_TYPE_OPTIONS[0]
-        : jobEdit.employment ?? EMPLOYMENT_TYPE_OPTIONS[0],
+        : jobEdit.commitment ?? EMPLOYMENT_TYPE_OPTIONS[0],
       show_salary: isReferral ? false : Boolean(jobEdit.show_salary),
       until_at: dayjs(jobEdit.until_at),
     });
   };
 
-  const buildPayload = (
-    values: JobDataModel
-  ): JobPayloadCreateModel & JobPayloadUpdateModel => {
-    const until = values.until_at ? dayjs(values.until_at).toISOString() : null;
-    if (!until) {
-      throw new Error("Date is required");
-    }
-    const jobType =
-      (values.type_job as (typeof TYPE_JOB_OPTIONS)[number]) ??
-      TYPE_JOB_OPTIONS[0];
-    const salaryValue = values.salary;
-    const parsedSalary =
-      typeof salaryValue === "number"
-        ? salaryValue.toString()
-        : (salaryValue ?? "").toString();
-
-    if (jobType === "TEAM_MEMBER" && !parsedSalary) {
-      throw new Error("Salary is required");
-    }
-
-    if (jobType === "TEAM_MEMBER") {
-      if (!values.work_type) {
-        throw new Error("Work type is required");
-      }
-      if (!values.employment) {
-        throw new Error("Employment type is required");
-      }
-    }
-
-    const workTypeValue =
-      values.work_type ?? WORK_TYPE_OPTIONS[0];
-    const employmentValue =
-      values.employment ?? EMPLOYMENT_TYPE_OPTIONS[0];
-
-    return {
-      name: values.name,
-      description: values.description,
-      location_id: values.location_id,
-      is_published: Boolean(values.is_published),
-      salary: jobType === "TEAM_MEMBER" ? parsedSalary : "",
-      type_job: jobType,
-      work_type: workTypeValue,
-      employment: employmentValue,
-      show_salary:
-        jobType === "REFFERAL" ? false : Boolean(values.show_salary),
-      until_at: until,
-    } as JobPayloadCreateModel & JobPayloadUpdateModel;
-  };
-
   const handleFinish = async (values: JobDataModel) => {
     try {
-      const payload = buildPayload(values);
+      const payload = buildJobPayload(values);
 
       if (modalType === "create") {
         await jobCreate(payload);
@@ -211,16 +152,7 @@ export default function SettingJobContent() {
         <CustomButton
           title="Add Job"
           onClick={() => {
-            form.resetFields();
-            form.setFieldsValue({
-              type_job: TYPE_JOB_OPTIONS[0],
-              work_type: WORK_TYPE_OPTIONS[0],
-              employment: EMPLOYMENT_TYPE_OPTIONS[0],
-              show_salary: true,
-            });
-            setSelectedJob(null);
-            setModalType("create");
-            setModalOpen(true);
+            router.push("/admin/dashboard/setting-job/create");
           }}
           icon={<PlusOutlined />}
         />
@@ -315,7 +247,7 @@ export default function SettingJobContent() {
       <ModalRecommendedCandidate
         open={Boolean(recommendedJob)}
         jobId={recommendedJob?.id}
-        jobName={recommendedJob?.name}
+        jobName={recommendedJob?.job_title}
         onClose={() => setRecommendedJob(null)}
       />
     </div>
