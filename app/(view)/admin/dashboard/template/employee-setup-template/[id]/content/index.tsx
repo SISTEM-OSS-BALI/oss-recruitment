@@ -18,12 +18,12 @@ import {
   Flex,
   Form,
   Space,
-  Spin,
   Typography,
 } from "antd";
 import { useParams } from "next/navigation";
 import { useState } from "react";
 import { PlusOutlined } from "@ant-design/icons";
+import LoadingSplash from "@/app/components/common/custom-loading";
 
 type EmployeeSetupQuestion =
   NonNullable<EmployeeSetupDataModel>["employeeSetupQuestion"][number];
@@ -123,7 +123,7 @@ export default function DetailEmployeeSetup() {
 
       {isLoading ? (
         <div style={{ textAlign: "center", padding: "60px 0" }}>
-          <Spin size="large" />
+          <LoadingSplash />
         </div>
       ) : !employeeSetup ? (
         <Empty description="Employee setup not found" />

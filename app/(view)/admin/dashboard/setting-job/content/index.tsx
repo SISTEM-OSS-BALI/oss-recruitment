@@ -2,7 +2,6 @@ import { useState, useMemo } from "react";
 import { Flex, Form, Input, Tabs, Typography, Empty, message } from "antd";
 import Title from "antd/es/typography/Title";
 import { PlusOutlined, SearchOutlined } from "@ant-design/icons";
-import dayjs from "dayjs";
 
 import { useJob, useJobs } from "@/app/hooks/job";
 import { JobDataModel, JobPayloadUpdateModel } from "@/app/models/job";
@@ -12,12 +11,7 @@ import JobModal from "@/app/components/common/modal/admin/job";
 import JobCard from "./JobCards";
 import { useRouter } from "next/navigation";
 import ModalRecommendedCandidate from "./ModalRecommendedCandidate";
-import {
-  EMPLOYMENT_TYPE_OPTIONS,
-  TYPE_JOB_OPTIONS,
-  WORK_TYPE_OPTIONS,
-  buildJobPayload,
-} from "@/app/(view)/admin/dashboard/setting-job/utils";
+import { buildJobPayload } from "@/app/(view)/admin/dashboard/setting-job/utils";
 
 const { Text } = Typography;
 
@@ -68,27 +62,9 @@ export default function SettingJobContent() {
   }, [jobsData, search, tab]);
 
   const handleEdit = (id: string) => {
-    const jobEdit = jobsData.find((job) => job.id === id);
-    if (!jobEdit) return;
-    setSelectedJob(jobEdit);
-    setModalType("update");
-    setModalOpen(true);
-
-    const isReferral = jobEdit.type_job === "REFFERAL";
-    form.setFieldsValue({
-      ...jobEdit,
-      type_job: jobEdit.type_job ?? TYPE_JOB_OPTIONS[0],
-      salary_min: isReferral ? undefined : jobEdit.salary_min,
-      salary_max: isReferral ? undefined : jobEdit.salary_max,
-      arrangement: isReferral
-        ? WORK_TYPE_OPTIONS[0]
-        : jobEdit.arrangement ?? WORK_TYPE_OPTIONS[0],
-      commitment: isReferral
-        ? EMPLOYMENT_TYPE_OPTIONS[0]
-        : jobEdit.commitment ?? EMPLOYMENT_TYPE_OPTIONS[0],
-      show_salary: isReferral ? false : Boolean(jobEdit.show_salary),
-      until_at: dayjs(jobEdit.until_at),
-    });
+    router.push(
+      `/admin/dashboard/setting-job/create?jobId=${encodeURIComponent(id)}`
+    );
   };
 
   const handleFinish = async (values: JobDataModel) => {

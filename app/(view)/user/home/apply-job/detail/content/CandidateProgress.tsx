@@ -28,7 +28,6 @@ import {
   Alert,
   Image,
   message,
-  Spin,
   Empty,
 } from "antd";
 import {
@@ -61,6 +60,7 @@ import SignaturePadUploader from "./SignatureUploader";
 import { useScheduleHiredsByApplicantId } from "@/app/hooks/schedule-hired";
 import { formatDateTime } from "@/app/utils/date-helper";
 import { useProcedureDocuments } from "@/app/hooks/procedure-document";
+import LoadingSplash from "@/app/components/common/custom-loading";
 
 const { Title, Text } = Typography;
 const { TextArea } = Input;
@@ -1230,7 +1230,7 @@ export default function CandidateProgress({ applicant, meta }: Props) {
                     padding: "24px 0",
                   }}
                 >
-                  <Spin />
+                  <LoadingSplash />
                 </div>
               ) : stageProcedureDocuments.length > 0 ? (
                 <List

@@ -12,6 +12,7 @@ import {
 } from "antd";
 import { useCardTemplates } from "@/app/hooks/card-template";
 import type { CardTemplateDataModel } from "@/app/models/card-template";
+import { useQueryClient } from "@tanstack/react-query";
 
 const { Text } = Typography;
 
@@ -21,6 +22,7 @@ type GenerateCardReferralProps = {
   candidateName?: string;
   no_unique?: string;
   loading?: boolean;
+  onClose?: () => void;
 };
 
 type GeneratedCardState = {
@@ -44,13 +46,24 @@ export default function GenerateCardReferral({
   applicant_id,
   candidateName,
   no_unique,
+  onClose,
 }: GenerateCardReferralProps) {
+  const queryClient = useQueryClient();
   const { data: cardTemplates, fetchLoading: templatesLoading } =
     useCardTemplates({});
 
   const [selectedTemplateId, setSelectedTemplateId] = useState<string>("");
   const [generating, setGenerating] = useState(false);
   const [cardResult, setCardResult] = useState<GeneratedCardState | null>(null);
+
+  useEffect(() => {
+    setSelectedTemplateId("");
+    setCardResult((prev) => {
+      if (prev?.frontUrl) URL.revokeObjectURL(prev.frontUrl);
+      if (prev?.backUrl) URL.revokeObjectURL(prev.backUrl);
+      return null;
+    });
+  }, [applicant_id]);
 
   const selectedTemplate = useMemo<CardTemplateDataModel | undefined>(
     () => cardTemplates?.find((tpl) => tpl.id === selectedTemplateId),
@@ -119,6 +132,8 @@ export default function GenerateCardReferral({
       };
       setCardResult(nextState);
       message.success("Referral card generated.");
+      queryClient.invalidateQueries({ queryKey: ["applicants"] });
+      queryClient.invalidateQueries({ queryKey: ["applicant", applicant_id] });
     } catch (error) {
       console.error(error);
       message.error(
@@ -151,6 +166,14 @@ export default function GenerateCardReferral({
       }
     >
       <Space direction="vertical" style={{ width: "100%" }} size="middle">
+        {onClose ? (
+          <Alert
+            type="info"
+            showIcon
+            message="Regenerating referral card"
+            description="Generating again will replace the previous referral card."
+          />
+        ) : null}
         <Select
           style={{ width: "100%" }}
           placeholder="Select card template"
@@ -206,6 +229,12 @@ export default function GenerateCardReferral({
             description="Select a card template and click 'Generate Member Card'."
           />
         )}
+
+        {onClose ? (
+          <Button onClick={onClose} disabled={generating}>
+            Back to card preview
+          </Button>
+        ) : null}
       </Space>
     </Card>
   );

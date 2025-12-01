@@ -10,7 +10,6 @@ import {
   Space,
   Button,
   Typography,
-  Spin,
   message,
   Table,
 } from "antd";
@@ -20,6 +19,7 @@ import { useEvalutors } from "@/app/hooks/evaluator";
 import { EvaluatorColumns } from "./columns";
 import { useScheduleEvaluators } from "@/app/hooks/schedule-evaluator";
 import { useDeleteDay } from "@/app/hooks/delete-day";
+import LoadingSplash from "@/app/components/common/custom-loading";
 
 const { Title } = Typography;
 
@@ -137,7 +137,7 @@ export default function SchedulePage() {
   } = useScheduleEvaluators({});
 
   // hook delete time
-const { onDelete: deleteDay} = useDeleteDay();
+  const { onDelete: deleteDay } = useDeleteDay();
 
   // evaluator terpilih
   const [selectedEvaluator, setSelectedEvaluator] = useState<{
@@ -366,26 +366,26 @@ const { onDelete: deleteDay} = useDeleteDay();
 
       // Bentuk payload Prisma Create (nested)
       // Catatan: kita hanya CREATE times baru (yang belum punya id).
-     const daysCreate = schedule
-       .filter((d) => d.isAvailable) // hanya hari aktif
-       .map((d) => {
-         const timesCreate = d.times
-           .filter((t) => t.start && t.end) // hanya slot valid
-           .map((t) => ({
-             startTime: hmToISO(t.start as string),
-             endTime: hmToISO(t.end as string),
-           }));
+      const daysCreate = schedule
+        .filter((d) => d.isAvailable) // hanya hari aktif
+        .map((d) => {
+          const timesCreate = d.times
+            .filter((t) => t.start && t.end) // hanya slot valid
+            .map((t) => ({
+              startTime: hmToISO(t.start as string),
+              endTime: hmToISO(t.end as string),
+            }));
 
-         // kalau tidak ada slot valid, jangan kirim hari ini
-         if (timesCreate.length === 0) return null;
+          // kalau tidak ada slot valid, jangan kirim hari ini
+          if (timesCreate.length === 0) return null;
 
-         return {
-           day: d.day,
-           isAvailable: true,
-           times: { create: timesCreate },
-         };
-       })
-       .filter(Boolean) as any[];
+          return {
+            day: d.day,
+            isAvailable: true,
+            times: { create: timesCreate },
+          };
+        })
+        .filter(Boolean) as any[];
 
       const payload = {
         evaluator_id: selectedEvaluator.id,
@@ -427,7 +427,7 @@ const { onDelete: deleteDay} = useDeleteDay();
         destroyOnClose
       >
         {loadingInit ? (
-          <Spin />
+          <LoadingSplash />
         ) : selectedEvaluator ? (
           <Form layout="vertical" onFinish={handleSubmit}>
             {schedule.map((item) => (
@@ -513,7 +513,7 @@ const { onDelete: deleteDay} = useDeleteDay();
             </Form.Item>
           </Form>
         ) : (
-          <Spin />
+          <LoadingSplash />
         )}
       </Drawer>
     </div>

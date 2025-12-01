@@ -4,7 +4,8 @@ export type OfferChecklistKey =
   | "contractFinalized"
   | "signatureDirectur"
   | "decisionCandidate"
-  | "generateCard";
+  | "generateCardReferral"
+  | "generateCardTeamMember";
 
 export type OfferChecklistItem = {
   key: OfferChecklistKey;

@@ -135,11 +135,11 @@ export const useUser = ({ id }: { id: string }) => {
       // segarkan list & detail
       queryClient.invalidateQueries({ queryKey: [queryKey] });
       queryClient.invalidateQueries({ queryKey: [entity, variables.id] });
-      MainNotification({
-        type: "success",
-        entity,
-        action: "document updated",
-      });
+      // MainNotification({
+      //   type: "success",
+      //   entity,
+      //   action: "document updated",
+      // });
     },
     onError: () => {
       MainNotification({
@@ -169,19 +169,19 @@ export const useUser = ({ id }: { id: string }) => {
       // segarkan list & detail
       queryClient.invalidateQueries({ queryKey: [queryKey] });
       queryClient.invalidateQueries({ queryKey: [entity, variables.id] });
-      MainNotification({
-        type: "success",
-        entity,
-        action: "document updated",
-      });
+      // MainNotification({
+      //   type: "success",
+      //   entity,
+      //   action: "document updated",
+      // });
     },
-    onError: () => {
-      MainNotification({
-        type: "error",
-        entity,
-        action: "document updated",
-      });
-    },
+    // onError: () => {
+    //   MainNotification({
+    //     type: "error",
+    //     entity,
+    //     action: "document updated",
+    //   });
+    // },
   });
 
   return {

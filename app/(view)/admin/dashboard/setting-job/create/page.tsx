@@ -5,10 +5,16 @@ import { Suspense, lazy } from "react";
 
 const CreateJobContent = lazy(() => import("./content"));
 
-export default function CreateJobPage() {
+export default function CreateJobPage({
+  searchParams,
+}: {
+  searchParams?: { jobId?: string };
+}) {
+  const jobId =
+    typeof searchParams?.jobId === "string" ? searchParams.jobId : undefined;
   return (
     <Suspense fallback={<Loading />}>
-      <CreateJobContent />
+      <CreateJobContent jobId={jobId} />
     </Suspense>
   );
 }

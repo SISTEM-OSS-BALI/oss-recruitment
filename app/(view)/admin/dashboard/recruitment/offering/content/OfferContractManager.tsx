@@ -22,7 +22,7 @@ import {
   Row,
   Select,
   Space,
-  Spin,
+
   Tabs,
   Tag,
   Typography,
@@ -74,6 +74,8 @@ import type {
 } from "./offer-checklist-types";
 import { ScheduleHiredDataModel } from "@/app/models/schedule-hired";
 import GenerateCardReferral from "./GenerateCardReferral";
+import GenerateCardTeamMember from "./GenerateCardTeamMember";
+import LoadingSplash from "@/app/components/common/custom-loading";
 export type {
   OfferChecklistItem,
   OfferChecklistKey,
@@ -312,6 +314,10 @@ export function OfferContractManager({
     () => Boolean(candidate?.user?.member_card_url),
     [candidate?.user?.member_card_url]
   );
+  const hasTeamMemberCard = useMemo(
+    () => Boolean(candidate?.user?.team_member_card_url),
+    [candidate?.user?.team_member_card_url]
+  );
 
   const { data: screeningAnswers, fetchLoading: screeningAnswersLoading } =
     useAnswerQuestionScreeningByApplicantId({
@@ -425,7 +431,8 @@ export function OfferContractManager({
     contractFinalized: hasExistingContract,
     signatureDirectur: isReferralJob ? true : hasDirectorSigned,
     decisionCandidate: hasAccepetedCandidate,
-    generateCard: isReferralJob ? hasMemberCard : true,
+    generateCardReferral: isReferralJob ? hasMemberCard : true,
+    generateCardTeamMember: hasTeamMemberCard
   });
   const [offerTriggeredAt, setOfferTriggeredAt] = useState<string | null>(null);
   const [sendingOffer, setSendingOffer] = useState(false);
@@ -546,7 +553,8 @@ export function OfferContractManager({
       contractFinalized: hasExistingContract,
       signatureDirectur: isReferralJob ? true : hasDirectorSigned,
       decisionCandidate: hasAccepetedCandidate,
-      generateCard: isReferralJob ? hasMemberCard : true,
+      generateCardReferral: isReferralJob ? hasMemberCard : true,
+      generateCardTeamMember: hasTeamMemberCard
     });
   }, [
     hasExistingContract,
@@ -554,6 +562,7 @@ export function OfferContractManager({
     hasDirectorSigned,
     isReferralJob,
     hasMemberCard,
+    hasTeamMemberCard,
   ]);
 
   const handleTriggerOfferReady = useCallback(async () => {
@@ -583,26 +592,42 @@ export function OfferContractManager({
       : "Send the contract to directors for signature.";
 
     const memberCardUrl = candidate?.user?.member_card_url;
+    const teamMemberCardUrl = candidate?.user?.team_member_card_url;
 
-    // Item tanda tangan (kondisional)
-    const signatureItem: OfferChecklistItem = isReferralJob
-      ? {
-          key: "generateCard",
-          title: "Generate Card Referral",
-          description: memberCardUrl
-            ? "Referral member card has been generated and stored as PDF."
-            : "Generate Card Referral for Sahabat Referral",
-          icon: <IdcardOutlined />,
-          disabled: true,
-        }
-      : {
-          key: "signatureDirectur",
-          title: "Directors signed",
-          description: directorDescription,
-          fileUrl: directorSignedPdfUrl || directorSignatureUrl || undefined,
-          icon: <UsergroupAddOutlined />,
-          disabled: true,
-        };
+    // Item kondisional (referral vs non-referral)
+    const signatureItems: OfferChecklistItem[] = isReferralJob
+      ? [
+          {
+            key: "generateCardReferral",
+            title: "Generate Card Referral",
+            description: memberCardUrl
+              ? "Referral member card has been generated and stored as PDF."
+              : "Generate Card Referral for Sahabat Referral",
+            fileUrl: memberCardUrl || undefined,
+            icon: <IdcardOutlined />,
+            disabled: true,
+          },
+        ]
+      : [
+          {
+            key: "signatureDirectur",
+            title: "Directors signed",
+            description: directorDescription,
+            fileUrl: directorSignedPdfUrl || directorSignatureUrl || undefined,
+            icon: <UsergroupAddOutlined />,
+            disabled: true,
+          },
+          {
+            key: "generateCardTeamMember",
+            title: "Generate Card Team Member",
+            description: hasMemberCard
+              ? "Team member card has been generated and linked below."
+              : "Generate the team member card and ensure details are correct.",
+            fileUrl: teamMemberCardUrl || undefined,
+            icon: <IdcardOutlined />,
+            disabled: true,
+          },
+        ];
 
     return [
       {
@@ -625,10 +650,7 @@ export function OfferContractManager({
         disabled: true,
       },
 
-      // masukkan item kondisional di sini
-      signatureItem,
-
-      // ...item lain (kompensasi, start date, dsb) kalau diperlukan
+      ...signatureItems,
     ];
   }, [
     isReferralJob,
@@ -641,6 +663,7 @@ export function OfferContractManager({
     candidateSignedPdfUrl,
     hasMemberCard,
     candidate?.user?.member_card_url,
+    candidate?.user?.team_member_card_url,
   ]);
 
   const checklistValues = useMemo(
@@ -674,12 +697,21 @@ export function OfferContractManager({
   const [applyingEdits, setApplyingEdits] = useState(false);
   const [convertingPdf, setConvertingPdf] = useState(false);
   const [creatingContract, setCreatingContract] = useState(false);
+  const [showTeamMemberCardGenerator, setShowTeamMemberCardGenerator] =
+    useState(false);
+  const [showReferralCardGenerator, setShowReferralCardGenerator] =
+    useState(false);
 
   const [form] = Form.useForm<ContractFormValues>();
 
   useEffect(() => {
     return () => revokeBlobUrl(docState?.pdfUrl);
   }, [docState]);
+
+  useEffect(() => {
+    setShowTeamMemberCardGenerator(false);
+    setShowReferralCardGenerator(false);
+  }, [candidate?.id]);
 
   const openPicker = () => setIsPickerOpen(true);
   const closePicker = () => {
@@ -1100,7 +1132,7 @@ export function OfferContractManager({
         />
       ) : (
         <Space direction="vertical" size={16} style={{ width: "100%" }}>
-          {candidate.user?.member_card_url ? (
+          {candidate.user?.member_card_url && !showReferralCardGenerator ? (
             <Card
               bordered={false}
               style={{
@@ -1143,7 +1175,11 @@ export function OfferContractManager({
                 A referral member card PDF has been generated and stored by
                 admin.
               </Text>
-              <Space direction="vertical" style={{ width: "100%" }} size="small">
+              <Space
+                direction="vertical"
+                style={{ width: "100%" }}
+                size="small"
+              >
                 {/\.(png|jpe?g|gif|webp)$/i.test(
                   candidate.user.member_card_url.split("?")[0] || ""
                 ) ? (
@@ -1179,6 +1215,12 @@ export function OfferContractManager({
                 >
                   Download Member Card
                 </Button>
+                <Button
+                  type="primary"
+                  onClick={() => setShowReferralCardGenerator(true)}
+                >
+                  Regenerate Member Card
+                </Button>
               </Space>
             </Card>
           ) : (
@@ -1188,9 +1230,86 @@ export function OfferContractManager({
               candidateName={candidate.user?.name || ""}
               no_unique={referralUniqueCode}
               loading={screeningAnswersLoading}
+              onClose={
+                candidate.user?.member_card_url
+                  ? () => setShowReferralCardGenerator(false)
+                  : undefined
+              }
             />
           )}
         </Space>
+      )}
+
+      {!isReferralJob && (
+        <div style={{ marginTop: 12 }}>
+          {candidate?.user?.team_member_card_url &&
+          !showTeamMemberCardGenerator ? (
+            <Card
+              title="Team Member Card"
+              style={{ borderRadius: 14 }}
+              bodyStyle={{ paddingBottom: 16 }}
+            >
+              <Space
+                direction="vertical"
+                style={{ width: "100%" }}
+                size="small"
+              >
+                {/\.(png|jpe?g|gif|webp)$/i.test(
+                  candidate.user.team_member_card_url.split("?")[0] || ""
+                ) ? (
+                  <Image
+                    src={candidate.user.team_member_card_url}
+                    alt="Team member card"
+                    style={{
+                      width: "100%",
+                      maxWidth: 420,
+                      borderRadius: 12,
+                      boxShadow: "0 6px 20px rgba(0,0,0,0.08)",
+                    }}
+                  />
+                ) : (
+                  <iframe
+                    src={candidate.user.team_member_card_url}
+                    title="Team member card preview"
+                    style={{
+                      width: "100%",
+                      height: 420,
+                      borderRadius: 12,
+                      border: "1px solid #f0f0f0",
+                    }}
+                  />
+                )}
+                <Space>
+                  <Button
+                    type="link"
+                    icon={<FilePdfOutlined />}
+                    href={candidate.user.team_member_card_url}
+                    target="_blank"
+                    rel="noreferrer"
+                    style={{ paddingLeft: 0 }}
+                  >
+                    Download Team Member Card
+                  </Button>
+                  <Button
+                    type="primary"
+                    onClick={() => setShowTeamMemberCardGenerator(true)}
+                  >
+                    Regenerate Team Member Card
+                  </Button>
+                </Space>
+              </Space>
+            </Card>
+          ) : (
+            <GenerateCardTeamMember
+              candidate={candidate ?? null}
+              onClose={
+                candidate?.user?.team_member_card_url
+                  ? () => setShowTeamMemberCardGenerator(false)
+                  : undefined
+              }
+            />
+          )}
+        </div>
       )}
 
       {/* <CandidateSignatureCard
@@ -1300,7 +1419,7 @@ export function OfferContractManager({
           <div
             style={{ minHeight: "40vh", display: "grid", placeItems: "center" }}
           >
-            <Spin />
+            <LoadingSplash />
           </div>
         ) : (
           <ContractResultTabs
@@ -1384,7 +1503,7 @@ const ContractResultTabs = ({
                   placeItems: "center",
                 }}
               >
-                <Spin />
+                <LoadingSplash />
               </div>
             ) : (
               <Alert

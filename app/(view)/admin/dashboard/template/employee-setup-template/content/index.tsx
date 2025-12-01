@@ -12,9 +12,10 @@ import {
 import { EmployeeSetupDataModel } from "@/app/models/employee-setup";
 import { makeActionsByType } from "@/app/utils/presets";
 import { PlusOutlined, UnorderedListOutlined } from "@ant-design/icons";
-import { Card, Empty, Flex, Form, Space, Spin, Tag, Typography } from "antd";
+import { Card, Empty, Flex, Form, Space, Tag, Typography } from "antd";
 import { CSSProperties, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import LoadingSplash from "@/app/components/common/custom-loading";
 
 const { Title, Text } = Typography;
 
@@ -95,7 +96,7 @@ export default function EmployeeSetupTemplateContent() {
     if (fetchLoading) {
       return (
         <div style={{ padding: "40px 0", textAlign: "center" }}>
-          <Spin size="large" />
+          <LoadingSplash />
         </div>
       );
     }

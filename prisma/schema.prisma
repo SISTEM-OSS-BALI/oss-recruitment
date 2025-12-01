@@ -44,6 +44,7 @@ enum LocationType {
 }
 
 enum Role {
+  SUPER_ADMIN
   ADMIN
   CANDIDATE
 }
@@ -121,25 +122,25 @@ model Job {
   owner                User?          @relation("JobOwner", fields: [user_id], references: [id], onDelete: SetNull, onUpdate: Cascade)
 
   location_id String?
-  location    Location? @relation(fields: [location_id], references: [id], onDelete: Cascade, onUpdate: Cascade)
-  candidate   User[]   @relation("CandidateJobs")
+  location    Location?   @relation(fields: [location_id], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  candidate   User[]      @relation("CandidateJobs")
   Applicant   Applicant[]
 
   @@map("job")
 }
 
 model Location {
-  id            String          @id @default(cuid())
-  name          String
-  maps_url      String
-  type          LocationType    @default(HEAD_OFFICE)
-  address       String
-  district      String
-  province      String
-  country       String
-  createdAt     DateTime        @default(now())
-  updatedAt     DateTime        @updatedAt
-  user_id       String
+  id        String       @id @default(cuid())
+  name      String
+  maps_url  String
+  type      LocationType @default(HEAD_OFFICE)
+  address   String
+  district  String
+  province  String
+  country   String
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+  user_id   String
 
   user          User            @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: Cascade)
   job           Job[]
@@ -149,22 +150,23 @@ model Location {
 }
 
 model User {
-  id                  String    @id @default(cuid())
-  email               String    @unique
-  name                String
-  password            String
-  role                Role      @default(CANDIDATE)
-  phone               String?
-  curiculum_vitae_url String?
-  address             String?
-  no_identity         String?
-  no_identity_url     String?
-  gender              String?
-  date_of_birth       DateTime?
-  photo_url           String?
-  portfolio_url       String?
-  no_unique           String?
-  member_card_url     String?
+  id                   String    @id @default(cuid())
+  email                String    @unique
+  name                 String
+  password             String
+  role                 Role      @default(CANDIDATE)
+  phone                String?
+  curiculum_vitae_url  String?
+  address              String?
+  no_identity          String?
+  no_identity_url      String?
+  gender               String?
+  date_of_birth        DateTime?
+  photo_url            String?
+  portfolio_url        String?
+  no_unique            String?
+  member_card_url      String?
+  team_member_card_url String?
 
   interestTags UserInterestTag[]
   job_id       String?
@@ -361,6 +363,16 @@ model CardTemplate {
   updatedAt       DateTime @updatedAt
 
   @@map("card_template")
+}
+
+model TeamMemberCardTemplate {
+  id        String   @id @default(cuid())
+  name      String
+  image     String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("team_member_card_template")
 }
 
 model Contract {

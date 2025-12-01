@@ -22,6 +22,12 @@ export const SidebarMenuSettingAdmin = (): MenuProps["items"] => {
 
   const sidebarMenu: MenuProps["items"] = [
     {
+      key: "/admin/dashboard/user-management",
+      label: menuLabel("User Management"),
+      icon: <FontAwesomeIcon icon={faUserGroup} />,
+      onClick: () => router.push("/admin/dashboard/user-management"),
+    },
+    {
       key: "/admin/dashboard/setting-job",
       label: menuLabel("Setting Job"),
       icon: <FontAwesomeIcon icon={faBriefcase} />,
@@ -40,10 +46,18 @@ export const SidebarMenuSettingAdmin = (): MenuProps["items"] => {
             router.push("/admin/dashboard/template/contract-template"),
         },
         {
-          key: "/admin/dashboard/template/card-template",
+          key: "/admin/dashboard/template/referral-card-template",
           label: menuLabel("Card Referral Template"),
           icon: <FontAwesomeIcon icon={faClipboardList} />,
-          onClick: () => router.push("/admin/dashboard/template/card-template"),
+          onClick: () =>
+            router.push("/admin/dashboard/template/referral-card-template"),
+        },
+        {
+          key: "/admin/dashboard/template/team-member-card-template",
+          label: menuLabel("Team Member Card Template"),
+          icon: <FontAwesomeIcon icon={faClipboardList} />,
+          onClick: () =>
+            router.push("/admin/dashboard/template/team-member-card-template"),
         },
         {
           key: "/admin/dashboard/template/employee-setup-template",

@@ -1,5 +1,8 @@
-import { CardTemplatePayloadUpdateModel } from "@/app/models/card-template";
-import { DELETE_CARD_TEMPLATE, UPDATE_CARD_TEMPLATE } from "@/app/providers/card-template";
+import { TeamMemberCardTemplatePayloadUpdateModel } from "@/app/models/team-member-card-template";
+import {
+  DELETE_TEAM_MEMBER_CARD_TEMPLATE,
+  UPDATE_TEAM_MEMBER_CARD_TEMPLATE,
+} from "@/app/providers/team-member-card-template";
 import { GeneralError } from "@/app/utils/general-error";
 import { NextRequest, NextResponse } from "next/server";
 
@@ -9,9 +12,9 @@ export const PUT = async (
 ) => {
   try {
     const id = params.id;
-    const payload: CardTemplatePayloadUpdateModel= await req.json();
+    const payload: TeamMemberCardTemplatePayloadUpdateModel = await req.json();
 
-    const data = await UPDATE_CARD_TEMPLATE(id, payload);
+    const data = await UPDATE_TEAM_MEMBER_CARD_TEMPLATE(id, payload);
 
     return NextResponse.json(
       {
@@ -43,7 +46,7 @@ export const DELETE = async (
   try {
     const id = params.id;
 
-    const data = await DELETE_CARD_TEMPLATE(id);
+    const data = await DELETE_TEAM_MEMBER_CARD_TEMPLATE(id);
 
     return NextResponse.json(
       {

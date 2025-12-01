@@ -93,18 +93,19 @@ const STEP_FIELD_NAMES: (string | (string | number)[])[][] = [
   [],
 ];
 
-export default function CreateJobUI() {
+export default function CreateJobUI({ jobId }: { jobId?: string }) {
   const [form] = Form.useForm();
   const router = useRouter();
   const user_id = useAuth().user_id;
   const { data: locationsData } = useLocationByUserId({ id: user_id || "" });
 
+  const isEditMode = Boolean(jobId);
   const [currentStep, setCurrentStep] = useState(0);
   const isFinalStep = currentStep === STEP_ITEMS.length - 1;
 
   const [jobRoleOptions, setJobRoleOptions] = useState<any[]>([]);
   const [loadingRecommended, setLoadingRecommended] = useState(false);
-  const [draftId, setDraftId] = useState<string | null>(null);
+  const [draftId, setDraftId] = useState<string | null>(jobId ?? null);
   const [isAutoSaving, setIsAutoSaving] = useState(false);
   const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
   const isInitialChange = useRef(true);
@@ -122,6 +123,22 @@ export default function CreateJobUI() {
     onPublishLoading,
   } = useJob({ id: draftId || "" });
   const { onCreate: createJob } = useJobs({});
+
+  const jobStatusInfo = useMemo(() => {
+    if (isEditMode) {
+      if (!draftJob) {
+        return { label: "Loading…", color: "#6b7280" };
+      }
+      if (draftJob.is_published) {
+        return { label: "Published", color: "#027a48" };
+      }
+      if (draftJob.is_draft) {
+        return { label: "Draft", color: "#c47400" };
+      }
+      return { label: "Inactive", color: "#1677ff" };
+    }
+    return { label: "Draft", color: "#c47400" };
+  }, [draftJob, isEditMode]);
 
   const fetchRecommendedSkills = useCallback(
     async (title: string, role: string) => {
@@ -151,23 +168,28 @@ export default function CreateJobUI() {
   const hasRestoredDraftRef = useRef(false);
   const lastDraftIdRef = useRef<string | null>(null);
 
-  const persistDraftId = useCallback((value: string | null) => {
-    if (typeof window === "undefined") return;
-    if (value) {
-      window.localStorage.setItem(DRAFT_STORAGE_KEY, value);
-    } else {
-      window.localStorage.removeItem(DRAFT_STORAGE_KEY);
-    }
-  }, []);
+  const persistDraftId = useCallback(
+    (value: string | null) => {
+      if (isEditMode) return;
+      if (typeof window === "undefined") return;
+      if (value) {
+        window.localStorage.setItem(DRAFT_STORAGE_KEY, value);
+      } else {
+        window.localStorage.removeItem(DRAFT_STORAGE_KEY);
+      }
+    },
+    [isEditMode]
+  );
 
   useEffect(() => {
+    if (isEditMode) return;
     if (typeof window === "undefined") return;
     if (draftId) return;
     const stored = window.localStorage.getItem(DRAFT_STORAGE_KEY);
     if (stored) {
       setDraftId(stored);
     }
-  }, [draftId]);
+  }, [draftId, isEditMode]);
 
   useEffect(() => {
     if (draftId && draftId !== lastDraftIdRef.current) {
@@ -175,6 +197,11 @@ export default function CreateJobUI() {
       lastDraftIdRef.current = draftId;
     }
   }, [draftId]);
+
+  useEffect(() => {
+    if (!isEditMode) return;
+    setDraftId(jobId ?? null);
+  }, [isEditMode, jobId]);
 
   const debouncedFetch = useMemo(
     () =>
@@ -288,7 +315,9 @@ export default function CreateJobUI() {
 
   const autoSaveDraft = useCallback(
     async (overrideValues?: Record<string, unknown>) => {
-      if (!user_id) return;
+      if (!user_id && !isEditMode) return;
+      if (isEditMode && !draftId) return;
+      if (isEditMode && !draftJob) return;
 
       const values = {
         ...form.getFieldsValue(true),
@@ -337,6 +366,8 @@ export default function CreateJobUI() {
         nice_to_have: desc.nice_to_have ?? [],
       };
 
+      const resolvedUserId =
+        isEditMode && draftJob?.user_id ? draftJob.user_id : user_id;
       const payload: JobPayloadCreateModel = {
         ...values,
         job_title: rawJobTitle,
@@ -352,7 +383,6 @@ export default function CreateJobUI() {
             ? values.location_id
             : undefined,
         until_at,
-        is_published: false,
         salary_min: normalizedSalaryMin,
         salary_max: normalizedSalaryMax,
         type_job: values.type_job ?? "TEAM_MEMBER",
@@ -360,10 +390,19 @@ export default function CreateJobUI() {
         commitment: values.commitment ?? "FULL_TIME",
         show_salary: Boolean(values.show_salary),
         is_have_domicile: Boolean(values.is_have_domicile),
-        user_id,
+        user_id: resolvedUserId,
         step: currentStep,
-        is_draft: true,
       };
+
+      const resolvedIsDraft = isEditMode
+        ? Boolean(draftJob?.is_draft)
+        : true;
+      const resolvedIsPublished = isEditMode
+        ? Boolean(draftJob?.is_published)
+        : false;
+
+      payload.is_draft = resolvedIsDraft;
+      payload.is_published = resolvedIsPublished;
 
       try {
         setIsAutoSaving(true);
@@ -392,7 +431,17 @@ export default function CreateJobUI() {
         setIsAutoSaving(false);
       }
     },
-    [createJob, updateJob, currentStep, draftId, user_id, form, persistDraftId]
+    [
+      createJob,
+      updateJob,
+      currentStep,
+      draftId,
+      user_id,
+      form,
+      persistDraftId,
+      isEditMode,
+      draftJob,
+    ]
   );
 
   const debouncedAutoSave = useMemo(
@@ -459,12 +508,13 @@ export default function CreateJobUI() {
   }, [draftId, draftJob, form]);
 
   useEffect(() => {
+    if (isEditMode) return;
     if (!draftId) return;
     if (draftLoading) return;
     if (draftJob) return;
     persistDraftId(null);
     setDraftId(null);
-  }, [draftId, draftJob, draftLoading, persistDraftId]);
+  }, [draftId, draftJob, draftLoading, persistDraftId, isEditMode]);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -484,23 +534,30 @@ export default function CreateJobUI() {
           return;
         }
 
-        await publishJob(jobId);
-        persistDraftId(null);
-        hasRestoredDraftRef.current = false;
-        setDraftId(null);
-        setLastSavedAt(null);
-        form.resetFields();
+        if (isEditMode) {
+          message.success("Job berhasil diperbarui.");
+        } else {
+          await publishJob(jobId);
+          persistDraftId(null);
+          hasRestoredDraftRef.current = false;
+          setDraftId(null);
+          setLastSavedAt(null);
+          form.resetFields();
+        }
         router.push("/admin/dashboard/setting-job");
       } catch (error) {
         console.error("Publish job error:", error);
+        const defaultMessage = isEditMode
+          ? "Gagal memperbarui job."
+          : "Gagal mempublikasikan job.";
         message.error(
-          error instanceof Error ? error.message : "Gagal mempublikasikan job."
+          error instanceof Error ? error.message : defaultMessage
         );
       } finally {
         setIsSubmitting(false);
       }
     },
-    [autoSaveDraft, draftId, publishJob, router, persistDraftId, form]
+    [autoSaveDraft, draftId, publishJob, router, persistDraftId, form, isEditMode]
   );
 
   const handleGenerateJobDescription = useCallback(async () => {
@@ -589,15 +646,15 @@ export default function CreateJobUI() {
           message={
             <span>
               Status:{" "}
-              <Text strong style={{ color: "#c47400" }}>
-                Draft
+              <Text strong style={{ color: jobStatusInfo.color }}>
+                {jobStatusInfo.label}
               </Text>
             </span>
           }
           description={
             lastSavedAt
               ? `Autosaved ${dayjs(lastSavedAt).fromNow()}.`
-              : "Autosaved draft."
+              : "Autosaved progress."
           }
           style={{ marginBottom: 16 }}
         />
@@ -1184,7 +1241,7 @@ export default function CreateJobUI() {
             onClick={handleNext}
             loading={isFinalStep && (isSubmitting || onPublishLoading)}
           >
-            {isFinalStep ? "Submit" : "Next"}
+            {isFinalStep ? (isEditMode ? "Update Job" : "Submit") : "Next"}
           </Button>
         </div>
       </Form>

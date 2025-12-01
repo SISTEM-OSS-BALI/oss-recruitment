@@ -21,6 +21,16 @@ function normalizeDateInput(input: unknown): Date | null | undefined {
   return null;
 }
 
+export const GET_USERS = async () => {
+  const result = await db.user.findMany({
+    where : {
+      role: "ADMIN"
+    },
+    orderBy: { createdAt: "desc" },
+  });
+  return result;
+}
+
 export const CREATE_USER = async (payload: UserPayloadCreateModel) => {
   const { interestTags, password, ...rest } = payload;
   const hashedPassword = await bcrypt.hash(password, 10);
@@ -206,3 +216,17 @@ export const UPDATE_MEMBER_CARD = async (user_id: string, payload: UserPayloadUp
   return result;
 }
 
+export const UPDATE_TEAM_MEMBER_CARD = async (
+  user_id: string,
+  payload: UserPayloadUpdateModel
+) => {
+  const result = await db.user.update({
+    where: {
+      id: user_id,
+    },
+    data: {
+      team_member_card_url: payload.team_member_card_url,
+    },
+  });
+  return result;
+};

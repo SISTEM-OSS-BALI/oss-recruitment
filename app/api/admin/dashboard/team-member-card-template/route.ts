@@ -1,22 +1,15 @@
-import { CardTemplatePayloadUpdateModel } from "@/app/models/card-template";
-import { DELETE_CARD_TEMPLATE, UPDATE_CARD_TEMPLATE } from "@/app/providers/card-template";
+import { TeamMemberCardTemplatePayloadCreateModel } from "@/app/models/team-member-card-template";
+import { CREATE_TEAM_MEMBER_CARD_TEMPLATE, GET_TEAM_MEMBER_CARD_TEMPLATES } from "@/app/providers/team-member-card-template";
 import { GeneralError } from "@/app/utils/general-error";
 import { NextRequest, NextResponse } from "next/server";
 
-export const PUT = async (
-  req: NextRequest,
-  { params }: { params: { id: string } }
-) => {
+export const GET = async () => {
   try {
-    const id = params.id;
-    const payload: CardTemplatePayloadUpdateModel= await req.json();
-
-    const data = await UPDATE_CARD_TEMPLATE(id, payload);
-
+    const data = await GET_TEAM_MEMBER_CARD_TEMPLATES();
     return NextResponse.json(
       {
         success: true,
-        message: "Successfully updated!",
+        message: "Successfully get data!",
         result: data,
       },
       { status: 200 }
@@ -36,19 +29,16 @@ export const PUT = async (
   }
 };
 
-export const DELETE = async (
-  req: NextRequest,
-  { params }: { params: { id: string } }
-) => {
+export const POST = async (req: NextRequest) => {
   try {
-    const id = params.id;
+    const payload: TeamMemberCardTemplatePayloadCreateModel = await req.json();
 
-    const data = await DELETE_CARD_TEMPLATE(id);
+    const data = await CREATE_TEAM_MEMBER_CARD_TEMPLATE(payload);
 
     return NextResponse.json(
       {
         success: true,
-        message: "Successfully deleted!",
+        message: "Successfully created data!",
         result: data,
       },
       { status: 200 }
