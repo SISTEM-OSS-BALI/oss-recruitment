@@ -17,7 +17,63 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import menuLabel from "@/app/utils/label";
 
-export const SidebarMenuSettingAdmin = (): MenuProps["items"] => {
+export type AdminRole = "ADMIN" | "SUPER_ADMIN" | "CANDIDATE";
+
+const restrictedRoutes: Record<string, AdminRole[]> = {
+  "/admin/dashboard/user-management": ["SUPER_ADMIN"],
+  "/admin/dashboard/template": ["SUPER_ADMIN"],
+  "/admin/dashboard/evaluation": ["SUPER_ADMIN"],
+  "/admin/dashboard/evaluator": ["SUPER_ADMIN"],
+  "/admin/dashboard/assignment-setting": ["SUPER_ADMIN"],
+  "/admin/dashboard/procedure-document": ["SUPER_ADMIN"],
+};
+
+const filterMenuItems = (
+  items: MenuProps["items"],
+  role?: AdminRole
+): MenuProps["items"] => {
+  if (!role || role === "SUPER_ADMIN") return items;
+
+  return (
+    items
+      ?.map((item) => {
+        if (!item) return null;
+
+        const key = typeof item.key === "string" ? item.key : undefined;
+        if (key) {
+          const allowedRoles = restrictedRoutes[key];
+          if (allowedRoles && !allowedRoles.includes(role)) {
+            return null;
+          }
+        }
+
+        if ("children" in item && item.children && item.children.length > 0) {
+          const filteredChildren = filterMenuItems(
+            item.children as MenuProps["items"],
+            role
+          );
+
+          if (!filteredChildren?.length) {
+            return null;
+          }
+
+          return {
+            ...item,
+            children: filteredChildren,
+          };
+        }
+
+        return item;
+      })
+      .filter(
+        (item): item is NonNullable<MenuProps["items"][number]> => !!item
+      ) ?? []
+  );
+};
+
+export const SidebarMenuSettingAdmin = (
+  role?: AdminRole
+): MenuProps["items"] => {
   const router = useRouter();
 
   const sidebarMenu: MenuProps["items"] = [
@@ -151,5 +207,5 @@ export const SidebarMenuSettingAdmin = (): MenuProps["items"] => {
     },
   ];
 
-  return sidebarMenu;
+  return filterMenuItems(sidebarMenu, role);
 };

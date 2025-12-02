@@ -21,12 +21,18 @@ import {
   Space,
   Tag,
   Typography,
+  Upload,
   message as antdMessage,
 } from "antd";
 import axios from "axios";
 import dayjs from "dayjs";
 import relativeTime from "dayjs/plugin/relativeTime";
 import { RecruitmentStage } from "@prisma/client";
+import {
+  PaperClipOutlined,
+  DownloadOutlined,
+  SendOutlined,
+} from "@ant-design/icons";
 import { useJobs } from "@/app/hooks/job";
 import { useConversations } from "@/app/hooks/conversation";
 import type { ConversationDataModel } from "@/app/models/conversation";
@@ -34,6 +40,8 @@ import { useAuth } from "@/app/utils/useAuth";
 import { useSocket } from "@/app/hooks/socket";
 import { ChatPayload } from "@/app/utils/socket-type";
 import { useQueryClient } from "@tanstack/react-query";
+import type { UploadFile } from "antd/es/upload/interface";
+import { uploadChatFiles } from "@/app/vendor/chat-upload";
 
 dayjs.extend(relativeTime);
 
@@ -50,6 +58,22 @@ type ChatMessage = {
     name: string | null;
     email: string | null;
   } | null;
+  attachments?: MessageAttachment[];
+};
+
+type MessageAttachment = {
+  id: string;
+  name: string;
+  url: string;
+  mimeType?: string;
+  size?: number;
+};
+
+type RawAttachment = {
+  url: string;
+  name?: string | null;
+  mimeType?: string | null;
+  size?: number | null;
 };
 
 const generateId = () =>
@@ -61,6 +85,89 @@ const generateId = () =>
 
 const buildRoomId = (applicantId?: string | null) =>
   applicantId ? `recruitment:${applicantId}` : null;
+
+const mapAttachments = (
+  messageId: string,
+  attachments?: RawAttachment[]
+): MessageAttachment[] =>
+  (attachments ?? []).map((att, idx) => ({
+    id: `${messageId}-att-${idx}`,
+    name:
+      att.name ??
+      att.url.split("/").pop()?.split("?")[0] ??
+      "Attachment",
+    url: att.url,
+    mimeType: att.mimeType ?? undefined,
+    size: att.size ?? undefined,
+  }));
+
+function AttachmentPreview({
+  attachment,
+  align,
+}: {
+  attachment: MessageAttachment;
+  align: "left" | "right";
+}) {
+  const isImage = (attachment.mimeType ?? "").startsWith("image/");
+  const downloadName = attachment.name.replace(/\s+/g, "_");
+
+  return (
+    <div
+      style={{
+        display: "inline-flex",
+        flexDirection: "column",
+        alignItems: align === "right" ? "flex-end" : "flex-start",
+        gap: 6,
+        maxWidth: 280,
+      }}
+    >
+      <a
+        href={attachment.url}
+        target="_blank"
+        rel="noreferrer"
+        download={downloadName}
+        style={{
+          display: "inline-block",
+          borderRadius: 12,
+          overflow: "hidden",
+          border: "1px solid #f0f0f0",
+          maxWidth: "100%",
+        }}
+      >
+        {isImage ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={attachment.url}
+            alt={attachment.name}
+            style={{ display: "block", width: "100%", height: "auto" }}
+          />
+        ) : (
+          <Flex
+            align="center"
+            gap={8}
+            style={{
+              padding: "8px 12px",
+              background: align === "right" ? "#f5f5f5" : "#fff",
+            }}
+          >
+            <PaperClipOutlined />
+            <span style={{ fontSize: 12 }}>{attachment.name}</span>
+          </Flex>
+        )}
+      </a>
+      <Button
+        size="small"
+        icon={<DownloadOutlined />}
+        href={attachment.url}
+        target="_blank"
+        rel="noreferrer"
+        download={downloadName}
+      >
+        Download
+      </Button>
+    </div>
+  );
+}
 
 export default function ChatContent() {
   const { data: jobs } = useJobs({});
@@ -103,6 +210,7 @@ export default function ChatContent() {
   const [composer, setComposer] = useState("");
   const [sending, setSending] = useState(false);
   const readAckRef = useRef<Set<string>>(new Set());
+  const [fileList, setFileList] = useState<UploadFile[]>([]);
 
   const stageOptions = useMemo(
     () =>
@@ -134,6 +242,9 @@ export default function ChatContent() {
       setSelectedConversationId(conversationData[0].id);
     }
   }, [conversationData, selectedConversationId]);
+  useEffect(() => {
+    setFileList([]);
+  }, [selectedConversationId]);
 
   const selectedConversation = useMemo(
     () =>
@@ -174,6 +285,7 @@ export default function ChatContent() {
             type: msg.type,
             senderId: msg.senderId,
             sender: msg.sender ?? null,
+            attachments: mapAttachments(msg.id, msg.attachments),
           })) ?? [];
         history.sort(
           (a, b) =>
@@ -233,6 +345,7 @@ export default function ChatContent() {
               name: senderName,
               email: undefined,
             },
+            attachments: mapAttachments(payload.id, payload.attachments),
           },
         ];
       });
@@ -277,12 +390,27 @@ export default function ChatContent() {
 
   const handleSendMessage = async () => {
     const text = composer.trim();
-    if (!text || !currentUser || !socket || !roomId || !selectedConversation) {
+    const filesToUpload = fileList
+      .map((file) => file.originFileObj)
+      .filter((file): file is File => !!file);
+    if (
+      (!text && filesToUpload.length === 0) ||
+      !currentUser ||
+      !socket ||
+      !roomId ||
+      !selectedConversation
+    ) {
       return;
     }
     setSending(true);
     const id = generateId();
     const now = new Date().toISOString();
+    const uploadFolder =
+      selectedConversation.applicant?.id ??
+      activeConversationId ??
+      selectedConversation.id ??
+      currentUser.id ??
+      "chat";
 
     const optimistic: ChatMessage = {
       id,
@@ -296,19 +424,52 @@ export default function ChatContent() {
         email: undefined,
       },
     };
-    setMessages((prev) => [...prev, optimistic]);
-    setComposer("");
-
-    const payload: ChatPayload = {
-      id,
-      room: roomId,
-      text,
-      senderId: currentUser.id,
-      createdAt: now,
-      conversationId: activeConversationId ?? selectedConversation.id,
-    };
 
     try {
+      const uploaded = filesToUpload.length
+        ? await uploadChatFiles(filesToUpload, {
+            folder: `recruitment-${uploadFolder}`,
+          })
+        : [];
+
+      const attachmentsForState = mapAttachments(
+        id,
+        uploaded.map((file) => ({
+          url: file.url,
+          name: file.name,
+          mimeType: file.mimeType,
+          size: file.size,
+        }))
+      );
+
+      const optimisticMessage: ChatMessage = {
+        ...optimistic,
+        attachments: attachmentsForState.length
+          ? attachmentsForState
+          : undefined,
+      };
+
+      setMessages((prev) => [...prev, optimisticMessage]);
+      setComposer("");
+      if (fileList.length) {
+        setFileList([]);
+      }
+
+      const payload: ChatPayload = {
+        id,
+        room: roomId,
+        text,
+        senderId: currentUser.id,
+        createdAt: now,
+        conversationId: activeConversationId ?? selectedConversation.id,
+        attachments: uploaded.map((file) => ({
+          url: file.url,
+          name: file.name,
+          mimeType: file.mimeType,
+          size: file.size,
+        })),
+      };
+
       socket.emit("chat:send", payload);
       invalidateConversations();
     } catch (error) {
@@ -350,45 +511,66 @@ export default function ChatContent() {
       ? dayjs(lastMessage.createdAt).fromNow()
       : dayjs(item.updatedAt).fromNow();
 
+    const isActive = selectedConversation?.id === item.id;
+
     return (
       <List.Item
         onClick={() => handleSelectConversation(item)}
         style={{
           cursor: "pointer",
-          borderRadius: 12,
+          borderRadius: 16,
           padding: 16,
-          border:
-            selectedConversation?.id === item.id
-              ? "1px solid #1677ff"
-              : "1px solid #f0f0f0",
-          background:
-            selectedConversation?.id === item.id ? "#f0f7ff" : "#fff",
+          margin: "8px 16px",
+          border: isActive ? "1px solid rgba(22,119,255,0.45)" : "1px solid #e8eef6",
+          background: isActive
+            ? "linear-gradient(135deg, rgba(22,119,255,0.1), rgba(22,119,255,0.02))"
+            : "#fff",
+          boxShadow: isActive
+            ? "0 16px 35px rgba(22,119,255,0.18)"
+            : "0 6px 18px rgba(15,23,42,0.06)",
+          transition: "all 0.2s ease",
         }}
       >
         <List.Item.Meta
           avatar={
-            <Avatar style={{ backgroundColor: "#1677ff" }}>
+            <Avatar
+              style={{
+                background: "linear-gradient(135deg,#1677ff,#69b1ff)",
+                fontWeight: 600,
+              }}
+            >
               {applicantName.slice(0, 1).toUpperCase()}
             </Avatar>
           }
           title={
-            <Space>
-              <Typography.Text strong>{applicantName}</Typography.Text>
+            <Flex gap={8} align="center">
+              <Typography.Text strong style={{ fontSize: 15 }}>
+                {applicantName}
+              </Typography.Text>
               {item.applicant?.stage && (
-                <Tag color="blue">
+                <Tag
+                  color="blue"
+                  style={{ borderRadius: 999, padding: "0 10px" }}
+                >
                   {item.applicant.stage.replace(/_/g, " ")}
                 </Tag>
               )}
-            </Space>
+            </Flex>
           }
           description={
             <div>
-              <Typography.Text type="secondary">{jobTitle}</Typography.Text>
-              <div style={{ marginTop: 4, color: "#555" }}>{lastSnippet}</div>
+              <Typography.Text type="secondary" style={{ fontSize: 13 }}>
+                {jobTitle}
+              </Typography.Text>
+              <div style={{ marginTop: 4, color: "#5c5f66", fontSize: 13 }}>
+                {lastSnippet}
+              </div>
             </div>
           }
         />
-        <Typography.Text type="secondary">{lastTime}</Typography.Text>
+        <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+          {lastTime}
+        </Typography.Text>
       </List.Item>
     );
   };
@@ -409,9 +591,8 @@ export default function ChatContent() {
     const candidateId = selectedConversation.applicant?.user?.id;
 
     return (
-      <List
-        dataSource={messages}
-        renderItem={(msg) => {
+      <div style={{ padding: "12px 8px" }}>
+        {messages.map((msg) => {
           const fromCandidate = msg.senderId === candidateId;
           const displayName = fromCandidate
             ? selectedConversation.applicant?.user?.name ??
@@ -419,63 +600,99 @@ export default function ChatContent() {
               "Candidate"
             : currentUser?.name ?? msg.sender?.name ?? "Admin";
           return (
-            <List.Item
+            <Flex
               key={msg.id}
-              style={{
-                justifyContent: fromCandidate ? "flex-start" : "flex-end",
-              }}
+              justify={fromCandidate ? "flex-start" : "flex-end"}
+              style={{ marginBottom: 12 }}
             >
-              <Card
+              <div
                 style={{
-                  maxWidth: "80%",
-                  borderRadius: 16,
-                  background: fromCandidate ? "#ffffff" : "#e6f4ff",
-                  border: fromCandidate
-                    ? "1px solid #f0f0f0"
-                    : "1px solid #b3daff",
+                  maxWidth: "75%",
+                  background: fromCandidate
+                    ? "#fff"
+                    : "linear-gradient(135deg,#1677ff,#69b1ff)",
+                  color: fromCandidate ? "#1f1f1f" : "#fff",
+                  padding: "12px 18px",
+                  borderRadius: 20,
+                  borderTopLeftRadius: fromCandidate ? 6 : 20,
+                  borderTopRightRadius: fromCandidate ? 20 : 6,
+                  boxShadow: "0 10px 30px rgba(15,23,42,0.1)",
+                  border: fromCandidate ? "1px solid #f1f5f9" : "none",
                 }}
               >
-                <Space
-                  direction="vertical"
-                  style={{ width: "100%", gap: 4 }}
+                <Flex
+                  justify="space-between"
+                  align="baseline"
+                  style={{ marginBottom: 6 }}
                 >
-                  <Space
-                    align="baseline"
+                  <Typography.Text
+                    strong
                     style={{
-                      justifyContent: "space-between",
-                      width: "100%",
+                      color: fromCandidate ? "#0f172a" : "#fff",
+                      fontSize: 13,
                     }}
                   >
-                    <Typography.Text strong>{displayName}</Typography.Text>
-                    <Typography.Text
-                      type="secondary"
-                      style={{ fontSize: 12 }}
-                    >
-                      {dayjs(msg.createdAt).format("DD MMM YYYY • HH:mm")}
-                    </Typography.Text>
-                  </Space>
-                  <Typography.Text style={{ whiteSpace: "pre-line" }}>
-                    {msg.content || (
-                      <em>
-                        {msg.type === "IMAGE"
-                          ? "Shared an image"
-                          : msg.type === "FILE"
-                          ? "Shared a file"
-                          : "No text content"}
-                      </em>
-                    )}
+                    {displayName}
                   </Typography.Text>
-                </Space>
-              </Card>
-            </List.Item>
+                  <Typography.Text
+                    type="secondary"
+                    style={{
+                      fontSize: 11,
+                      color: fromCandidate ? "#94a3b8" : "rgba(255,255,255,0.7)",
+                    }}
+                  >
+                    {dayjs(msg.createdAt).format("DD MMM YYYY • HH:mm")}
+                  </Typography.Text>
+                </Flex>
+                {msg.content?.trim() ? (
+                  <Typography.Paragraph
+                    style={{
+                      margin: 0,
+                      color: fromCandidate ? "#1f2937" : "#fff",
+                      whiteSpace: "pre-line",
+                    }}
+                  >
+                    {msg.content}
+                  </Typography.Paragraph>
+                ) : !msg.attachments?.length ? (
+                  <Typography.Text
+                    italic
+                    style={{ color: fromCandidate ? "#94a3b8" : "#e0eaff" }}
+                  >
+                    {msg.type === "IMAGE"
+                      ? "Shared an image"
+                      : msg.type === "FILE"
+                      ? "Shared a file"
+                      : "No text content"}
+                  </Typography.Text>
+                ) : null}
+                {msg.attachments?.length ? (
+                  <Flex gap={12} wrap style={{ marginTop: 10 }}>
+                    {msg.attachments.map((attachment) => (
+                      <AttachmentPreview
+                        key={attachment.id}
+                        attachment={attachment}
+                        align={fromCandidate ? "left" : "right"}
+                      />
+                    ))}
+                  </Flex>
+                ) : null}
+              </div>
+            </Flex>
           );
-        }}
-      />
+        })}
+      </div>
     );
   };
 
   return (
-    <div style={{ padding: 24 }}>
+    <div
+      style={{
+        padding: 24,
+        minHeight: "calc(100vh - 160px)",
+        background: "linear-gradient(180deg,#f6f8ff 0%,#fff 60%)",
+      }}
+    >
       <Flex justify="space-between" align="center" style={{ marginBottom: 24 }}>
         <div>
           <Typography.Title level={3} style={{ marginBottom: 0 }}>
@@ -487,7 +704,15 @@ export default function ChatContent() {
         </div>
       </Flex>
 
-      <Card style={{ marginBottom: 16 }}>
+      <Card
+        style={{
+          marginBottom: 16,
+          borderRadius: 20,
+          border: "1px solid #e7ecf5",
+          boxShadow: "0 25px 50px rgba(15,23,42,0.05)",
+        }}
+        bodyStyle={{ padding: 20 }}
+      >
         <Row gutter={[12, 12]}>
           <Col xs={24} md={8}>
             <Select
@@ -529,7 +754,13 @@ export default function ChatContent() {
           <Card
             title="Conversations"
             bodyStyle={{ padding: 0 }}
-            style={{ borderRadius: 16, overflow: "hidden", height: "70vh" }}
+            style={{
+              borderRadius: 24,
+              overflow: "hidden",
+              height: "72vh",
+              border: "1px solid #e7ecf5",
+              boxShadow: "0 25px 50px rgba(15,23,42,0.08)",
+            }}
           >
             {fetchLoading ? (
               <Skeleton active paragraph={{ rows: 6 }} />
@@ -547,45 +778,123 @@ export default function ChatContent() {
         <Col xs={24} md={16}>
           <Card
             title={
-              selectedConversation?.applicant?.user?.name ??
-              selectedConversation?.title ??
-              "Conversation"
+              <Flex align="center" justify="space-between">
+                <Flex align="center" gap={12}>
+                  <Avatar
+                    size={48}
+                    style={{
+                      background: "linear-gradient(135deg,#1677ff,#69b1ff)",
+                      fontWeight: 600,
+                      fontSize: 20,
+                    }}
+                  >
+                    {(
+                      selectedConversation?.applicant?.user?.name ??
+                      selectedConversation?.title ??
+                      "Conversation"
+                    )
+                      .slice(0, 1)
+                      .toUpperCase()}
+                  </Avatar>
+                  <div>
+                    <Typography.Title level={5} style={{ margin: 0 }}>
+                      {selectedConversation?.applicant?.user?.name ??
+                        selectedConversation?.title ??
+                        "Conversation"}
+                    </Typography.Title>
+                    <Typography.Text type="secondary">
+                      {selectedConversation?.applicant?.job?.job_title ??
+                        "No job assigned"}
+                    </Typography.Text>
+                  </div>
+                </Flex>
+                {selectedConversation?.applicant?.stage && (
+                  <Tag
+                    color="blue"
+                    style={{ borderRadius: 999, padding: "4px 16px" }}
+                  >
+                    {selectedConversation.applicant.stage.replace(/_/g, " ")}
+                  </Tag>
+                )}
+              </Flex>
             }
-            extra={
-              selectedConversation?.applicant?.stage && (
-                <Tag color="blue">
-                  {selectedConversation.applicant.stage.replace(/_/g, " ")}
-                </Tag>
-              )
-            }
-            style={{ borderRadius: 16, height: "70vh" }}
+            style={{
+              borderRadius: 24,
+              height: "72vh",
+              border: "1px solid #e7ecf5",
+              boxShadow: "0 25px 50px rgba(15,23,42,0.08)",
+            }}
             bodyStyle={{
-              height: "calc(70vh - 56px)",
+              height: "calc(72vh - 56px)",
               display: "flex",
               flexDirection: "column",
             }}
           >
-            <div style={{ flex: 1, overflowY: "auto", paddingRight: 8 }}>
+            <div
+              style={{
+                flex: 1,
+                overflowY: "auto",
+                padding: "0 12px",
+                borderBottom: "1px solid #f1f5f9",
+              }}
+            >
               {renderMessages()}
             </div>
-            <div style={{ marginTop: 12 }}>
-              <Input.TextArea
-                value={composer}
-                onChange={(e) => setComposer(e.target.value)}
-                placeholder="Type a message..."
-                autoSize={{ minRows: 3, maxRows: 4 }}
-                onKeyDown={handleComposerKeyDown}
-                disabled={!currentUser || !roomId}
-              />
-              <Flex justify="flex-end" gap={8} style={{ marginTop: 8 }}>
+            <div style={{ paddingTop: 12 }}>
+              <Flex gap={10} align="flex-end">
+                <div style={{ flex: 1 }}>
+                  <Input.TextArea
+                    value={composer}
+                    onChange={(e) => setComposer(e.target.value)}
+                    placeholder="Type a message..."
+                    autoSize={{ minRows: 3, maxRows: 4 }}
+                    onKeyDown={handleComposerKeyDown}
+                    disabled={!currentUser || !roomId}
+                  />
+                  {fileList.length > 0 && (
+                    <Flex gap={8} wrap style={{ marginTop: 8 }}>
+                      {fileList.map((file) => (
+                        <Tag
+                          key={file.uid}
+                          closable
+                          onClose={() =>
+                            setFileList((prev) =>
+                              prev.filter((item) => item.uid !== file.uid)
+                            )
+                          }
+                        >
+                          {file.name}
+                        </Tag>
+                      ))}
+                    </Flex>
+                  )}
+                </div>
+                <Upload
+                  multiple
+                  fileList={fileList}
+                  showUploadList={false}
+                  beforeUpload={() => false}
+                  onChange={({ fileList: newList }) => setFileList(newList)}
+                >
+                  <Button
+                    icon={<PaperClipOutlined />}
+                    shape="circle"
+                    disabled={!currentUser || !roomId}
+                  />
+                </Upload>
                 <Button
                   type="primary"
+                  icon={<SendOutlined />}
+                  shape="circle"
                   onClick={handleSendMessage}
-                  disabled={!currentUser || !roomId || !composer.trim()}
+                  disabled={
+                    !currentUser ||
+                    !roomId ||
+                    (!composer.trim() &&
+                      !fileList.some((file) => !!file.originFileObj))
+                  }
                   loading={sending}
-                >
-                  Send
-                </Button>
+                />
               </Flex>
             </div>
           </Card>

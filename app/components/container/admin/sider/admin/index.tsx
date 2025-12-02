@@ -2,26 +2,32 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 import Sider from "antd/es/layout/Sider";
 import { Divider, Image, Menu, Typography, theme } from "antd";
 import type { MenuProps } from "antd";
 import { SidebarMenuMainAdmin } from "@/app/data/admin/main/sidebar-data";
-import { SidebarMenuSettingAdmin } from "@/app/data/admin/setting/sidebar-data";
+import {
+  SidebarMenuSettingAdmin,
+  type AdminRole,
+} from "@/app/data/admin/setting/sidebar-data";
 
 const { Text } = Typography;
 
 export const SiderAdmin = () => {
   const router = useRouter();
   const pathname = usePathname();
+  const { data: session } = useSession();
   const { token } = theme.useToken();
 
   const [collapsed, setCollapsed] = useState(false);
   const [activeKey, setActiveKey] = useState("/");
   const [openKeys, setOpenKeys] = useState<string[]>([]);
+  const role = session?.user?.role as AdminRole | undefined;
 
   // Memoize menu items (avoid re-renders)
   const mainItems = useMemo(() => SidebarMenuMainAdmin(), []);
-  const settingItems = useMemo(() => SidebarMenuSettingAdmin(), []);
+  const settingItems = useMemo(() => SidebarMenuSettingAdmin(role), [role]);
 
   // Normalize active key (first 4 segments like your original logic)
   useEffect(() => {

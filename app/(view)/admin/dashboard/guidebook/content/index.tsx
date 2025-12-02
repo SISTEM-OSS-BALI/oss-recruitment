@@ -41,145 +41,232 @@ export default function GuidebookContent() {
   const searchRef = useRef(null);
   const activeSectionRef = useRef("");
 
-  const tags = [
-    "All",
-    "General",
-    "Installation",
-    "Configuration",
-    "Features",
-    "Operations",
-    "Reference",
-  ];
+  const tags = ["All", "General", "Onboarding", "Operations", "Reference"];
 
   const chapters = useMemo(
     () => [
       {
-        id: "intro",
-        title: "Introduction",
+        id: "overview",
+        title: "OSS Recruitment at a Glance",
         summary:
-          "A quick overview of the guide's purpose, scope, and how to navigate it effectively.",
-        lastUpdated: "2025-10-25",
-        estimated: "3 min",
+          "Learn who uses the platform, what each menu does, and how the pieces connect.",
+        lastUpdated: "2024-12-05",
+        estimated: "5 min",
         tags: ["General"],
         sections: [
           {
-            heading: "Document Goals",
+            heading: "Main Roles",
             content: [
-              "Serve as the official reference for new and advanced users.",
-              "Provide consistent operational standards across teams.",
-              "Reduce repeated questions and configuration errors.",
+              "SUPER ADMIN prepares the base data: team accounts, document templates, and house rules.",
+              "ADMIN runs the daily work: publish jobs, follow up applicants, plan interviews, and send offers.",
+              "Candidates use the user portal to apply, upload files, answer questions, and sign the contract.",
             ],
           },
           {
-            heading: "How to Use",
+            heading: "Menus You Will See Most",
             content: [
-              "Use the search to find specific topics.",
-              "Skim each chapter summary, then dive into details.",
-              "Follow the Quickstart if this is your first time.",
+              "Home shows a quick summary of applicants in every stage plus upcoming activities.",
+              "Setting Job is used to create or edit job openings.",
+              "Recruitment lists applicants per stage (Screening, Interview, Offering, Hiring, Rejected).",
+              "Support menus such as Evaluator, Schedule Interview, Template, Procedure Document, History Contract, and Chat help the daily routine.",
+            ],
+          },
+          {
+            heading: "Access Levels",
+            content: [
+              "SUPER ADMIN can see every menu including user and template settings.",
+              "ADMIN only sees menus needed for operations so the sidebar stays clean.",
+              "If something is missing, contact a SUPER ADMIN to double-check your role.",
             ],
           },
         ],
       },
       {
-        id: "quickstart",
-        title: "Quickstart",
-        summary: "The shortest path from zero to ready.",
-        lastUpdated: "2025-10-26",
+        id: "initial-setup",
+        title: "Before the Recruitment Starts",
+        summary:
+          "Items to prepare so the entire flow runs smoothly for the team and candidates.",
+        lastUpdated: "2024-12-05",
         estimated: "7 min",
-        tags: ["Installation", "Configuration"],
+        tags: ["Onboarding"],
         sections: [
           {
-            heading: "Prerequisites",
+            heading: "Company Profile",
             content: [
-              "Valid account access and proper roles.",
-              "Active credentials/tokens.",
-              "Stable network connection.",
+              "Fill in the company basics under Company Setting › Profile (name, HR contact, logo if you have one).",
+              "Add office locations so addresses appear on contracts and candidate pages automatically.",
+              "Review the details carefully because the same data is used across many modules.",
             ],
           },
           {
-            heading: "Fast Steps",
+            heading: "Team Accounts",
             content: [
-              "Create/sign in → verify email.",
-              "Initial configuration (profile, organization, preferences).",
-              "Test the main features to confirm the flow works.",
+              "SUPER ADMIN creates new admins from the User Management menu and assigns the correct role.",
+              "Use clear display names or email aliases so conversations are easy to recognize.",
+              "Ask every new user to sign in at least once to activate their access.",
+            ],
+          },
+          {
+            heading: "Document Templates",
+            content: [
+              "The Template menu stores contract drafts, referral cards, team ID cards, and onboarding files.",
+              "Procedure Document works well for simple SOPs or quick tips you often share with the team.",
+              "History Contract keeps every signed document so you can trace approvals later.",
+            ],
+          },
+          {
+            heading: "Screening Questions",
+            content: [
+              "Assignment Setting lets you build question banks for each job type.",
+              "Choose between multiple choice or short answer and provide answer choices when needed.",
+              "You can also add the MBTI test link here so candidates receive the instruction early.",
             ],
           },
         ],
       },
       {
-        id: "core-features",
-        title: "Core Features",
-        summary: "Key features explained with practical tips.",
-        lastUpdated: "2025-10-27",
+        id: "job-preparation",
+        title: "Publishing a New Job",
+        summary:
+          "How to use the Setting Job page from draft mode until the vacancy is live.",
+        lastUpdated: "2024-12-05",
+        estimated: "8 min",
+        tags: ["Operations"],
+        sections: [
+          {
+            heading: "Form Steps",
+            content: [
+              "Step 1 collects basics such as job title, workplace, work arrangement, and salary range.",
+              "Step 2 describes the role: summary, core responsibilities, and any important notes for candidates.",
+              "Step 3 (optional) links the screening questions or MBTI so applicants get instructions immediately.",
+            ],
+          },
+          {
+            heading: "Draft & Publish",
+            content: [
+              "Drafts save automatically whenever you make changes, so you can leave the page safely.",
+              "The top bar shows whether the job is still a draft or already published.",
+              "Hit Publish when ready and use the same action to hide the job again later if needed.",
+            ],
+          },
+          {
+            heading: "Tracking Applicants per Job",
+            content: [
+              "Setting Job › Manage Candidates shows the pipeline for that specific vacancy.",
+              "Open the applicant card to review files, send chats, or move the stage.",
+              "Key figures also appear on the Home dashboard so everyone stays informed.",
+            ],
+          },
+        ],
+      },
+      {
+        id: "candidate-pipeline",
+        title: "Handling the Applicant Pipeline",
+        summary:
+          "Move candidates from screening to hiring while keeping the team aligned.",
+        lastUpdated: "2024-12-05",
         estimated: "10 min",
-        tags: ["Features", "Operations"],
+        tags: ["Operations"],
         sections: [
           {
-            heading: "Navigation & Layout",
+            heading: "Stage Order",
             content: [
-              "Use the sidebar for core modules and the header for quick actions.",
-              "Use global search to jump between pages.",
-              "Keyboard: / to focus search, g → m to go to modules.",
+              "The main stages are Screening, Interview, Offering, Hiring, and Rejected.",
+              "Use the action buttons on the candidate detail page to switch stages after each decision.",
+              "Dashboard counters follow the same order so every admin reads the same numbers.",
             ],
           },
           {
-            heading: "Data Management",
+            heading: "Reviewing Screening Answers",
             content: [
-              "Use filter & sort for faster discovery.",
-              "Export (CSV/PDF) for reporting.",
-              "Track changes via the history/audit page.",
+              "The Screening tab displays all answers so reviewers can read them without downloading files.",
+              "MBTI status is visible; resend the link if the candidate has not finished yet.",
+              "Update the question sets anytime from Assignment Setting.",
+            ],
+          },
+          {
+            heading: "Scheduling Interviews",
+            content: [
+              "Schedule Interview keeps both on-site and online meetings in one place, complete with time and location.",
+              "Evaluator pages record interviewers and their scoring sheets.",
+              "Upcoming interviews also appear on the Home dashboard so the team can prepare.",
+            ],
+          },
+          {
+            heading: "Making the Offer",
+            content: [
+              "The Offering tab bundles final salary, benefits, and contract files so you can send everything in one go.",
+              "Candidates see the update in their portal, read the contract, sign digitally, or decline with a reason.",
+              "Once accepted, the stage moves to Hiring and the signed file stays in History Contract.",
             ],
           },
         ],
       },
       {
-        id: "faq",
-        title: "FAQ & Troubleshooting",
-        summary: "Common questions, frequent errors, and quick fixes.",
-        lastUpdated: "2025-10-28",
+        id: "candidate-experience",
+        title: "What Candidates Experience",
+        summary: "Follow the steps a candidate sees from the first visit to the final decision.",
+        lastUpdated: "2024-12-05",
         estimated: "6 min",
-        tags: ["Operations", "Reference"],
+        tags: ["General"],
         sections: [
           {
-            heading: "Frequently Asked",
+            heading: "Applying for a Job",
             content: [
-              "How to reset password? → Profile page.",
-              "Can't log in? → Check connectivity & account status.",
-              "Slow performance? → Clear cache & limit active tabs.",
+              "Candidates browse the job list, read the description, and press Apply.",
+              "They complete their profile, upload a CV, and answer the screening questions if required.",
+              "Partial answers are saved, so they can pause and continue later.",
             ],
           },
           {
-            heading: "Quick Diagnosis",
+            heading: "Tracking Progress",
             content: [
-              "Capture the complete error message.",
-              "Repeat the steps → confirm it's reproducible.",
-              "Report via the official channel with screenshots/logs.",
+              "The Candidate Progress timeline shows Application, Screening, Interview, Offering, and Hiring.",
+              "Each step includes a quick action such as opening the interview schedule or reviewing the contract.",
+              "Automatic notifications keep the candidate informed whenever their stage changes.",
+            ],
+          },
+          {
+            heading: "Candidate Decisions",
+            content: [
+              "At the offering stage, candidates accept or decline directly from the portal.",
+              "Accepting is as simple as placing a digital signature and uploading the requested ID.",
+              "Declining allows them to add a short note so the team understands the situation.",
             ],
           },
         ],
       },
       {
-        id: "appendix",
-        title: "Appendix & References",
-        summary: "Glossary, file structure, and reference links.",
-        lastUpdated: "2025-10-29",
-        estimated: "4 min",
+        id: "communication-support",
+        title: "Communication & Support",
+        summary:
+          "Keep the team in sync and know what to do when something feels off.",
+        lastUpdated: "2024-12-05",
+        estimated: "5 min",
         tags: ["Reference"],
         sections: [
           {
-            heading: "Glossary",
+            heading: "Chat & Notifications",
             content: [
-              "Token: an access key representing user authorization.",
-              "SLA: the agreed service-level commitment.",
-              "Backup: a data copy used for recovery.",
+              "The Chat menu connects admins with candidates or teammates without leaving the dashboard.",
+              "The bell icon in the header lists unread messages; click an item to open that conversation.",
+              "Online and typing indicators help everyone feel the conversation is live.",
             ],
           },
           {
-            heading: "Useful Links",
+            heading: "Reference Documents",
             content: [
-              "Help Center & Advanced Docs.",
-              "Service Status & Incident History.",
-              "Security & Compliance Guide.",
+              "This Guide Book lives under Settings and offers search plus a handy table of contents.",
+              "Procedure Document is perfect for short how-to notes, letter templates, or other frequently shared files.",
+              "Tag important chapters as Reference so training sessions can find them quickly.",
+            ],
+          },
+          {
+            heading: "If Something Goes Wrong",
+            content: [
+              "Check your role if a menu disappears unexpectedly.",
+              "Refresh the page or sign out and back in whenever data feels slow.",
+              "Note the time of the issue and contact a SUPER ADMIN or support if the problem continues.",
             ],
           },
         ],

@@ -29,7 +29,7 @@ export default function LoginContent() {
       const sessionRes = await fetch("/api/auth/session");
       const session = await sessionRes.json();
 
-      if (session.user.role === "ADMIN") {
+      if (session.user.role === "SUPER_ADMIN" || session.user.role === "ADMIN") {
         router.push("/admin/dashboard/home");
       } else {
         router.push("/user");

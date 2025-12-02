@@ -18,6 +18,10 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faBell } from "@fortawesome/free-solid-svg-icons";
 import { useChatUnread } from "@/app/hooks/chat";
 import { useRouter } from "next/navigation";
+import { useAuth } from "@/app/utils/useAuth";
+import { normalize } from "path";
+import { normalizedRole } from "@/app/utils/normalized";
+
 
 const { Header, Content, Footer } = Layout;
 
@@ -69,6 +73,7 @@ export default function AdminLayout({
 }) {
   const router = useRouter();
   const { unreadCount, conversations, isFetching } = useChatUnread();
+  const {role} = useAuth();
 
   const notificationItems: MenuProps["items"] =
     conversations.length > 0
@@ -212,7 +217,7 @@ export default function AdminLayout({
                     type="secondary"
                     style={{ fontSize: 14, marginTop: 0 }}
                   >
-                    Admin
+                    {normalizedRole(role || "")}
                   </Typography.Text>
                 </div>
               </div>

@@ -27,3 +27,16 @@ export function normalizedWorkType(type: string) {
       return type;
   }
 }
+
+export function normalizedRole(role: string) {
+  switch (role) {
+    case "ADMIN":
+      return "Admin";
+    case "SUPER_ADMIN":
+      return "Super Admin";
+    case "CANDIDATE":
+      return "Candidate";
+    default:
+      return role;
+  }
+}
