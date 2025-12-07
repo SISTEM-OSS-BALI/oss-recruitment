@@ -1,6 +1,7 @@
 "use client";
 
 import { useJobs } from "@/app/hooks/job";
+import { useMobile } from "@/app/hooks/use-mobile";
 import { useMemo, useState } from "react";
 import { Row, Col, Typography, Input, Button, Card, Empty } from "antd";
 import { sanitizeHtml } from "@/app/utils/sanitize-html";
@@ -22,6 +23,7 @@ const { Title, Text } = Typography;
 
 export default function JobList() {
   const { data: jobData } = useJobs({ queryString: "status=active" });
+  const isMobile = useMobile();
   const [search, setSearch] = useState("");
   const [statusFilters, setStatusFilters] = useState<string[]>([]);
   const [workTypeFilters, setWorkTypeFilters] = useState<string[]>([]);
@@ -63,12 +65,13 @@ export default function JobList() {
   const formatEnum = (value?: string | null) =>
     value ? toCapitalized(value.replace(/_/g, " ")) : "";
 
-  const uniqueOptions = <T,>(values: (T | null | undefined)[]) => {
-    const set = new Set(
-      values
-        .map((val) => (typeof val === "string" ? val : null))
-        .filter((val): val is string => Boolean(val))
-    );
+  const uniqueOptions = (values: Array<string | null | undefined>) => {
+    const set = new Set<string>();
+    values.forEach((val) => {
+      if (typeof val === "string" && val.trim()) {
+        set.add(val);
+      }
+    });
     return Array.from(set);
   };
 
@@ -228,11 +231,12 @@ export default function JobList() {
         </Text>
         <div
           style={{
-            marginTop: 30,
+            marginTop: isMobile ? 20 : 30,
             width: "100%",
-            maxWidth: 620,
+            maxWidth: isMobile ? "100%" : 620,
             display: "flex",
-            gap: 18,
+            gap: isMobile ? 12 : 18,
+            flexDirection: isMobile ? "column" : "row",
           }}
         >
           <Input
@@ -247,6 +251,7 @@ export default function JobList() {
               fontSize: 17,
               borderColor: "#e6eeff",
               flex: 1,
+              minHeight: isMobile ? 48 : undefined,
             }}
           />
           <Button
@@ -258,6 +263,7 @@ export default function JobList() {
               padding: "0 34px",
               fontSize: 17,
               height: 48,
+              width: isMobile ? "100%" : "auto",
             }}
           >
             Search
@@ -266,7 +272,7 @@ export default function JobList() {
       </div>
 
       {/* KONTEN GRID */}
-      <Row gutter={32} align="top">
+      <Row gutter={isMobile ? [24, 32] : 32} align="top">
         {/* FILTER SIDEBAR */}
         <Col
           xs={24}
@@ -274,17 +280,29 @@ export default function JobList() {
           md={7}
           lg={6}
           xl={5}
-          style={{ display: "flex", justifyContent: "center" }}
+          style={{
+            display: "flex",
+            justifyContent: isMobile ? "flex-start" : "center",
+            marginBottom: isMobile ? 20 : 0,
+          }}
         >
-          <FilterSidebar
-            sections={filterSections}
-            clearFilters={clearFilters}
-            onApplyFilters={applyFilters}
-          />
+          <div style={{ width: "100%", maxWidth: 360 }}>
+            <FilterSidebar
+              sections={filterSections}
+              clearFilters={clearFilters}
+              onApplyFilters={applyFilters}
+            />
+          </div>
         </Col>
         {/* JOB LIST */}
         <Col xs={24} sm={17} md={17} lg={18} xl={19}>
-          <div style={{ display: "flex", flexDirection: "column", gap: 28 }}>
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              gap: isMobile ? 16 : 28,
+            }}
+          >
             {filteredJobs.length === 0 ? (
               <Card
                 style={{

@@ -17,6 +17,8 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import menuLabel from "@/app/utils/label";
 
+type MenuItems = NonNullable<MenuProps["items"]>;
+
 export type AdminRole = "ADMIN" | "SUPER_ADMIN" | "CANDIDATE";
 
 const restrictedRoutes: Record<string, AdminRole[]> = {
@@ -65,9 +67,7 @@ const filterMenuItems = (
 
         return item;
       })
-      .filter(
-        (item): item is NonNullable<MenuProps["items"][number]> => !!item
-      ) ?? []
+      .filter((item): item is MenuItems[number] => !!item) ?? []
   );
 };
 

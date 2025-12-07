@@ -36,14 +36,12 @@ import type { JobSkillSuggestion } from "@/app/vendor/recommeded-skill";
 import { useJob, useJobs } from "@/app/hooks/job";
 import dayjs from "dayjs";
 import relativeTime from "dayjs/plugin/relativeTime";
+import {
+  formatCurrencyIDR,
+  parseCurrencyToNumber,
+} from "@/app/utils/currency";
 
 dayjs.extend(relativeTime);
-
-const formatToIDR = (value?: string | number) => {
-  if (value === undefined || value === null) return "";
-  const numeric = `${value}`.replace(/[^\d]/g, "");
-  return numeric.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
-};
 
 const splitTextArea = (value?: string | string[]) => {
   if (!value) return [];
@@ -882,9 +880,9 @@ export default function CreateJobUI({ jobId }: { jobId?: string }) {
                     <InputNumber
                       size="large"
                       style={{ width: "100%" }}
-                      min={0}
-                      formatter={(value) => `Rp ${formatToIDR(value)}`}
-                      parser={(value) => value?.replace(/[^\d]/g, "") ?? ""}
+                      min={0 as number}
+                      formatter={(value) => formatCurrencyIDR(value)}
+                      parser={(value) => parseCurrencyToNumber(value) ?? 0}
                       placeholder="2.000.000"
                     />
                   </Form.Item>
@@ -905,9 +903,9 @@ export default function CreateJobUI({ jobId }: { jobId?: string }) {
                     <InputNumber
                       size="large"
                       style={{ width: "100%" }}
-                      min={0}
-                      formatter={(value) => `Rp ${formatToIDR(value)}`}
-                      parser={(value) => value?.replace(/[^\d]/g, "") ?? ""}
+                      min={0 as number}
+                      formatter={(value) => formatCurrencyIDR(value)}
+                      parser={(value) => parseCurrencyToNumber(value) ?? 0}
                       placeholder="5.000.000"
                     />
                   </Form.Item>

@@ -34,6 +34,7 @@ import {
   getStageLabel,
   toProgressStage,
 } from "@/app/utils/recruitment-stage";
+import { useMobile } from "@/app/hooks/use-mobile";
 
 dayjs.extend(relativeTime);
 
@@ -76,6 +77,7 @@ export default function Content() {
   const { data: applicants, fetchLoading } = useCandidateByUserId({
     id: user_id,
   });
+  const isMobile = useMobile();
   const [searchTerm, setSearchTerm] = useState("");
   const [stageFilter, setStageFilter] =
     useState<StageFilterValue>("ALL");
@@ -123,7 +125,11 @@ export default function Content() {
 
   return (
     <div
-      style={{ padding: "32px 24px 64px", maxWidth: 1300, margin: "0 auto" }}
+      style={{
+        padding: isMobile ? "24px 16px 48px" : "32px 24px 64px",
+        maxWidth: 1300,
+        margin: "0 auto",
+      }}
     >
       <Space direction="vertical" size={8} style={{ display: "flex" }}>
         <div>
@@ -177,7 +183,7 @@ export default function Content() {
           <Empty description="No applications match your filters" />
         </Card>
       ) : (
-        <Row gutter={[16, 16]} style={{ marginTop: 16 }}>
+        <Row gutter={isMobile ? [12, 12] : [16, 16]} style={{ marginTop: 16 }}>
           {filteredApplicants.map((app) => {
             const name = app?.user?.name || "Candidate";
             const initials =
@@ -218,6 +224,7 @@ export default function Content() {
                   stageDisplayCount={stageDisplayCount}
                   avatarUrl={app?.user?.photo_url}
                   onDetail={goToDetail}
+                  isMobile={isMobile}
                 />
               </Col>
             );
@@ -241,6 +248,7 @@ type ApplicationCardProps = {
   stageDisplayCount: number;
   avatarUrl?: string | null;
   onDetail: (id: string) => void;
+  isMobile: boolean;
 };
 
 function ApplicationCard({
@@ -256,6 +264,7 @@ function ApplicationCard({
   stageDisplayCount,
   avatarUrl,
   onDetail,
+  isMobile,
 }: ApplicationCardProps) {
   return (
     <Card
@@ -266,14 +275,21 @@ function ApplicationCard({
         boxShadow: "0 24px 40px rgba(15, 23, 42, 0.06)",
         cursor: "pointer",
       }}
-      bodyStyle={{ padding: 24 }}
+      bodyStyle={{ padding: isMobile ? 20 : 24 }}
       onClick={() => onDetail(id)}
     >
-      <Row align="middle" justify="space-between" gutter={[16, 16]}>
+      <Row
+        align="middle"
+        justify={isMobile ? "start" : "space-between"}
+        gutter={[16, 16]}
+      >
         <Col flex="auto">
-          <Space align="center" size={18}>
+          <Space
+            align={isMobile ? "start" : "center"}
+            size={isMobile ? 14 : 18}
+          >
             <Avatar
-              size={64}
+              size={isMobile ? 56 : 64}
               src={avatarUrl || undefined}
               style={{
                 background:
@@ -306,7 +322,7 @@ function ApplicationCard({
             </Space>
           </Space>
         </Col>
-        <Col>
+        <Col style={{ textAlign: isMobile ? "left" : "right" }}>
           <Tooltip title="Application ID">
             <Tag
               color="black"
@@ -333,7 +349,11 @@ function ApplicationCard({
         }}
         bodyStyle={{ padding: 16 }}
       >
-        <Row align="middle" gutter={[16, 12]}>
+        <Row
+          align="middle"
+          gutter={[16, 12]}
+          style={{ flexDirection: isMobile ? "column" : "row" }}
+        >
           <Col xs={24} md={6}>
             <Tag
               style={{
@@ -348,7 +368,7 @@ function ApplicationCard({
               {stageLabelText}
             </Tag>
           </Col>
-          <Col xs={24} md={18}>
+          <Col xs={24} md={18} style={{ width: "100%" }}>
             <div
               style={{
                 display: "flex",
@@ -386,13 +406,13 @@ function ApplicationCard({
             Tap to open detailed timeline
           </Text>
         </Col>
-        <Col>
+        <Col style={{ width: isMobile ? "100%" : "auto" }}>
           <Tooltip title="View details">
             <Button
               type="primary"
               icon={<EyeOutlined />}
               style={{
-                minWidth: 180,
+                width: isMobile ? "100%" : 180,
                 height: 48,
                 borderRadius: 14,
                 background:

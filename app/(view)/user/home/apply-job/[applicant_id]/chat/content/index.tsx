@@ -10,6 +10,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { uploadChatFiles } from "@/app/vendor/chat-upload";
 import { message } from "antd";
 import { getStageLabel } from "@/app/utils/recruitment-stage";
+import { useMobile } from "@/app/hooks/use-mobile";
 
 const generateId = () =>
   typeof window !== "undefined" &&
@@ -32,6 +33,7 @@ export default function ChatPage() {
   const socket = useSocket(
     currentUser ? { userId: currentUser.id } : undefined
   );
+  const isMobile = useMobile();
   const [peerOnline, setPeerOnline] = useState(false);
   const [peerTyping, setPeerTyping] = useState(false);
 
@@ -340,7 +342,13 @@ export default function ChatPage() {
   if (!currentUser) return null;
 
   return (
-    <div style={{ maxWidth: 920, margin: "24px auto", padding: 16 }}>
+    <div
+      style={{
+        maxWidth: 920,
+        margin: isMobile ? "16px auto" : "24px auto",
+        padding: isMobile ? 12 : 16,
+      }}
+    >
       <ChatWidget
         currentUser={currentUser}
         peer={{

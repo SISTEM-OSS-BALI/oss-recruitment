@@ -28,6 +28,10 @@ export type ActionItem = {
 
 type Props = {
   id: string;
+  /** Optional label describing the record for accessibility */
+  title?: string;
+  /** Optional short description of record */
+  description?: string;
 
   /** PROPS BARU: daftar action yang akan dirender */
   items?: ActionItem[];
@@ -44,6 +48,8 @@ type Props = {
 
 export default function ActionTable({
   id,
+  title,
+  description,
   items,
   actions,
   badgeStyle = {
@@ -69,8 +75,12 @@ export default function ActionTable({
 
   if (list.length === 0) return <>{emptyFallback}</>;
 
+  const ariaLabel = title
+    ? `${title}${description ? ` – ${description}` : ""}`
+    : description ?? undefined;
+
   return (
-    <div>
+    <div aria-label={ariaLabel}>
       <Flex gap={8}>
         {list.map((action) => {
           const handleClick = () => {

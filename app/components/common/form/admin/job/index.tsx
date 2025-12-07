@@ -1,6 +1,10 @@
 import { useLocations } from "@/app/hooks/location";
 import { JobDataModel } from "@/app/models/job";
 import {
+  formatCurrencyIDR,
+  parseCurrencyToNumber,
+} from "@/app/utils/currency";
+import {
   Alert,
   Button,
   Checkbox,
@@ -181,11 +185,9 @@ export default function JobForm({
               >
                 <InputNumber
                   style={{ width: "100%" }}
-                  min={0}
-                  formatter={(value) =>
-                    value ? `Rp ${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ".") : ""
-                  }
-                  parser={(value) => value?.replace(/[Rp.\s]/g, "") ?? ""}
+                  min={0 as number}
+                  formatter={(value) => formatCurrencyIDR(value)}
+                  parser={(value) => parseCurrencyToNumber(value) ?? 0}
                   placeholder="Enter minimum salary"
                   size="large"
                 />
@@ -199,11 +201,9 @@ export default function JobForm({
               >
                 <InputNumber
                   style={{ width: "100%" }}
-                  min={0}
-                  formatter={(value) =>
-                    value ? `Rp ${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ".") : ""
-                  }
-                  parser={(value) => value?.replace(/[Rp.\s]/g, "") ?? ""}
+                  min={0 as number}
+                  formatter={(value) => formatCurrencyIDR(value)}
+                  parser={(value) => parseCurrencyToNumber(value) ?? 0}
                   placeholder="Enter maximum salary"
                   size="large"
                 />

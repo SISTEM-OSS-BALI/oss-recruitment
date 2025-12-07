@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import {
   useCallback,
   useEffect,
@@ -18,7 +19,6 @@ import {
   Row,
   Select,
   Skeleton,
-  Space,
   Tag,
   Typography,
   Upload,
@@ -40,7 +40,7 @@ import { useAuth } from "@/app/utils/useAuth";
 import { useSocket } from "@/app/hooks/socket";
 import { ChatPayload } from "@/app/utils/socket-type";
 import { useQueryClient } from "@tanstack/react-query";
-import type { UploadFile } from "antd/es/upload/interface";
+import type { RcFile, UploadFile } from "antd/es/upload/interface";
 import { uploadChatFiles } from "@/app/vendor/chat-upload";
 
 dayjs.extend(relativeTime);
@@ -224,7 +224,7 @@ export default function ChatContent() {
   const jobOptions = useMemo(
     () =>
       (jobs ?? []).map((job) => ({
-        label: job.job_title ?? job.name ?? "Untitled Job",
+        label: job.job_title ?? job.job_role ?? "Untitled Job",
         value: job.id,
       })),
     [jobs]
@@ -343,7 +343,7 @@ export default function ChatContent() {
             sender: {
               id: payload.senderId,
               name: senderName,
-              email: undefined,
+              email: null,
             },
             attachments: mapAttachments(payload.id, payload.attachments),
           },
@@ -392,7 +392,7 @@ export default function ChatContent() {
     const text = composer.trim();
     const filesToUpload = fileList
       .map((file) => file.originFileObj)
-      .filter((file): file is File => !!file);
+      .filter((file): file is RcFile => Boolean(file));
     if (
       (!text && filesToUpload.length === 0) ||
       !currentUser ||
@@ -421,7 +421,7 @@ export default function ChatContent() {
       sender: {
         id: currentUser.id,
         name: currentUser.name ?? "Admin",
-        email: undefined,
+        email: null,
       },
     };
 

@@ -22,6 +22,7 @@ import {
 import dayjs from "dayjs";
 
 import { useJob } from "@/app/hooks/job";
+import { useMobile } from "@/app/hooks/use-mobile";
 import { sanitizeHtml } from "@/app/utils/sanitize-html";
 import { toCapitalized } from "@/app/utils/capitalized";
 import PreviewComponent from "../../../home/profile/content/PreviewComponent";
@@ -80,6 +81,7 @@ export default function ApplyJobContent() {
   const { id } = useParams() as { id: string };
   const router = useRouter();
   const { data, fetchLoading: isLoading } = useJob({ id });
+  const isMobile = useMobile();
 
   const overviewHTML = useMemo(
     () => sanitizeHtml(data?.description ?? ""),
@@ -146,9 +148,20 @@ export default function ApplyJobContent() {
   ];
 
   return (
-    <div style={{ maxWidth: 1200, margin: "0 auto", padding: "24px 24px 64px" }}>
-      <Space direction="vertical" size={24} style={{ width: "100%" }}>
+    <div
+      style={{
+        maxWidth: 1200,
+        margin: "0 auto",
+        padding: isMobile ? "16px 16px 48px" : "24px 24px 64px",
+      }}
+    >
+      <Space
+        direction="vertical"
+        size={isMobile ? 16 : 24}
+        style={{ width: "100%" }}
+      >
         <HeroCard
+          isMobile={isMobile}
           isLoading={isLoading}
           jobName={data?.job_title}
           locationLabel={formattedLocation}
@@ -156,7 +169,7 @@ export default function ApplyJobContent() {
           onApply={() => goToQuestinScreening(id)}
         />
 
-        <Row gutter={[24, 24]}>
+        <Row gutter={isMobile ? [16, 16] : [24, 24]}>
           <Col xs={24} lg={15}>
             <Card
               bordered={false}
@@ -261,7 +274,11 @@ export default function ApplyJobContent() {
           }}
           bodyStyle={{ padding: 24 }}
         >
-          <Row gutter={[16, 16]} align="middle">
+          <Row
+            gutter={[16, 16]}
+            align={isMobile ? "stretch" : "middle"}
+            style={{ textAlign: isMobile ? "left" : "inherit" }}
+          >
             <Col xs={24} md={16}>
               <Title level={4} style={{ margin: 0 }}>
                 Ready to move forward?
@@ -271,12 +288,16 @@ export default function ApplyJobContent() {
                 let recruiters know you are interested.
               </Text>
             </Col>
-            <Col xs={24} md={8} style={{ textAlign: "right" }}>
+            <Col
+              xs={24}
+              md={8}
+              style={{ textAlign: isMobile ? "left" : "right" }}
+            >
               <Button
                 type="primary"
                 size="large"
                 style={{
-                  minWidth: 200,
+                  width: isMobile ? "100%" : 200,
                   border: "none",
                   background:
                     "linear-gradient(135deg, #1f4ed8 0%, #5a67f2 100%)",
@@ -370,6 +391,7 @@ type HeroCardProps = {
   locationLabel?: string;
   closingDate?: string;
   onApply: () => void;
+  isMobile: boolean;
 };
 
 function HeroCard({
@@ -378,6 +400,7 @@ function HeroCard({
   locationLabel,
   closingDate,
   onApply,
+  isMobile,
 }: HeroCardProps) {
   return (
     <Card
@@ -388,12 +411,16 @@ function HeroCard({
           "linear-gradient(135deg, #1d2760 0%, #1f4ed8 100%)",
         color: "white",
       }}
-      bodyStyle={{ padding: 32 }}
+      bodyStyle={{ padding: isMobile ? 20 : 32 }}
     >
       {isLoading ? (
         <Skeleton active paragraph={{ rows: 2 }} title />
       ) : (
-        <Space direction="vertical" size={12} style={{ width: "100%" }}>
+        <Space
+          direction="vertical"
+          size={isMobile ? 8 : 12}
+          style={{ width: "100%" }}
+        >
           <Space size={[8, 8]} wrap>
             <Tag
               style={{

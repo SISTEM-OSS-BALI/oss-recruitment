@@ -9,9 +9,9 @@ export type ConversationDataModel = Prisma.ConversationGetPayload<{
     applicant: {
       include: {
         user: true;
+        job: true;
       };
     };
   };
 }>;
-
 

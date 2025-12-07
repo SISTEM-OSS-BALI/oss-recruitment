@@ -2,6 +2,7 @@
 
 import { useMemo } from "react";
 import { Breadcrumb } from "antd";
+import type { BreadcrumbProps } from "antd";
 import { RightOutlined } from "@ant-design/icons";
 import { usePathname } from "next/navigation";
 import { useQueries } from "@tanstack/react-query";
@@ -180,7 +181,7 @@ export const MainBreadcrumb = () => {
   const resolved = useResolvedLabels(segments);
 
   const items = useMemo(() => {
-    const arr = [
+    const arr: NonNullable<BreadcrumbProps["items"]> = [
       {
         title: (
           <Link href="/" style={{ cursor: "pointer" }}>

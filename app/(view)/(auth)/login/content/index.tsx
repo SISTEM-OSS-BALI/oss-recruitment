@@ -5,6 +5,7 @@ import { UserFormModel } from "@/app/models/user";
 import { notification } from "antd";
 import Image from "next/image";
 import Link from "next/link";
+import type { Session } from "next-auth";
 import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import React, { useState } from "react";
@@ -16,26 +17,45 @@ export default function LoginContent() {
   const [loading, setLoading] = useState(false);
 
   const handleLogin = async (values: UserFormModel) => {
-    setLoading(true);
-    const res = await signIn("credentials", {
-      redirect: false,
-      email: values.email,
-      password: values.password,
-    });
-    setLoading(false);
+    try {
+      setLoading(true);
+      const res = await signIn("credentials", {
+        redirect: false,
+        email: values.email,
+        password: values.password,
+      });
 
-    if (res?.ok) {
-      notification.success({ message: "Signed in successfully" });
-      const sessionRes = await fetch("/api/auth/session");
-      const session = await sessionRes.json();
-
-      if (session.user.role === "SUPER_ADMIN" || session.user.role === "ADMIN") {
-        router.push("/admin/dashboard/home");
-      } else {
-        router.push("/user");
+      if (!res?.ok) {
+        notification.error({
+          message: "Sign in failed",
+          description: res?.error ?? "Invalid email or password.",
+        });
+        return;
       }
-    } else {
-      notification.error({ message: "Sign in failed" });
+
+      const sessionRes = await fetch("/api/auth/session");
+      if (!sessionRes.ok) {
+        throw new Error("Unable to retrieve session information.");
+      }
+
+      const session = (await sessionRes.json()) as Session | null;
+      const role = session?.user?.role;
+
+      notification.success({ message: "Signed in successfully" });
+      if (role === "SUPER_ADMIN" || role === "ADMIN") {
+        router.push("/admin/dashboard/home");
+        return;
+      }
+
+      router.push("/user");
+    } catch (error) {
+      notification.error({
+        message: "Sign in failed",
+        description:
+          error instanceof Error ? error.message : "Unexpected error occurred.",
+      });
+    } finally {
+      setLoading(false);
     }
   };
 
