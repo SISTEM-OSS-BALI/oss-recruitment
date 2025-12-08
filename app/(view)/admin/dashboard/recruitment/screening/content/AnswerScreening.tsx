@@ -166,9 +166,19 @@ export default function AnswerScreening({
 
   // Normalisasi: hook bisa mengembalikan array atau { result: [...] }
   const rows: AnswerRow[] = useMemo(() => {
-    if (Array.isArray(data)) return data as AnswerRow[];
+    const normalize = (source: unknown): AnswerRow[] => {
+      if (!Array.isArray(source)) return [];
+      return source.map((row) => ({
+        ...(row as AnswerRow),
+        createdAt: row?.createdAt
+          ? dayjs(row.createdAt).toISOString()
+          : undefined,
+      }));
+    };
+
+    if (Array.isArray(data)) return normalize(data);
     if (data && Array.isArray((data as any).result)) {
-      return (data as any).result as AnswerRow[];
+      return normalize((data as any).result);
     }
     return [];
   }, [data]);

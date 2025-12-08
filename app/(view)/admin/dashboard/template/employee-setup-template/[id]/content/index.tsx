@@ -76,6 +76,10 @@ export default function DetailEmployeeSetup() {
     form.setFieldsValue({
       name_activity: target.name_activity,
       executor: target.executor,
+      method: target.method ?? "CHECK",
+      description: target.description ?? "",
+      default_link: target.default_link ?? "",
+      input_label: target.input_label ?? "",
     });
     setModalType("update");
     setModalOpen(true);
@@ -206,6 +210,10 @@ export default function DetailEmployeeSetup() {
             ? {
                 name_activity: selectedQuestion?.name_activity ?? "",
                 executor: selectedQuestion?.executor ?? "",
+                method: selectedQuestion?.method ?? "CHECK",
+                description: selectedQuestion?.description ?? "",
+                default_link: selectedQuestion?.default_link ?? "",
+                input_label: selectedQuestion?.input_label ?? "",
               }
             : null
         }

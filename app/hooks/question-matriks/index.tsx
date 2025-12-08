@@ -4,6 +4,7 @@ import axios from "axios";
 import MainNotification from "../../components/common/notifications";
 
 import type {
+  MatriksQuestionCreateDTO,
   MatriksQuestionDataModel,
   MatriksQuestionUpdateDTO,
 } from "@/app/models/question-matriks";
@@ -16,13 +17,7 @@ const queryKey = "question-matriks";
 // Payload create untuk row matriks via endpoint single-row (perlu baseId)
 export type MatriksQuestionCreatePayload = {
   baseId: string;
-  text: string;
-  inputType: string; // atau QuestionMatriksType jika kamu export enum-nya
-  required?: boolean;
-  order?: number;
-  helpText?: string | null;
-  placeholder?: string | null;
-};
+} & MatriksQuestionCreateDTO;
 
 // ========================= Collection hook =========================
 export const useQuestionMatriks = ({
@@ -46,7 +41,7 @@ export const useQuestionMatriks = ({
     },
   });
 
-  // CREATE (perlu baseId di body, jangan kirim options)
+  // CREATE (perlu baseId di body, options opsional)
   const { mutateAsync: onCreate, isPending: onCreateLoading } = useMutation({
     mutationFn: async (payload: MatriksQuestionCreatePayload) => {
       return axios.post(baseUrl, payload);

@@ -31,14 +31,16 @@ const { Title, Text, Paragraph } = Typography;
 // • Responsive layout: Left TOC (Affix), Main content, Right help panel
 // ————————————————————————————————————————————————
 
+import type { AnchorProps } from "antd/es/anchor/Anchor";
+
 export default function GuidebookContent() {
   const [query, setQuery] = useState("");
   const [activeTag, setActiveTag] = useState("All");
   const [progress, setProgress] = useState(0);
   const [activeSection, setActiveSection] = useState("");
 
-  const contentRef = useRef(null);
-  const searchRef = useRef(null);
+  const contentRef = useRef<HTMLDivElement | null>(null);
+  const searchRef = useRef<HTMLInputElement | null>(null);
   const activeSectionRef = useRef("");
 
   const tags = ["All", "General", "Onboarding", "Operations", "Reference"];
@@ -366,7 +368,7 @@ export default function GuidebookContent() {
   }, [filtered]);
 
   useEffect(() => {
-    const onKey = (e) => {
+    const onKey = (e: KeyboardEvent) => {
       if (e.key === "/") {
         e.preventDefault();
         searchRef.current?.focus();
@@ -409,7 +411,10 @@ export default function GuidebookContent() {
 
   const handlePrint = () => window.print();
 
-  const handleAnchorClick = (e, link) => {
+  const handleAnchorClick: NonNullable<AnchorProps["onClick"]> = (
+    e,
+    link
+  ) => {
     e.preventDefault();
 
     const rawHref = link?.href || "";
@@ -657,14 +662,12 @@ export default function GuidebookContent() {
                     replace
                     affix={false}
                     onClick={handleAnchorClick}
-                    activeKey={activeSection || undefined}
-                    getContainer={() => {
-                      if (contentRef.current) return contentRef.current;
-                      if (typeof window !== "undefined") {
-                        return document.body;
-                      }
-                      return undefined;
-                    }}
+                    getCurrentAnchor={(defaultActive) =>
+                      activeSection ? `#${activeSection}` : defaultActive
+                    }
+                    getContainer={() =>
+                      contentRef.current ?? document.body
+                    }
                   />
                 ) : (
                   <Empty
@@ -872,7 +875,7 @@ export default function GuidebookContent() {
   );
 }
 
-function formatDateEN(iso) {
+function formatDateEN(iso: string | number | Date) {
   try {
     const d = new Date(iso);
     const f = new Intl.DateTimeFormat("en-US", {

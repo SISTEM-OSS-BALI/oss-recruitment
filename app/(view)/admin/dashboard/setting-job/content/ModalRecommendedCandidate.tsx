@@ -35,7 +35,7 @@ export default function ModalRecommendedCandidate({
   onClose,
 }: Props) {
   const {
-    data: candidates = [],
+    data: candidates,
     isLoading,
     isFetching,
     refetch,
@@ -45,7 +45,9 @@ export default function ModalRecommendedCandidate({
   });
 
   const router = useRouter();
-  const showEmpty = !isLoading && !isFetching && candidates.length === 0;
+  const candidateList = (candidates ?? []) as RankedCandidateModel[];
+  const showEmpty =
+    !isLoading && !isFetching && candidateList.length === 0;
 
   const handleRefresh = useCallback(() => {
     refetch();
@@ -95,7 +97,7 @@ export default function ModalRecommendedCandidate({
             <Empty description="No candidates matched yet" />
           ) : (
             <CandidateList
-              candidates={candidates}
+              candidates={candidateList}
               onNavigate={handleNavigate}
             />
           )}

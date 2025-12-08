@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { ReactNode, useMemo, useState } from "react";
 import {
   Button,
   Divider,
@@ -1129,12 +1129,12 @@ function QuestionForm({ form, onSubmit }: QuestionFormProps) {
 
 /* -------------------------- Small helper -------------------------- */
 /** Render conditional fields inside Form.List item */
-function FormDependency<T>({
+function FormDependency({
   path,
   children,
 }: {
   path: (string | number)[];
-  children: (val: any) => T;
+  children: (val: any) => ReactNode;
 }) {
   return (
     <Form.Item

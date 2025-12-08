@@ -33,7 +33,7 @@ import dayjs from "dayjs";
 import "dayjs/locale/en";
 dayjs.locale("en");
 
-import { TypeJob, type QuestionBaseScreening } from "@prisma/client";
+import { TypeJob } from "@prisma/client";
 import type {
   QuestionBaseScreeningDataModel,
   QuestionBaseScreeningPayloadCreateModel,
@@ -85,9 +85,8 @@ export default function BaseScreeningCards(): JSX.Element {
     onDeleteLoading: onDeleteBaseScreeningLoading,
   } = useQuestionBaseScreenings({});
 
-  const [editTarget, setEditTarget] = useState<QuestionBaseScreening | null>(
-    null
-  );
+  const [editTarget, setEditTarget] =
+    useState<QuestionBaseScreeningDataModel | null>(null);
   const { onUpdate: onUpdateBaseScreening, onUpdateLoading } =
     useQuestionBaseScreening({ id: editTarget?.id ?? "" });
 
@@ -103,10 +102,10 @@ export default function BaseScreeningCards(): JSX.Element {
   const [search, setSearch] = useState<string>("");
   const [typeFilter, setTypeFilter] = useState<TypeJob | "ALL">("ALL");
 
-  const filtered: QuestionBaseScreening[] = useMemo(() => {
+  const filtered: QuestionBaseScreeningDataModel[] = useMemo(() => {
     const q = search.trim().toLowerCase();
     const arr = Array.isArray(baseScreeningData)
-      ? (baseScreeningData as QuestionBaseScreening[])
+      ? (baseScreeningData as QuestionBaseScreeningDataModel[])
       : [];
 
     return arr.filter((x) => {

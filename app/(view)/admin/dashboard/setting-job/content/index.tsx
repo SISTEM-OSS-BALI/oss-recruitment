@@ -136,7 +136,7 @@ export default function SettingJobContent() {
 
       <Tabs
         activeKey={tab}
-        onChange={(k: string) => setTab(k)}
+        onChange={(k) => setTab(k as typeof tab)}
         items={[
           {
             key: "all",

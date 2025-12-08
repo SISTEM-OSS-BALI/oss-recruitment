@@ -34,6 +34,11 @@ import { useAuth } from "@/app/utils/useAuth";
 import RequirementCard from "./RequirmentComponent";
 import type { JobSkillSuggestion } from "@/app/vendor/recommeded-skill";
 import { useJob, useJobs } from "@/app/hooks/job";
+import type {
+  JobDataModel,
+  JobPayloadCreateModel,
+  JobPayloadUpdateModel,
+} from "@/app/models/job";
 import dayjs from "dayjs";
 import relativeTime from "dayjs/plugin/relativeTime";
 import {
@@ -524,8 +529,7 @@ export default function CreateJobUI({ jobId }: { jobId?: string }) {
         const jobId =
           draftId ??
           response?.data?.result?.id ??
-          response?.data?.id ??
-          response?.result?.id;
+          response?.data?.id;
 
         if (!jobId) {
           message.error("Draft job belum tersimpan. Coba lagi.");

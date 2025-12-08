@@ -1,6 +1,7 @@
 // admin/dashboard/recruitment/components/HeaderStatusCard.tsx
 "use client";
 
+import { useCallback } from "react";
 import { Card } from "antd";
 import { useRouter } from "next/navigation";
 import { useDrop } from "react-dnd";
@@ -45,9 +46,16 @@ export default function HeaderStatusCard({
     ? "0 2px 8px #2370ff22"
     : "0 1px 6px #d6d6d633";
 
+  const dropTargetRef = useCallback(
+    (node: HTMLDivElement | null) => {
+      dropRef(node);
+    },
+    [dropRef]
+  );
+
   return (
     <div
-      ref={dropRef}
+      ref={dropTargetRef}
       onClick={() =>
         router.push(`/admin/dashboard/recruitment/${k === "all" ? "" : k}`)
       }

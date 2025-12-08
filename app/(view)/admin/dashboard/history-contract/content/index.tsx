@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useMemo, useState } from "react";
+import type { RecruitmentStage } from "@prisma/client";
 import {
   Row,
   Col,
@@ -27,16 +28,15 @@ import { useOfferingContracts } from "@/app/hooks/offering-contract";
 
 const { Title, Text } = Typography;
 
-const STAGE_COLOR = {
-  APPLICATION: "default",
+const STAGE_COLOR: Record<RecruitmentStage | "UNKNOWN", string> = {
+  NEW_APLICANT: "default",
   SCREENING: "processing",
   INTERVIEW: "geekblue",
   OFFERING: "gold",
-  OFFER_SENT: "gold",
-  SIGNED: "cyan",
-  HIRING: "green",
   HIRED: "green",
   REJECTED: "red",
+  WAITING: "purple",
+  UNKNOWN: "default",
 };
 
 export default function HistoryContractContent() {
@@ -121,7 +121,8 @@ export default function HistoryContractContent() {
             const id = contract?.id;
             const name = contract?.applicant?.user?.name || "-";
             const job = contract?.applicant?.job?.job_title || "-";
-            const stage = contract?.applicant?.stage || "UNKNOWN";
+            const stage: RecruitmentStage | "UNKNOWN" =
+              contract?.applicant?.stage ?? "UNKNOWN";
             const filePath = contract?.filePath || "";
 
             return (

@@ -39,7 +39,7 @@ type Interview = {
   meeting_link?: string | null;
   applicant?: {
     user?: { name?: string | null } | null;
-    job?: { name?: string | null } | null;
+    job?: { job_title?: string | null; job_role?: string | null } | null;
   } | null;
 };
 
@@ -55,7 +55,10 @@ function hm(d: string | Dayjs) {
 /* ---------- Event pill untuk grid kalender ---------- */
 const EventPill: React.FC<{ ev: Interview }> = ({ ev }) => {
   const who = ev.applicant?.user?.name || "Candidate";
-  const role = ev.applicant?.job?.job_title || "Interview";
+  const role =
+    ev.applicant?.job?.job_title ||
+    ev.applicant?.job?.job_role ||
+    "Interview";
   const leftColor = ev.is_online ? "#2F88FF" : "#E64A3B";
   return (
     <Tooltip

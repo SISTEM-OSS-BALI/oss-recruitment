@@ -4,6 +4,7 @@ import { formatDate } from "@/app/utils/date-helper";
 import { getStageLabel } from "@/app/utils/recruitment-stage";
 import { HistoryOutlined, UserOutlined } from "@ant-design/icons";
 import { Button } from "antd";
+import type { RecruitmentStage } from "@prisma/client";
 
 export default function Columns({
   onDetail,
@@ -70,7 +71,11 @@ export default function Columns({
   return columnDefinitions;
 }
 
-const StatusTag = ({ stage }: { stage?: string }) => {
+const StatusTag = ({
+  stage,
+}: {
+  stage?: RecruitmentStage | null;
+}) => {
   const text = getStageLabel(stage);
   return (
     <span

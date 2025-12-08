@@ -19,6 +19,7 @@ import {
   Space,
   Typography,
 } from "antd";
+import type { FormInstance } from "antd/es/form";
 import { PlusOutlined, EditOutlined, DeleteOutlined } from "@ant-design/icons";
 import dayjs from "dayjs";
 import "dayjs/locale/en";
@@ -333,17 +334,19 @@ export default function Content() {
 }
 
 /* =================== Reusable Form =================== */
-function BaseForm({
+type BaseFormProps<T extends CreatePayload | UpdatePayload> = {
+  form: FormInstance<T>;
+  onSubmit: (values: T) => Promise<void>;
+  isEdit?: boolean;
+};
+
+function BaseForm<T extends CreatePayload | UpdatePayload>({
   form,
   onSubmit,
   isEdit,
-}: {
-  form: any;
-  isEdit?: boolean;
-  onSubmit: (values: CreatePayload | UpdatePayload) => Promise<void>;
-}) {
+}: BaseFormProps<T>) {
   return (
-    <Form
+    <Form<T>
       form={form}
       layout="vertical"
       onFinish={onSubmit}

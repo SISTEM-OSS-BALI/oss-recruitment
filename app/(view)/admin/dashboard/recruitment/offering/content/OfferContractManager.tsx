@@ -236,6 +236,8 @@ const buildTemplateVariables = (
   const candidateName = candidate?.user.name || "";
   const candidateUser = candidate?.user ?? null;
   const candidateJob = candidate?.job ?? null;
+  const jobPosition =
+    candidateJob?.job_title || candidateJob?.job_role || "";
   const startDefault = candidate?.createdAt
     ? formatDate(candidate.createdAt)
     : "";
@@ -246,7 +248,7 @@ const buildTemplateVariables = (
     no_phone: candidateUser?.phone || "",
     email: candidateUser?.email || "",
     no_identity: candidateUser?.no_identity || "",
-    position: candidateJob?.name || "",
+    position: jobPosition,
     duties: [] as string[],
     month: "",
     start_date: startDefault,
@@ -465,9 +467,9 @@ export function OfferContractManager({
   useEffect(() => {
     const nextCardValue = isReferralJob ? hasMemberCard : true;
     setOfferChecklist((prev) =>
-      prev.generateCard === nextCardValue
+      prev.generateCardReferral === nextCardValue
         ? prev
-        : { ...prev, generateCard: nextCardValue }
+        : { ...prev, generateCardReferral: nextCardValue }
     );
   }, [isReferralJob, hasMemberCard]);
 

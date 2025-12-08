@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { ReactNode, useEffect, useMemo, useState } from "react";
 import {
   App as AntdApp,
   Button,
@@ -784,12 +784,12 @@ export default function Content() {
 
 /* -------------------- Small helper -------------------- */
 /** Render conditional fields based on a form path value */
-function FormDependency<T>({
+function FormDependency({
   path,
   children,
 }: {
   path: (string | number)[];
-  children: (val: any) => T;
+  children: (val: any) => ReactNode;
 }) {
   return (
     <Form.Item
