@@ -15,6 +15,7 @@ const NUMBER_BOX = { x: 0.08, y: 0.9, width: 0.84, height: 0.06 };
 
 // Area foto di kanan (persegi panjang)
 const AVATAR_BOX = { x: 0.5, y: 0.18, width: 0.48, height: 0.78 };
+const AVATAR_OPACITY = 0.7; // 0 = transparan, 1 = solid
 
 // Warna teks (bisa sesuaikan brand)
 const NAME_COLOR = "#FFE17A"; // contoh: NGURAH (kuning)
@@ -216,13 +217,20 @@ export async function generateTeamMemberCard(
       .toBuffer();
   }
 
+  const avatarOpacity = Math.min(Math.max(AVATAR_OPACITY, 0), 1);
+  if (avatarOpacity < 1) {
+    // Kurangi opacity keseluruhan foto supaya teks lebih jelas dibaca
+    avatarBuffer = await sharp(avatarBuffer)
+      .ensureAlpha()
+      .linear([1, 1, 1, avatarOpacity], [0, 0, 0, 0])
+      .toBuffer();
+  }
+
   const overlays: sharp.OverlayOptions[] = [
     {
       input: avatarBuffer,
       left: avatarBox.x,
       top: avatarBox.y,
-      // ↓↓↓ opacity di sini bikin foto lebih soft supaya teks lebih jelas
-      opacity: 0.7, // 0 = transparan, 1 = full solid. Silakan diubah 0.5–0.9 sesuai selera
     },
     {
       input: Buffer.from(svgOverlay),
