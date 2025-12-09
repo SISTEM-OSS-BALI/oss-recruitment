@@ -5,7 +5,11 @@ import { GeneralOmitModel } from "./general-omit";
 
 export type ApplicantDataModel = Prisma.ApplicantGetPayload<{
   include: {
-    job: true;
+    job: {
+      include: {
+        location: true;
+      };
+    };
     user: true;
     mbti_test: true;
     scheduleInterview: true;

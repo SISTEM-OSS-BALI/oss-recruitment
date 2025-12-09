@@ -2,7 +2,7 @@
 import { DeleteOutlined, InboxOutlined } from "@ant-design/icons";
 import { Button, message, Upload, Popconfirm, UploadProps, Image } from "antd";
 import { UploadRequestOption as RcCustomRequestOptions } from "rc-upload/lib/interface";
-import React, { useEffect, useState } from "react";
+import React, { CSSProperties, useEffect, useState } from "react";
 import { supabase } from "@/app/vendor/supabase-client";
 
 type Variant = "thumbnail" | "profile";
@@ -22,6 +22,8 @@ interface SupaImageUploaderProps {
   variant?: Variant; 
   maxSizeMB?: number;
   accept?: string;
+  wrapperStyle?: CSSProperties;
+  previewStyle?: CSSProperties;
 }
 
 export default function SupaImageUploader({
@@ -34,6 +36,8 @@ export default function SupaImageUploader({
   variant = "thumbnail",
   maxSizeMB = 5,
   accept = "image/*",
+  wrapperStyle,
+  previewStyle,
 }: SupaImageUploaderProps) {
   const [previewImage, setPreviewImage] = useState<ImageItem | null>(
     value ? { url: value, path: "" } : null
@@ -121,7 +125,7 @@ export default function SupaImageUploader({
   };
 
   return (
-    <div>
+    <div style={wrapperStyle}>
       {!previewImage ? (
         <Upload.Dragger
           customRequest={handleUpload as UploadProps["customRequest"]}
@@ -174,11 +178,12 @@ export default function SupaImageUploader({
               key={previewImage.url} // force rerender saat URL berubah
               src={previewImage.url}
               alt="Preview"
-               // <-- penting untuk absolute fill
-              sizes="100vw"
               style={{
                 objectFit: "cover",
                 borderRadius: borderRadiusImg,
+                width: "100%",
+                height: "100%",
+                ...previewStyle,
               }}
               onError={() => message.error("Gagal memuat gambar pratinjau")} // optional: skip Next image optimizer
             />

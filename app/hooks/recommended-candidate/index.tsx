@@ -29,7 +29,11 @@ export function useRecommendedCandidates({
 }) {
   const qc = useQueryClient();
 
-  const { data, isLoading, isFetching, refetch } = useQuery<RankedCandidateModel[]>({
+  const { data, isLoading, isFetching, refetch } = useQuery<
+    ScoredCandidateModel[],
+    Error,
+    RankedCandidateModel[]
+  >({
     queryKey: [queryKey, { jobId, minScore, limit }],
     enabled: !!jobId && enabled,
     queryFn: async () => {
@@ -39,7 +43,7 @@ export function useRecommendedCandidates({
       // pastikan API kamu mengirim { result: [...] }
       return (data?.result ?? []) as ScoredCandidateModel[];
     },
-    keepPreviousData: true,
+    placeholderData: (prev) => prev ?? [],
     staleTime: 30_000, // 30s
     select: (rows) =>
       rows

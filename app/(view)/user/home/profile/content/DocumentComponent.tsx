@@ -121,11 +121,9 @@ export default function DocumentsComponent({ loading }: SubmitProps) {
                 bucket="web-oss-recruitment"
                 folder="profile"
                 label="Upload Photo"
-                previewStyle={{
-                  width: 240,
-                  maxHeight: 140,
-                  objectFit: "cover",
-                  borderRadius: 8,
+                wrapperStyle={{
+                  width: "100%",
+                  maxWidth: 240,
                 }}
               />
             </Form.Item>

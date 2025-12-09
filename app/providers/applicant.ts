@@ -8,7 +8,9 @@ export const GET_APPLICANTS = async () => {
   const candidates = await db.applicant.findMany({
     orderBy: { createdAt: "desc" },
     include: {
-      job: true,
+      job: {
+        include: { location: true },
+      },
       user: true,
       mbti_test: true,
       scheduleInterview: true,
@@ -41,7 +43,9 @@ export const GET_APPLICANT_BY_USER_ID = async (user_id: string) => {
     where: { user_id },
     orderBy: { createdAt: "desc" },
     include: {
-      job: true,
+      job: {
+        include: { location: true },
+      },
       user: true,
       mbti_test: true,
       scheduleInterview: true,
@@ -98,7 +102,9 @@ export const GET_APPLICANT = async (id: string) => {
   const detailCandidate = await db.applicant.findUnique({
     where: { id },
     include: {
-      job: true,
+      job: {
+        include: { location: true },
+      },
       user: true,
       mbti_test: true,
       scheduleInterview: true,
@@ -125,7 +131,9 @@ export const GET_APPLICANTS_BY_JOB_ID = async (job_id: string) => {
   const result = await db.applicant.findMany({
     where: { job_id },
     include: {
-      job: true,
+      job: {
+        include: { location: true },
+      },
       user: true,
       mbti_test: true,
       scheduleInterview: true,

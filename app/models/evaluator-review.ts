@@ -3,6 +3,11 @@
 import { Prisma } from "@prisma/client";
 import { GeneralOmitModel } from "./general-omit";
 
+export type EvaluatorReviewAnswerPayload = {
+  questionId: string;
+  value: unknown;
+};
+
 export type EvaluatorReviewDataModel =
   Prisma.EvaluatorReviewGetPayload<{
     include: {
@@ -11,8 +16,10 @@ export type EvaluatorReviewDataModel =
     }
   }>;
 
-export interface EvaluatorReviewPayloadCreateModel
-  extends Prisma.EvaluatorReviewUncheckedCreateInput {}
+export interface EvaluatorReviewPayloadCreateModel {
+  id: string;
+  answers: EvaluatorReviewAnswerPayload[];
+}
 
 export interface EvaluatorReviewPayloadUpdateModel
   extends Omit<

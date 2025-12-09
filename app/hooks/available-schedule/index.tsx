@@ -1,9 +1,29 @@
-import { ScheduleEvaluatorDataModel } from "@/app/models/schedule-evaluator";
 import { useQuery } from "@tanstack/react-query";
 import axios from "axios";
 
 const baseUrl = "/api/admin/dashboard/schedule-evaluator/schedule-available";
 const queryKey = "schedule-evaluators";
+
+export type AvailableScheduleSlot = {
+  start: string;
+  end: string;
+};
+
+export type AvailableScheduleDay = {
+  day: string;
+  slots: AvailableScheduleSlot[];
+};
+
+export type AvailableScheduleResponse = {
+  schedule_id: string;
+  evaluator_id: string;
+  available: AvailableScheduleDay[];
+  meta?: {
+    tz: string;
+    forDateLocal: string;
+    interviewSlotMinutes: number;
+  };
+};
 
 type UseAvailableSchedulesArgs = {
   schedule_id: string;
@@ -36,7 +56,7 @@ export const useAvailableSchedules = ({
     queryFn: async () => {
       const url = buildUrl(scheduleId!, selectedDateIso);
       const result = await axios.get(url);
-      return result.data.result as ScheduleEvaluatorDataModel[];
+      return result.data.result as AvailableScheduleResponse;
     },
   });
 

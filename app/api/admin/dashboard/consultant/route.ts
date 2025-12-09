@@ -1,4 +1,4 @@
-import { LocationPayloadCreateModel } from "@/app/models/location";
+import { ConsultantPayloadCreateModel } from "@/app/models/consultant";
 import { CREATE_CONSULTANT, GET_CONSULTANTS } from "@/app/providers/consultant";
 import { GeneralError } from "@/app/utils/general-error";
 import { NextRequest, NextResponse } from "next/server";
@@ -31,7 +31,7 @@ export const GET = async () => {
 
 export const POST = async (req: NextRequest) => {
   try {
-    const payload: LocationPayloadCreateModel = await req.json();
+    const payload: ConsultantPayloadCreateModel = await req.json();
 
     const data = await CREATE_CONSULTANT(payload);
 

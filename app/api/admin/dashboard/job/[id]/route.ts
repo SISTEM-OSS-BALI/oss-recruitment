@@ -2,7 +2,7 @@ import { JobPayloadUpdateModel } from "@/app/models/job";
 import { DELETE_JOB, GET_JOB, UPDATE_JOB } from "@/app/providers/job";
 import { GeneralError } from "@/app/utils/general-error";
 import { NextRequest, NextResponse } from "next/server";
-import { EmploymentType, TypeJob, WorkType } from "@prisma/client";
+import { EmploymentType, Prisma, TypeJob, WorkType } from "@prisma/client";
 
 const EMPLOYMENT_VALUES = Object.values(EmploymentType);
 const WORK_TYPE_VALUES = Object.values(WorkType);
@@ -195,10 +195,12 @@ const buildUpdatePayload = (
     }
   }
   if (body.requirement !== undefined) {
-    data.requirement =
+    const normalizedRequirement =
       body.requirement && typeof body.requirement === "object"
-        ? body.requirement
+        ? (body.requirement as Prisma.JsonValue)
         : null;
+    data.requirement =
+      normalizedRequirement === null ? Prisma.JsonNull : normalizedRequirement;
   }
   if (body.location_id !== undefined) {
     if (
@@ -255,8 +257,9 @@ const buildUpdatePayload = (
 
   let salaryRange: { min: number; max: number } | undefined;
   try {
+    const salaryInput: SalaryInput | undefined = (body as any).salary;
     salaryRange = normalizeSalary(
-      body.salary as SalaryInput,
+      salaryInput,
       body.salary_min,
       body.salary_max,
       resolvedType
@@ -278,10 +281,10 @@ const buildUpdatePayload = (
   }
 
   if (body.description_sections === null) {
-    data.description_sections = null;
+    data.description_sections = Prisma.JsonNull;
   }
   if (body.requirement === null) {
-    data.requirement = null;
+    data.requirement = Prisma.JsonNull;
   }
 
   if (body.until_at !== undefined) {

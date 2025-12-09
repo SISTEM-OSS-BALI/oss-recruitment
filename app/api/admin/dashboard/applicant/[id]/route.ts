@@ -59,11 +59,15 @@ export const PATCH = async (
     // Enqueue WA (jangan blokir response)
     if (phone) {
       await enqueueWa({
-        type: "status-update",
         applicantId: id,
-        phone,
-        message: waMessage,
-        stage,
+        templateId: "status-update",
+        ctx: {
+          phone,
+          message: waMessage,
+          stage,
+          userId: user?.id,
+          userName: user?.name,
+        },
       });
 
       // (opsional) tandai status PENDING di DB Applicant

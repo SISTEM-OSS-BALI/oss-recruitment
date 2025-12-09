@@ -21,7 +21,10 @@ const generateId = () =>
 
 export default function ChatPage() {
   const params = useParams();
-  const applicantId = params.applicant_id || "demo";
+  const rawApplicantId = params.applicant_id;
+  const applicantId = Array.isArray(rawApplicantId)
+    ? rawApplicantId[0]
+    : rawApplicantId || "demo";
   const roomId = useMemo(() => `recruitment:${applicantId}`, [applicantId]);
 
   const { user_id, user_name } = useAuth();

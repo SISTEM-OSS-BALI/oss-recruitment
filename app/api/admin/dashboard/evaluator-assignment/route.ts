@@ -1,7 +1,7 @@
-import { EvaluatorAssignmentPayloadCreateModel } from "@/app/models/evaluator-assignment";
 import {
   CREATE_EVALUATOR_ASSIGNMENT,
   GET_EVALUATOR_ASSIGNMENTS,
+  EvaluatorAssignmentPayloadCreateModel,
 } from "@/app/providers/evaluator-assignment";
 import { GeneralError } from "@/app/utils/general-error";
 import { NextRequest, NextResponse } from "next/server";

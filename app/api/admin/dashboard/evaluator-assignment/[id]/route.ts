@@ -1,5 +1,4 @@
-import { EvaluatorAssignmentPayloadCreateModel } from "@/app/models/evaluator-assignment";
-import { DELETE_EVALUATOR_ASSIGNMENT, GET_EVALUATOR_ASSIGNMENT, UPDATE_EVALUATOR_ASSIGNMENT } from "@/app/providers/evaluator-assignment";
+import { DELETE_EVALUATOR_ASSIGNMENT, GET_EVALUATOR_ASSIGNMENT, UPDATE_EVALUATOR_ASSIGNMENT, EvaluatorAssignmentUpdatePayload } from "@/app/providers/evaluator-assignment";
 import { GeneralError } from "@/app/utils/general-error";
 import { NextRequest, NextResponse } from "next/server";
 
@@ -42,7 +41,29 @@ export const PUT = async (
 ) => {
   try {
     const id = params.id;
-    const payload: EvaluatorAssignmentPayloadCreateModel = await req.json();
+    const body = (await req.json()) as Partial<
+      EvaluatorAssignmentUpdatePayload & { submittedAt?: string | Date | null }
+    >;
+
+    const payload: EvaluatorAssignmentUpdatePayload = {
+      ...body,
+    };
+
+    if ("submittedAt" in body) {
+      const rawValue = body.submittedAt;
+      if (rawValue === null) {
+        payload.submittedAt = null;
+      } else if (rawValue instanceof Date) {
+        payload.submittedAt = rawValue;
+      } else if (typeof rawValue === "string") {
+        const parsed = new Date(rawValue);
+        payload.submittedAt = Number.isNaN(parsed.valueOf())
+          ? undefined
+          : parsed;
+      } else if (rawValue === undefined) {
+        payload.submittedAt = undefined;
+      }
+    }
 
     const data = await UPDATE_EVALUATOR_ASSIGNMENT(id, payload);
 

@@ -51,7 +51,11 @@ function toPrismaUpdate(
   const data: Prisma.QuestionBaseScreeningUncheckedUpdateInput = {};
 
   if (payload.name !== undefined) {
-    const name = payload.name?.trim?.();
+    const rawName =
+      typeof payload.name === "string"
+        ? payload.name
+        : (payload.name as Prisma.StringFieldUpdateOperationsInput)?.set;
+    const name = rawName?.trim();
     if (!name) {
       throw new Error("Name cannot be empty");
     }

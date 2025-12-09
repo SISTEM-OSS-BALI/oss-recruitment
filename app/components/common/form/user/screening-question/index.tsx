@@ -72,9 +72,6 @@ export default function FormScreeningQuestionAll({
     queryString: `type=${job_type}`,
   });
   const bases = useMemo(() => coerceBases(data), [data]);
-  const selectedBaseId = bases.find((base) =>
-    base.questions?.some((question) => question.job_id === job_id)
-  )?.id;
 
   // form global untuk SEMUA base
   const [form] = Form.useForm();
@@ -360,7 +357,10 @@ function BaseAnswerFields({
                         q={q}
                         // relative path → [fieldIndex, questionId]
                         namePath={[field.name, q.id]}
-                        fieldKey={[field.fieldKey, q.id]}
+                        fieldKey={[
+                          field.fieldKey ?? field.key,
+                          q.id,
+                        ]}
                       />
                     ))}
                   </div>

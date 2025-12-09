@@ -386,7 +386,7 @@ function ApplicationCard({
                   showInfo={false}
                   strokeColor="#111"
                   trailColor="#E0E7FF"
-                  size={[undefined, 8]}
+                  size={{ height: 8 }}
                 />
               </div>
               <Text strong>{pct}% complete</Text>

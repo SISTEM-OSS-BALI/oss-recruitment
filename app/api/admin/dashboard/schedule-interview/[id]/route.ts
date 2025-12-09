@@ -47,14 +47,29 @@ export const PUT = async (
     }
 
     // normalisasi kunci camelCase/snake_case, dukung juga `link`
-    const candidateId = raw.candidateId ?? raw.candidate_id;
-    const locationId = raw.locationId ?? raw.location_id;
+    const applicantId =
+      raw.applicantId ??
+      raw.applicant_id ??
+      raw.candidateId ??
+      raw.candidate_id;
+    const scheduleId =
+      raw.scheduleId ?? raw.schedule_id ?? raw.locationId ?? raw.location_id;
     const startTimeRaw = raw.startTime ?? raw.start_time;
     const meetingLinkRaw = raw.meetingLink ?? raw.meeting_link ?? raw.link;
     const noteRaw = raw.note ?? null;
 
     // Ambil data existing untuk melengkapi field yang tidak dikirim (partial update)
-    const current = await db.scheduleInterview.findUnique({ where: { id } });
+    const current = await db.scheduleInterview.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        date: true,
+        start_time: true,
+        meeting_link: true,
+        applicant_id: true,
+        schedule_id: true,
+      },
+    });
     if (!current) {
       return NextResponse.json(
         { success: false, message: "Schedule not found" },
@@ -63,11 +78,11 @@ export const PUT = async (
     }
 
     // Coerce values dengan fallback ke current
-    const candidate_id = String(
-      isProvided(candidateId) ? candidateId : current.candidateId
+    const applicant_id = String(
+      isProvided(applicantId) ? applicantId : current.applicant_id
     );
-    const location_id = String(
-      isProvided(locationId) ? locationId : current.locationId
+    const schedule_id = String(
+      isProvided(scheduleId) ? scheduleId : current.schedule_id
     );
 
     let date: string | Date = current.date;
@@ -108,11 +123,11 @@ export const PUT = async (
     }
 
     const payload = {
-      candidate_id,
-      location_id,
+      applicant_id,
+      schedule_id,
       date,
       start_time,
-      online: onlineFinal,
+      is_online: onlineFinal,
       note: emptyToNull(noteRaw),
       meeting_link,
     };
@@ -150,9 +165,14 @@ export const GET = async (
     const data = await db.scheduleInterview.findUnique({
       where: { id: params.id },
       include: {
-        location: true,
-        candidate: {
+        schedule: {
           include: {
+            evaluator: true,
+          },
+        },
+        applicant: {
+          include: {
+            user: true,
             job: {
               include: { location: true },
             },

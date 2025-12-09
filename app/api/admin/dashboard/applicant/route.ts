@@ -22,7 +22,7 @@ export const POST = async (req: NextRequest) => {
       getDetailCandidate!.user.name,
       {
         type: "applied",
-        jobTitle: getDetailJob?.name,
+        jobTitle: getDetailJob?.job_title ?? getDetailJob?.id ?? "Unknown Job",
         idApply: getDetailJob?.id,
       }
     );

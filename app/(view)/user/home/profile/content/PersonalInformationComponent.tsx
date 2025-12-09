@@ -51,9 +51,25 @@ export default function PersonalInformationDocuments({ loading }: SubmitProps) {
         : undefined,
     };
 
-    if (values.date_of_birth && typeof values.date_of_birth !== "string") {
-      payload.date_of_birth = dayjs(values.date_of_birth).toISOString();
-    } else if (!values.date_of_birth) {
+    const dobValue = values.date_of_birth;
+    if (!dobValue) {
+      payload.date_of_birth = null;
+    } else if (dayjs.isDayjs(dobValue)) {
+      payload.date_of_birth = dobValue.toISOString();
+    } else if (dobValue instanceof Date) {
+      payload.date_of_birth = dayjs(dobValue).toISOString();
+    } else if (typeof dobValue === "string") {
+      payload.date_of_birth = dobValue;
+    } else if (
+      typeof dobValue === "object" &&
+      "set" in dobValue &&
+      (dobValue as { set?: Date | string | null }).set
+    ) {
+      const setValue = (dobValue as { set?: Date | string | null }).set;
+      payload.date_of_birth = setValue
+        ? dayjs(setValue).toISOString()
+        : null;
+    } else {
       payload.date_of_birth = null;
     }
 

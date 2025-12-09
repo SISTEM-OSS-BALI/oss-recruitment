@@ -142,11 +142,8 @@ export const PUT = async (
           : undefined;
 
     const data = await UPDATE_QUESTION_MATRIKS(id, {
-      text:
-        body.text !== undefined
-          ? body.text.trim()
-          : undefined,
-      inputType: body.inputType,
+      text: body.text !== undefined ? body.text.trim() : existing.text,
+      inputType: body.inputType ?? existing.inputType,
       required: body.required,
       order: body.order,
       helpText: normalizeNullableString(body.helpText ?? undefined),
