@@ -2,6 +2,8 @@ import { GET_USERS } from "@/app/providers/user";
 import { GeneralError } from "@/app/utils/general-error";
 import { NextResponse } from "next/server";
 
+export const dynamic = "force-dynamic";
+
 export const GET = async () => {
   try {
     const data = await GET_USERS();
@@ -25,5 +27,14 @@ export const GET = async () => {
         { status: error.code }
       );
     }
+    console.error("[api/user] unexpected error", error);
+    return NextResponse.json(
+      {
+        success: false,
+        message: "Internal server error",
+        error_code: "UNHANDLED_EXCEPTION",
+      },
+      { status: 500 }
+    );
   }
 };

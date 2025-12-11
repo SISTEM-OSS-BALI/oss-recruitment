@@ -9,8 +9,11 @@ export type MatriksBaseQuestionDataModel =
   Prisma.MatriksBaseQuestionGetPayload<{
     include: {
       columns: true;
-      rows: true;
-      options: true;
+      rows: {
+        include: {
+          matriksQuestionOption: true;
+        };
+      };
     };
   }>;
 

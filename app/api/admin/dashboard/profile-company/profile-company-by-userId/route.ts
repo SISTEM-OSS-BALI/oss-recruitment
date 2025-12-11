@@ -2,6 +2,8 @@ import { GET_PROFILE_COMPANY_USER_ID } from "@/app/providers/profile-company";
 import { GeneralError } from "@/app/utils/general-error";
 import { NextRequest, NextResponse } from "next/server";
 
+export const dynamic = "force-dynamic";
+
 
 export const GET = async (req: NextRequest) => {
   try {
@@ -31,5 +33,17 @@ export const GET = async (req: NextRequest) => {
         { status: error.code }
       );
     }
+    console.error(
+      "[api/admin/dashboard/profile-company/profile-company-by-userId] unexpected error",
+      error
+    );
+    return NextResponse.json(
+      {
+        success: false,
+        message: "Internal server error",
+        error_code: "UNHANDLED_EXCEPTION",
+      },
+      { status: 500 }
+    );
   }
 };

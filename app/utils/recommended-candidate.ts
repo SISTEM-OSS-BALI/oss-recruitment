@@ -245,7 +245,7 @@ export default function recommendedCandidate(
   jobName: string,
   userInterest: string[]
 ) {
-  const job: JobLite = { name: jobName, description: "" };
+  const job: JobLite = { job_title: jobName, description: "" };
   const candidates: Candidate[] = [
     {
       id: "temp",

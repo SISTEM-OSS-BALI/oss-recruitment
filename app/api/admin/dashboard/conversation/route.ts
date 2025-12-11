@@ -3,6 +3,8 @@ import { GeneralError } from "@/app/utils/general-error";
 import { RecruitmentStage } from "@prisma/client";
 import { NextRequest, NextResponse } from "next/server";
 
+export const dynamic = "force-dynamic";
+
 export const GET = async (req: NextRequest) => {
   try {
     const jobId = req.nextUrl.searchParams.get("job_id") || undefined;
@@ -37,5 +39,14 @@ export const GET = async (req: NextRequest) => {
         { status: error.code }
       );
     }
+    console.error("[api/admin/dashboard/conversation] unexpected error", error);
+    return NextResponse.json(
+      {
+        success: false,
+        message: "Internal server error",
+        error_code: "UNHANDLED_EXCEPTION",
+      },
+      { status: 500 }
+    );
   }
 };

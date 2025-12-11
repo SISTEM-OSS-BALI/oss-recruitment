@@ -1,0 +1,17 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "outDir": "./dist",
+    "noEmit": false,
+    "emitDeclarationOnly": false,
+    "isolatedModules": false,
+    "module": "CommonJS",
+    "moduleResolution": "node",
+    "target": "ES2019",
+    "lib": ["es2020"],
+    "allowJs": false,
+    "noEmitOnError": true
+  },
+  "include": ["lib/**/*.ts"],
+  "exclude": ["node_modules", ".next"]
+}

@@ -63,7 +63,13 @@ function toPrismaUpdate(
   }
 
   if (payload.desc !== undefined) {
-    data.desc = normalizeNullableString(payload.desc) ?? null;
+    const rawDesc =
+      payload.desc === null
+        ? null
+        : typeof payload.desc === "string"
+          ? payload.desc
+          : payload.desc.set;
+    data.desc = normalizeNullableString(rawDesc) ?? null;
   }
 
   if (payload.allowMultipleSubmissions !== undefined) {

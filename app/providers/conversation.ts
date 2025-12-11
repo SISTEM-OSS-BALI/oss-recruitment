@@ -29,16 +29,16 @@ const buildConversationWhere = (
     const keyword = filter.search.trim();
     conditions.push({
       OR: [
-        { title: { contains: keyword, mode: "insensitive" } },
+        { title: { contains: keyword } },
         {
           applicant: {
-            user: { name: { contains: keyword, mode: "insensitive" } },
+            user: { name: { contains: keyword } },
           },
         },
         {
           applicant: {
             job: {
-              job_title: { contains: keyword, mode: "insensitive" },
+              job_title: { contains: keyword },
             },
           },
         },

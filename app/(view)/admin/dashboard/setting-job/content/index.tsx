@@ -1,3 +1,5 @@
+"use client";
+
 import { useState, useMemo } from "react";
 import { Flex, Form, Input, Tabs, Typography, Empty, message } from "antd";
 import Title from "antd/es/typography/Title";

@@ -4,20 +4,51 @@ import { Prisma } from "@prisma/client";
 /* =========================
    Error helper
 ========================= */
+type GeneralErrorParams = {
+  message?: string;
+  error?: string;
+  code?: number;
+  error_code?: string;
+  details?: unknown;
+};
+
 class GeneralError extends Error {
   code: number;
   error_code?: string;
   details?: unknown;
+  error?: string;
+
+  constructor(message: string, code?: number, error_code?: string, details?: unknown);
+  constructor(options: GeneralErrorParams);
   constructor(
-    message: string,
+    messageOrOptions: string | GeneralErrorParams,
     code = 400,
     error_code?: string,
     details?: unknown
   ) {
-    super(message);
-    this.code = code;
-    this.error_code = error_code;
-    this.details = details;
+    if (typeof messageOrOptions === "string") {
+      super(messageOrOptions);
+      this.error = messageOrOptions;
+      this.code = code;
+      this.error_code = error_code;
+      this.details = details;
+      return;
+    }
+
+    const {
+      message,
+      error,
+      code: optionCode = 400,
+      error_code: optionErrorCode,
+      details: optionDetails,
+    } = messageOrOptions;
+
+    const resolvedMessage = message ?? error ?? "Unknown error";
+    super(resolvedMessage);
+    this.error = error ?? resolvedMessage;
+    this.code = optionCode;
+    this.error_code = optionErrorCode;
+    this.details = optionDetails;
   }
 }
 

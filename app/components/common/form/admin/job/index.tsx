@@ -1,3 +1,5 @@
+"use client";
+
 import { useLocations } from "@/app/hooks/location";
 import { JobDataModel } from "@/app/models/job";
 import {
@@ -19,8 +21,10 @@ import {
   Segmented,
 } from "antd";
 import dayjs from "dayjs";
+import dynamic from "next/dynamic";
 import { useEffect, useState } from "react";
-import ReactQuill from "react-quill";
+
+const ReactQuill = dynamic(() => import("react-quill"), { ssr: false });
 
 const WORK_TYPE_OPTIONS = ["ONSITE", "HYBRID", "REMOTE"] as const;
 const EMPLOYMENT_TYPE_OPTIONS = [

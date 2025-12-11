@@ -1,24 +1,27 @@
-import { GET_APPLICANTS_BY_JOB_ID } from "@/app/providers/applicant";
 import { GeneralError } from "@/app/utils/general-error";
 import { NextRequest, NextResponse } from "next/server";
+import { GET_REFERRAL } from "@/app/providers/referral";
 
-export const dynamic = "force-dynamic";
-
-export const GET = async (req: NextRequest) => {
+export const POST = async (req: NextRequest) => {
   try {
-    const { searchParams } = new URL(req.url);
-    const id = searchParams.get("job_id") as string;
+    const body = await req.json();
+    const code_referral = body?.code_referral?.toString().trim();
+    if (!code_referral) {
+      return NextResponse.json(
+        { success: false, message: "code_referral is required" },
+        { status: 400 }
+      );
+    }
 
-
-    const data = await GET_APPLICANTS_BY_JOB_ID(id);
+    const data = await GET_REFERRAL(code_referral);
 
     return NextResponse.json(
       {
         success: true,
-        message: "Successfully get data!",
+        message: "Successfully created data!",
         result: data,
       },
-      { status: 200 }
+      { status: 201 }
     );
   } catch (error: unknown) {
     if (error instanceof GeneralError) {
@@ -32,15 +35,12 @@ export const GET = async (req: NextRequest) => {
         { status: error.code }
       );
     }
-    console.error(
-      "[api/admin/dashboard/applicant/applicant-by-jobId] unexpected error",
-      error
-    );
+
     return NextResponse.json(
       {
         success: false,
-        message: "Internal server error",
-        error_code: "UNHANDLED_EXCEPTION",
+        message: "Failed to create data",
+        error: error instanceof Error ? error.message : "Internal server error",
       },
       { status: 500 }
     );

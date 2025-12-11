@@ -7,7 +7,7 @@ import { recommendCandidates } from "../utils/recommended-candidate";
 export async function recommendForJob(jobId: string) {
   const job = await db.job.findUnique({
     where: { id: jobId },
-    select: { name: true, description: true },
+    select: { job_title: true, description: true },
   });
   if (!job) return [];
 

@@ -1,5 +1,10 @@
 import IORedis from "ioredis";
 
+declare global {
+  // eslint-disable-next-line no-var
+  var __redis__: IORedis | undefined;
+}
+
 // Compose a redis URL from piecewise env values if REDIS_URL is not provided.
 const redisUrl =
 
@@ -21,17 +26,21 @@ if (!process.env.REDIS_URL && !process.env.REDIS_HOST) {
   );
 }
 
+const globalRedis = global as typeof global & {
+  __redis__?: IORedis;
+};
+
 export const redis =
-  global.__redis__ ??
+  globalRedis.__redis__ ??
   new IORedis(redisUrl, {
     maxRetriesPerRequest: null,
     enableOfflineQueue: true,
   });
 
-redis.on("error", (err) => {
+redis.on("error", (err: Error) => {
   console.error("[redis] connection error", err);
 });
 
 if (process.env.NODE_ENV !== "production") {
-  global.__redis__ = redis;
+  globalRedis.__redis__ = redis;
 }
