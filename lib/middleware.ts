@@ -10,7 +10,13 @@ import { NextResponse } from "next/server";
 type Role = "ADMIN" | "SUPER_ADMIN" | "CANDIDATE";
 
 // Halaman publik (kalau nanti pakai matcher global / route lain)
-const PUBLIC_PATHS = ["/login", "/register", "/api/public", "/"];
+const PUBLIC_PATHS = [
+  "/login",
+  "/register",
+  "/api/register",
+  "/api/public",
+  "/",
+];
 
 // Mapping prefix route → role yang boleh akses
 const roleAccessMap: Record<string, Role[]> = {
