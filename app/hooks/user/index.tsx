@@ -15,7 +15,7 @@ const queryKey = "users";
 export const useUsers = ({ queryString }: { queryString?: string }) => {
   const queryClient = useQueryClient();
 
-  const { data, isLoading: fetchLoading } = useQuery({
+  const { data, isLoading: fetchLoading, isFetching, refetch } = useQuery({
     queryKey: [queryKey, queryString],
     queryFn: async () => {
       const url = queryString ? `${baseUrl}?${queryString}` : baseUrl;
@@ -50,6 +50,8 @@ export const useUsers = ({ queryString }: { queryString?: string }) => {
   return {
     data,
     fetchLoading,
+    isFetching,
+    refetch,
     onCreate,
     onCreateLoading,
     onDelete,

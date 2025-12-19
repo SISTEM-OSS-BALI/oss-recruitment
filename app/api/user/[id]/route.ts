@@ -1,6 +1,5 @@
 import { UserPayloadUpdateModel } from "@/app/models/user";
-import { DELETE_JOB } from "@/app/providers/job";
-import { GET_USER, UPDATE_MEMBER_CARD, UPDATE_NO_UNIQUE, UPDATE_USER, UPDATE_USER_DOCUMENT } from "@/app/providers/user";
+import { DELETE_USER, GET_USER, UPDATE_MEMBER_CARD, UPDATE_NO_UNIQUE, UPDATE_USER, UPDATE_USER_DOCUMENT } from "@/app/providers/user";
 import { GeneralError } from "@/app/utils/general-error";
 import { NextRequest, NextResponse } from "next/server";
 
@@ -94,7 +93,7 @@ export const DELETE = async (
   try {
     const id = params.id;
 
-    const data = await DELETE_JOB(id);
+    const data = await DELETE_USER(id);
 
     return NextResponse.json(
       {
