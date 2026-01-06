@@ -56,45 +56,45 @@ export default function UserManagementColumns({
         <Tag color={roleColors[role] || "default"}>{normalizedRole(role)}</Tag>
       ),
     },
-    {
-      title: "Contact",
-      dataIndex: "phone",
-      key: "contact",
-      render: (phone: string | null | undefined, user) => (
-        <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-          <span style={{ fontWeight: 500 }}>{phone || "-"}</span>
-          {user.address ? (
-            <span style={{ color: "#8c8c8c" }}>
-              {user.address.length > 32
-                ? `${user.address.slice(0, 32)}...`
-                : user.address}
-            </span>
-          ) : (
-            <span style={{ color: "#8c8c8c" }}>No address</span>
-          )}
-        </div>
-      ),
-    },
-    {
-      title: "Interests",
-      dataIndex: "interestTags",
-      key: "interests",
-      render: (interestTags: UserDataModel["interestTags"]) =>
-        interestTags?.length ? (
-          <Space size={[6, 6]} wrap>
-            {interestTags.slice(0, 3).map((item) => (
-              <Tag key={`${item.user_id}-${item.interest}`} color="geekblue">
-                {item.interest}
-              </Tag>
-            ))}
-            {interestTags.length > 3 && (
-              <Tag color="default">+{interestTags.length - 3} more</Tag>
-            )}
-          </Space>
-        ) : (
-          <span style={{ color: "#8c8c8c" }}>No tags</span>
-        ),
-    },
+    // {
+    //   title: "Contact",
+    //   dataIndex: "phone",
+    //   key: "contact",
+    //   render: (phone: string | null | undefined, user) => (
+    //     <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+    //       <span style={{ fontWeight: 500 }}>{phone || "-"}</span>
+    //       {user.address ? (
+    //         <span style={{ color: "#8c8c8c" }}>
+    //           {user.address.length > 32
+    //             ? `${user.address.slice(0, 32)}...`
+    //             : user.address}
+    //         </span>
+    //       ) : (
+    //         <span style={{ color: "#8c8c8c" }}>No address</span>
+    //       )}
+    //     </div>
+    //   ),
+    // },
+    // {
+    //   title: "Interests",
+    //   dataIndex: "interestTags",
+    //   key: "interests",
+    //   render: (interestTags: UserDataModel["interestTags"]) =>
+    //     interestTags?.length ? (
+    //       <Space size={[6, 6]} wrap>
+    //         {interestTags.slice(0, 3).map((item) => (
+    //           <Tag key={`${item.user_id}-${item.interest}`} color="geekblue">
+    //             {item.interest}
+    //           </Tag>
+    //         ))}
+    //         {interestTags.length > 3 && (
+    //           <Tag color="default">+{interestTags.length - 3} more</Tag>
+    //         )}
+    //       </Space>
+    //     ) : (
+    //       <span style={{ color: "#8c8c8c" }}>No tags</span>
+    //     ),
+    // },
     {
       title: "Created",
       dataIndex: "createdAt",

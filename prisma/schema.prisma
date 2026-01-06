@@ -14,7 +14,7 @@ datasource db {
 }
 
 enum RecruitmentStage {
-  NEW_APLICANT
+  NEW_APPLICANT
   SCREENING
   INTERVIEW
   OFFERING

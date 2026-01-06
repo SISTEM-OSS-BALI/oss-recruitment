@@ -690,7 +690,7 @@ export default function ChatContent() {
       style={{
         padding: 24,
         minHeight: "calc(100vh - 160px)",
-        background: "linear-gradient(180deg,#f6f8ff 0%,#fff 60%)",
+        // background: "linear-gradient(180deg,#f6f8ff 0%,#fff 60%)",
       }}
     >
       <Flex justify="space-between" align="center" style={{ marginBottom: 24 }}>

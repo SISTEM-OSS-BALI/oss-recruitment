@@ -47,14 +47,14 @@ export default function LocationForm({
         label="Adress"
         rules={[{ required: true, message: "Address is required" }]}
       >
-        <TextArea placeholder="Add Adress" size="large" />
+        <TextArea placeholder="Add Address" size="large" />
       </Form.Item>
       <Form.Item
         name="district"
-        label="Dictrict"
-        rules={[{ required: true, message: "Dictrict is required" }]}
+        label="District"
+        rules={[{ required: true, message: "District is required" }]}
       >
-        <Input placeholder="Add District" size="large" />
+        <Input placeholder="Add district" size="large" />
       </Form.Item>
       <Form.Item
         name="province"
