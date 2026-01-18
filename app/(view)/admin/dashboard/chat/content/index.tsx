@@ -1,11 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { KeyboardEvent } from "react";
 import {
   Avatar,
@@ -92,10 +86,7 @@ const mapAttachments = (
 ): MessageAttachment[] =>
   (attachments ?? []).map((att, idx) => ({
     id: `${messageId}-att-${idx}`,
-    name:
-      att.name ??
-      att.url.split("/").pop()?.split("?")[0] ??
-      "Attachment",
+    name: att.name ?? att.url.split("/").pop()?.split("?")[0] ?? "Attachment",
     url: att.url,
     mimeType: att.mimeType ?? undefined,
     size: att.size ?? undefined,
@@ -176,7 +167,9 @@ export default function ChatContent() {
     if (!user_id) return null;
     return { id: user_id, name: user_name ?? "Admin" };
   }, [user_id, user_name]);
-  const socket = useSocket(currentUser ? { userId: currentUser.id } : undefined);
+  const socket = useSocket(
+    currentUser ? { userId: currentUser.id } : undefined
+  );
   const queryClient = useQueryClient();
 
   const [jobFilter, setJobFilter] = useState<string | undefined>(undefined);
@@ -292,9 +285,7 @@ export default function ChatContent() {
             new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
         );
         setMessages(history);
-        setActiveConversationId(
-          data.result?.conversationId ?? conversation.id
-        );
+        setActiveConversationId(data.result?.conversationId ?? conversation.id);
         readAckRef.current.clear();
       } catch (error) {
         console.error("Failed to fetch messages:", error);
@@ -323,9 +314,7 @@ export default function ChatContent() {
   const handleIncomingMessage = useCallback(
     (payload: ChatPayload) => {
       if (!roomId || payload.room !== roomId) return;
-      setActiveConversationId(
-        (prev) => prev ?? payload.conversationId ?? prev
-      );
+      setActiveConversationId((prev) => prev ?? payload.conversationId ?? prev);
       setMessages((prev) => {
         if (prev.some((msg) => msg.id === payload.id)) return prev;
         const senderName =
@@ -483,9 +472,7 @@ export default function ChatContent() {
     }
   };
 
-  const handleComposerKeyDown = (
-    event: KeyboardEvent<HTMLTextAreaElement>
-  ) => {
+  const handleComposerKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
     if (event.key === "Enter" && !event.shiftKey) {
       event.preventDefault();
       handleSendMessage();
@@ -521,7 +508,9 @@ export default function ChatContent() {
           borderRadius: 16,
           padding: 16,
           margin: "8px 16px",
-          border: isActive ? "1px solid rgba(22,119,255,0.45)" : "1px solid #e8eef6",
+          border: isActive
+            ? "1px solid rgba(22,119,255,0.45)"
+            : "1px solid #e8eef6",
           background: isActive
             ? "linear-gradient(135deg, rgba(22,119,255,0.1), rgba(22,119,255,0.02))"
             : "#fff",
@@ -568,7 +557,8 @@ export default function ChatContent() {
             </div>
           }
         />
-        <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+
+        <Typography.Text type="secondary" style={{ fontSize: 12}}>
           {lastTime}
         </Typography.Text>
       </List.Item>
@@ -638,9 +628,13 @@ export default function ChatContent() {
                     type="secondary"
                     style={{
                       fontSize: 11,
-                      color: fromCandidate ? "#94a3b8" : "rgba(255,255,255,0.7)",
+                      color: fromCandidate
+                        ? "#94a3b8"
+                        : "rgba(255,255,255,0.7)",
+                      marginLeft: 12,
                     }}
                   >
+                    
                     {dayjs(msg.createdAt).format("DD MMM YYYY • HH:mm")}
                   </Typography.Text>
                 </Flex>
@@ -765,7 +759,10 @@ export default function ChatContent() {
             {fetchLoading ? (
               <Skeleton active paragraph={{ rows: 6 }} />
             ) : conversationData.length === 0 ? (
-              <Empty description="No conversations found" style={{ margin: 24 }} />
+              <Empty
+                description="No conversations found"
+                style={{ margin: 24 }}
+              />
             ) : (
               <List
                 dataSource={conversationData}

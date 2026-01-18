@@ -28,6 +28,13 @@ type DirectorSignatureEmailPayload = {
   linkUrl?: string;
 };
 
+type PasswordResetEmailPayload = {
+  to: string;
+  name?: string;
+  resetUrl: string;
+  expiresInMinutes?: number;
+};
+
 function fmtDate(d: Date | string, locale = "en-US") {
   const date = typeof d === "string" ? new Date(d) : d;
   return new Intl.DateTimeFormat(locale, {
@@ -61,6 +68,28 @@ function baseWrapper(innerHTML: string) {
       <p><a href="https://onestepsolutionbali.com" style="color: #2d89e5; text-decoration: none;">Visit Our Website</a></p>
     </div>
   </div>`;
+}
+
+function buildPasswordResetHTML(payload: PasswordResetEmailPayload) {
+  const { name, resetUrl, expiresInMinutes = 60 } = payload;
+  const greeting = name ? `Hello ${name},` : "Hello,";
+  const content = `
+    <h2 style="color: #2d89e5; text-align: center;">Reset your password</h2>
+    <p style="font-size: 16px; color: #555;">${greeting}</p>
+    <p style="font-size: 16px; color: #555;">
+      We received a request to reset your password. Click the button below to set a new one.
+    </p>
+    <p style="text-align: center; margin: 24px 0;">
+      <a href="${resetUrl}"
+         style="display: inline-block; padding: 12px 20px; background: #2d89e5; color: #fff; text-decoration: none; border-radius: 8px; font-weight: 600;">
+        Reset Password
+      </a>
+    </p>
+    <p style="font-size: 14px; color: #777;">
+      This link expires in ${expiresInMinutes} minutes. If you didn't request a password reset, you can ignore this email.
+    </p>
+  `;
+  return baseWrapper(content);
 }
 
 /* ================================
@@ -241,5 +270,26 @@ export async function sendDirectorSignatureEmail(
     to,
     subject,
     html: baseWrapper(content),
+  });
+}
+
+export async function sendPasswordResetEmail(
+  payload: PasswordResetEmailPayload
+) {
+  const transporter = nodemailer.createTransport({
+    service: "gmail",
+    auth: {
+      user: process.env.EMAIL_USERNAME,
+      pass: process.env.EMAIL_PASSWORD,
+    },
+  });
+
+  const subject = "Reset your password - OSS Recruitment";
+
+  await transporter.sendMail({
+    from: `"One Step Solution (OSS) Bali" <${process.env.EMAIL_USERNAME}>`,
+    to: payload.to,
+    subject,
+    html: buildPasswordResetHTML(payload),
   });
 }

@@ -16,6 +16,11 @@ const baseUrl = "/api/admin/dashboard/offering-contract";
 const entity = "offering-contract";
 const queryKey = "offering-contracts";
 
+export interface OfferingContractCountByJobType {
+  jobType: string;
+  count: number;
+}
+
 export const useOfferingContracts = (params?: { queryString?: string }) => {
   const queryString = params?.queryString;
   const queryClient = useQueryClient();
@@ -239,3 +244,25 @@ export const useOfferingContractByApplicantId = ({
     onSendFinalEmailLoading
   };
 };
+
+export const useOfferingContractCountByJobType = (): {
+  data: OfferingContractCountByJobType[] | undefined;
+  fetchLoading: boolean;
+} => {
+  const { data, isLoading: fetchLoading } = useQuery({
+    queryKey: [entity, "count-by-job-type"],
+    queryFn: async () => {
+      const result = await axios.get(
+        `${baseUrl}/count-by-job-type`
+      );
+      return result.data.result as OfferingContractCountByJobType[];
+    },
+  });
+
+  return {
+    data,
+    fetchLoading,
+  };
+};
+
+

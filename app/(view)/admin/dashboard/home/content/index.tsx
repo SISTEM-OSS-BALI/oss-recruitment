@@ -12,6 +12,7 @@ import {
   Col,
   Empty,
   List,
+  Modal,
   Progress,
   Row,
   Skeleton,
@@ -24,7 +25,7 @@ import {
 import dayjs from "dayjs";
 import customParseFormat from "dayjs/plugin/customParseFormat";
 import relativeTime from "dayjs/plugin/relativeTime";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 
 import { useCandidates } from "@/app/hooks/applicant";
 import { useJobs } from "@/app/hooks/job";
@@ -33,6 +34,7 @@ import {
   SummaryStageKey,
   stageMatches,
 } from "@/app/utils/recruitment-stage";
+import { useOfferingContractCountByJobType } from "@/app/hooks/offering-contract";
 
 dayjs.extend(relativeTime);
 dayjs.extend(customParseFormat);
@@ -58,12 +60,36 @@ const stageColors: Record<SummaryStageKey, string> = {
 };
 
 export default function DashboardContent() {
-  const {
-    data: candidates,
-    fetchLoading: candidatesLoading,
-  } = useCandidates({ queryString: "" });
-  const { data: jobs, fetchLoading: jobsLoading } = useJobs({ queryString: "" });
+  const { data: candidates, fetchLoading: candidatesLoading } = useCandidates({
+    queryString: "",
+  });
+  const { data: jobs, fetchLoading: jobsLoading } = useJobs({
+    queryString: "",
+  });
   const loading = candidatesLoading || jobsLoading;
+
+  const [offerModalOpen, setOfferModalOpen] = useState(false);
+
+  const {
+    data: offeringContractCountByJobType,
+    fetchLoading: offeringContractLoading,
+  } = useOfferingContractCountByJobType();
+
+  const offeringContractsTotal = useMemo(() => {
+    return (
+      offeringContractCountByJobType?.reduce(
+        (total, item) => total + item.count,
+        0
+      ) ?? 0
+    );
+  }, [offeringContractCountByJobType]);
+
+  const offeringContractRows = useMemo(() => {
+    return (offeringContractCountByJobType ?? []).map((item) => ({
+      key: item.jobType,
+      ...item,
+    }));
+  }, [offeringContractCountByJobType]);
 
   const stageSummary = useMemo<StageSummary>(() => {
     const base = SUMMARY_STAGE_CONFIG.reduce((acc, curr) => {
@@ -114,14 +140,15 @@ export default function DashboardContent() {
         isPublished: boolean;
       }
     >();
+    const jobsById = new Map(jobs.map((job) => [job.id, job]));
 
     candidates.forEach((candidate) => {
       const jobId = candidate.job?.id ?? candidate.job_id ?? "unassigned";
-      const jobName = candidate.job?.job_title ?? "Unassigned";
+      const jobFromList = jobsById.get(jobId);
+      const jobName =
+        candidate.job?.job_title ?? jobFromList?.job_title ?? "Unassigned";
       const published =
-        candidate.job?.is_published ??
-        jobs.find((job) => job.id === jobId)?.is_published ??
-        false;
+        candidate.job?.is_published ?? jobFromList?.is_published ?? false;
       const current = counts.get(jobId) ?? {
         id: jobId,
         name: jobName,
@@ -133,14 +160,12 @@ export default function DashboardContent() {
     });
 
     if (!counts.size) {
-      return jobs
-        ?.slice(0, 5)
-        .map((job) => ({
-          id: job.id,
-          name: job.job_title,
-          applicants: 0,
-          isPublished: job.is_published,
-        })) ?? [];
+      return jobs.slice(0, 5).map((job) => ({
+        id: job.id,
+        name: job.job_title,
+        applicants: 0,
+        isPublished: job.is_published,
+      }));
     }
 
     return [...counts.values()]
@@ -151,8 +176,8 @@ export default function DashboardContent() {
   const latestCandidates = useMemo(() => {
     if (!candidates) return [];
     return [...candidates]
-      .sort((a, b) =>
-        dayjs(b.createdAt).valueOf() - dayjs(a.createdAt).valueOf()
+      .sort(
+        (a, b) => dayjs(b.createdAt).valueOf() - dayjs(a.createdAt).valueOf()
       )
       .slice(0, 6);
   }, [candidates]);
@@ -209,10 +234,13 @@ export default function DashboardContent() {
     {
       key: "offering",
       title: "Offers Sent",
-      value: stageSummary.offering ?? 0,
+      value: offeringContractsTotal,
       helper: `${stageSummary.hired ?? 0} accepted`,
       icon: <AuditOutlined />,
       color: "#722ed1",
+      loading: offeringContractLoading,
+      // onMouseEnter: () => setOfferModalOpen(true),
+      onClick: () => setOfferModalOpen(true),
     },
     {
       key: "hired",
@@ -239,7 +267,11 @@ export default function DashboardContent() {
       <Row gutter={[16, 16]}>
         {summaryCards.map((card) => (
           <Col key={card.key} xs={24} sm={12} xl={6}>
-            <Card>
+            <Card
+              hoverable
+              // onMouseEnter={card.onMouseEnter}
+              onClick={card.onClick}
+            >
               <Space align="start" size={16}>
                 <div
                   style={{
@@ -259,8 +291,12 @@ export default function DashboardContent() {
                 <div style={{ flex: 1 }}>
                   <Text type="secondary">{card.title}</Text>
                   <div style={{ marginTop: 4 }}>
-                    {loading ? (
-                      <Skeleton.Input active size="small" style={{ width: 120 }} />
+                    {(card.loading ?? loading) ? (
+                      <Skeleton.Input
+                        active
+                        size="small"
+                        style={{ width: 120 }}
+                      />
                     ) : (
                       <Title level={3} style={{ marginBottom: 0 }}>
                         {card.value}
@@ -414,7 +450,9 @@ export default function DashboardContent() {
                     <List.Item.Meta
                       title={
                         <Space>
-                          <Text strong>{candidate.user?.name ?? "Candidate"}</Text>
+                          <Text strong>
+                            {candidate.user?.name ?? "Candidate"}
+                          </Text>
                           <Tag>{candidate.job?.job_title ?? "—"}</Tag>
                         </Space>
                       }
@@ -438,6 +476,43 @@ export default function DashboardContent() {
           </Card>
         </Col>
       </Row>
+
+      <Modal
+        title="Offers Sent"
+        open={offerModalOpen}
+        onCancel={() => setOfferModalOpen(false)}
+        footer={null}
+        width={800}
+      >
+        {offeringContractLoading ? (
+          <Skeleton active paragraph={{ rows: 6 }} />
+        ) : offeringContractRows.length ? (
+          <Table
+            size="small"
+            pagination={{ pageSize: 8 }}
+            rowKey={(r) => r.jobType}
+            columns={[
+              {
+                title: "Job Type",
+                dataIndex: "jobType",
+                render: (value) => (
+                  <Tag color={value === "REFFERAL" ? "purple" : "gold"}>
+                    {value === "REFFERAL" ? "Referral" : "Team Member"}
+                  </Tag>
+                ),
+              },
+              {
+                title: "Offers",
+                dataIndex: "count",
+                width: 120,
+              },
+            ]}
+            dataSource={offeringContractRows}
+          />
+        ) : (
+          <Empty description="No offering contracts yet" />
+        )}
+      </Modal>
     </Space>
   );
 }

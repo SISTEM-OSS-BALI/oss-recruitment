@@ -3,10 +3,11 @@
 import { useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import Sider from "antd/es/layout/Sider";
-import { Divider, Image, Menu, Typography, theme } from "antd";
+import { Divider, Menu, Typography, theme } from "antd";
 import type { MenuProps } from "antd";
 import { SidebarMainUser } from "@/app/data/user/main/sidebar-data";
 import { SidebarSettingUser } from "@/app/data/user/setting/sidebar-data";
+import Image from "next/image";
 
 const { Text } = Typography;
 
@@ -90,10 +91,11 @@ export const SiderUser = () => {
         <Image
           src="/assets/images/icon.png"
           alt="OSS"
-          preview={false}
           width={32}
           height={32}
           style={{ objectFit: "contain" }}
+          priority
+          unoptimized
         />
         {!collapsed && (
           <div style={{ lineHeight: 1 }}>

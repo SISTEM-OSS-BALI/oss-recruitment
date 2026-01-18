@@ -16,6 +16,8 @@ import {
   Skeleton,
   Alert,
   List,
+  Flex,
+  Modal,
 } from "antd";
 import {
   FileTextOutlined,
@@ -23,6 +25,7 @@ import {
   UserOutlined,
   ApartmentOutlined,
   LinkOutlined,
+  DeleteOutlined,
 } from "@ant-design/icons";
 import { useOfferingContracts } from "@/app/hooks/offering-contract";
 
@@ -40,7 +43,7 @@ const STAGE_COLOR: Record<RecruitmentStage | "UNKNOWN", string> = {
 };
 
 export default function HistoryContractContent() {
-  const { data, fetchLoading } = useOfferingContracts({});
+  const { data, fetchLoading, onDelete } = useOfferingContracts({});
 
   const [q, setQ] = useState("");
 
@@ -58,10 +61,9 @@ export default function HistoryContractContent() {
           .toLowerCase()
           .includes(qNorm);
 
-
       return matchQ;
     });
-  }, [data, q,]);
+  }, [data, q]);
 
   if (!data) {
     return (
@@ -73,6 +75,19 @@ export default function HistoryContractContent() {
       />
     );
   }
+
+  const handleDelete = (id: string) => {
+    Modal.confirm({
+      title: "Are you sure you want to delete this contract?",
+      content: "This action cannot be undone.",
+      okText: "Delete",
+      okType: "danger",
+      cancelText: "Cancel",
+      onOk: async () => {
+        await onDelete(id);
+      },
+    });
+  };
 
   return (
     <div className="w-full">
@@ -130,10 +145,19 @@ export default function HistoryContractContent() {
                 <Card
                   hoverable
                   title={
-                    <Space align="center">
-                      <FileTextOutlined />
-                      <Tag color={STAGE_COLOR[stage] || "default"}>{stage}</Tag>
-                    </Space>
+                    <Flex justify="space-between">
+                      <Space align="center">
+                        <FileTextOutlined />
+                        <Tag color={STAGE_COLOR[stage] || "default"}>
+                          {stage}
+                        </Tag>
+                      </Space>
+                      <Button
+                        onClick={() => handleDelete(id!)}
+                        danger
+                        icon={<DeleteOutlined />}
+                      />
+                    </Flex>
                   }
                   actions={[
                     filePath ? (

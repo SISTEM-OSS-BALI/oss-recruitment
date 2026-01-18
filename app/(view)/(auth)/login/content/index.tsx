@@ -99,6 +99,7 @@ export default function LoginContent() {
                   width={64}
                   height={64}
                   priority
+                  unoptimized
                 />
               </div>
               <div className={styles.infoCardText}>
@@ -127,6 +128,10 @@ export default function LoginContent() {
               </p>
 
               <FormLogin onFinish={handleLogin} loading={loading} />
+
+              <div className={styles.formFooter} style={{ marginTop: 12 }}>
+                <Link href="/forgot-password">Forgot your password?</Link>
+              </div>
 
               <div className={styles.formFooter}>
                 <span>Don&apos;t have an account?</span>

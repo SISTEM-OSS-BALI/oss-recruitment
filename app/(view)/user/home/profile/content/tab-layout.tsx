@@ -24,17 +24,19 @@ import PreviewComponent from "./PreviewComponent";
 import { useAuth } from "@/app/utils/useAuth";
 import { useUser } from "@/app/hooks/user";
 import { UserDataModel } from "@/app/models/user";
+import getInitials from "@/app/utils/initials-username";
+import Image from "next/image";
 
 const { Title, Text } = Typography;
 const { useBreakpoint } = Grid;
 
-// const gradientBackground =
-//   "linear-gradient(135deg, rgba(248,250,255,1) 0%, rgba(236,243,255,1) 100%)";
 
 export default function TabLayout() {
   const { user_id } = useAuth();
   const { data: detailUserData } = useUser({ id: user_id! });
   const screens = useBreakpoint();
+
+  const interestCount = detailUserData?.interestTags?.length ?? 0;
 
   const completionFields = useMemo(
     () => [
@@ -46,9 +48,12 @@ export default function TabLayout() {
       detailUserData?.curiculum_vitae_url,
       detailUserData?.photo_url,
       detailUserData?.portfolio_url,
+      detailUserData?.interestTags,
+      detailUserData?.gender,
     ],
     [
       detailUserData?.address,
+      detailUserData?.interestTags,
       detailUserData?.curiculum_vitae_url,
       detailUserData?.date_of_birth,
       detailUserData?.email,
@@ -56,6 +61,7 @@ export default function TabLayout() {
       detailUserData?.phone,
       detailUserData?.photo_url,
       detailUserData?.portfolio_url,
+      detailUserData?.gender,
     ]
   );
 
@@ -71,23 +77,12 @@ export default function TabLayout() {
       "photo_url",
       "portfolio_url",
     ];
-    return keys.reduce(
-      (acc, key) => (detailUserData[key] ? acc + 1 : acc),
-      0
-    );
+    return keys.reduce((acc, key) => (detailUserData[key] ? acc + 1 : acc), 0);
   }, [detailUserData]);
 
   const lastUpdated = detailUserData?.updatedAt
     ? dayjs(detailUserData.updatedAt).format("DD MMM YYYY")
     : "Not updated yet";
-
-  const initials =
-    detailUserData?.name
-      ?.split(" ")
-      .map((word) => word[0])
-      .join("")
-      .slice(0, 2)
-      .toUpperCase() ?? "U";
 
   const tabItems: TabsProps["items"] = [
     {
@@ -122,6 +117,11 @@ export default function TabLayout() {
       label: "Last updated",
       value: lastUpdated,
       icon: <UserOutlined style={{ color: "#f59e0b" }} />,
+    },
+    {
+      label: "Interests selected",
+      value: `${interestCount} tags`,
+      icon: <Tag style={{ color: "#ec4899", borderColor: "#ec4899" }} />,
     },
   ];
 
@@ -158,14 +158,26 @@ export default function TabLayout() {
             }}
           >
             <Avatar
-              size={84}
-              icon={<UserOutlined />}
+              size={64}
               style={{
-                background: "linear-gradient(135deg,#2467e7,#3b82f6)",
+                background: "#2467e7",
                 fontWeight: 600,
+                fontSize: 22,
               }}
             >
-              {initials}
+              {detailUserData?.photo_url ? (
+                <Image
+                  src={detailUserData.photo_url}
+                  alt="Profile"
+                  width={100}
+                  height={100}
+                  style={{ objectFit: "cover", borderRadius: "50%" }}
+                  priority
+                  unoptimized
+                />
+              ) : (
+                getInitials(detailUserData?.name || "?")
+              )}
             </Avatar>
             <div style={{ flex: 1 }}>
               <Title level={3} style={{ marginBottom: 4 }}>
@@ -175,17 +187,6 @@ export default function TabLayout() {
                 {detailUserData?.address ||
                   "Keep your professional profile updated to stand out to recruiters."}
               </Text>
-              <div style={{ marginTop: 12 }}>
-                <Tag
-                  color="blue"
-                  style={{
-                    borderRadius: 999,
-                    padding: "4px 16px",
-                  }}
-                >
-                  {detailUserData?.interestTags?.length ?? 0} curated interests
-                </Tag>
-              </div>
             </div>
           </div>
           <Space

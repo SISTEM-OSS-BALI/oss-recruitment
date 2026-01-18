@@ -1,5 +1,5 @@
 import { db } from "@/lib/prisma";
-import type { Prisma } from "@prisma/client";
+import type { Prisma, TypeJob } from "@prisma/client";
 import { GeneralError } from "../utils/general-error";
 import { applyCandidateSignatureToContract } from "../vendor/contract-signature";
 import type {
@@ -205,3 +205,39 @@ export const UPDATE_DIRECTOR_SIGNATURE_DOCUMENT = async ({
 
   return updated;
 };
+
+export type OfferingContractCountByJobType = {
+  jobType: TypeJob;
+  count: number;
+};
+
+export default async function COUNT_OFFERING_CONTRACTS(): Promise<
+  OfferingContractCountByJobType[]
+> {
+  const contracts = await db.offeringContract.findMany({
+    select: {
+      applicant: {
+        select: {
+          job: {
+            select: {
+              type_job: true,
+            },
+          },
+        },
+      },
+    },
+  });
+
+  const counts = new Map<TypeJob, number>();
+
+  contracts.forEach((contract) => {
+    const jobType = contract.applicant?.job?.type_job;
+    if (!jobType) return;
+    counts.set(jobType, (counts.get(jobType) ?? 0) + 1);
+  });
+
+  return [...counts.entries()].map(([jobType, count]) => ({
+    jobType,
+    count,
+  }));
+}

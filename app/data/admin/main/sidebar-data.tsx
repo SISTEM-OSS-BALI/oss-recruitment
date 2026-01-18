@@ -28,7 +28,7 @@ export const SidebarMenuMainAdmin = (): MenuProps["items"] => {
     },
     {
       key: "/admin/dashboard/history-contract",
-      label: menuLabel("Management Contract"),
+      label: menuLabel("History Contract"),
       icon: <FontAwesomeIcon icon={faChartLine} />,
       onClick: () => router.push("/admin/dashboard/history-contract"),
     },

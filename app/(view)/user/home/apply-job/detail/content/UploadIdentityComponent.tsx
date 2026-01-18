@@ -31,7 +31,7 @@ const API_ENDPOINT =
   (typeof process !== "undefined" && process.env?.NEXT_PUBLIC_OCR_PYTHON) ||
   "http://127.0.0.1:8000/ocr";
 
-export default function KTPWizard({
+export default function UploadIdentityComponent({
   onPatchDocument,
 }: {
   onPatchDocument: (nik: string, imageUrl: string) => Promise<void>;

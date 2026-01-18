@@ -6,6 +6,7 @@ import {
   Badge,
   Button,
   Dropdown,
+  Grid,
   Layout,
   Menu,
   Typography,
@@ -13,13 +14,15 @@ import {
 import type { MenuProps } from "antd";
 import { Content, Footer, Header } from "antd/es/layout/layout";
 import { usePathname, useRouter } from "next/navigation";
-import { SiderUser } from "../../admin/sider/user";
-import { MainBreadcrumb } from "@/app/components/common/breadcrumb";
 import { LogoutOutlined } from "@ant-design/icons";
+import { signOut } from "next-auth/react";
 import getInitials from "@/app/utils/initials-username";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faBell } from "@fortawesome/free-solid-svg-icons";
 import { useChatUnread } from "@/app/hooks/chat";
+import { SidebarMainUser } from "@/app/data/user/main/sidebar-data";
+import { SidebarSettingUser } from "@/app/data/user/setting/sidebar-data";
+import { useMemo } from "react";
 
 // penting: matikan SSR untuk header
 const MainHeader = dynamic(() => import("../header"), { ssr: false });
@@ -36,33 +39,54 @@ export default function UserLayout({
   const pathname = usePathname();
   const router = useRouter();
   const { unreadCount, conversations, isFetching } = useChatUnread();
+  const screens = Grid.useBreakpoint();
+  const isMobile = !screens.md;
 
   const showHeaderHome =
     pathname === "/user" ||
     pathname.startsWith("/user/home/apply-job/detail/employee-setup");
-  const showSider =
-    pathname.startsWith("/user/home") &&
-    !pathname.startsWith("/user/home/apply-job/detail/employee-setup");
   const showHeaderDashboard =
     pathname.startsWith("/user/home") &&
     !pathname.startsWith("/user/home/apply-job/detail/employee-setup");
 
+  const mainNavItems = SidebarMainUser() || [];
+  const settingNavItems = SidebarSettingUser() || [];
+  const navItems = useMemo(
+    () => [...mainNavItems, ...settingNavItems].filter(Boolean),
+    [mainNavItems, settingNavItems]
+  );
+
+  const activeNavKey = useMemo(() => {
+    if (!pathname) return undefined;
+    const match = navItems.find(
+      (item) => typeof item?.key === "string" && pathname.startsWith(item.key)
+    );
+    return match?.key as string | undefined;
+  }, [navItems, pathname]);
+
   const headerStyle = {
-    background: "#fff",
-    padding: 0,
+    background: "rgba(255,255,255,0.96)",
+    padding: isMobile ? "12px 16px 8px" : "0 24px",
     display: "flex",
-    alignItems: "center",
+    alignItems: isMobile ? "stretch" : "center",
     justifyContent: "space-between",
-    boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
+    flexDirection: isMobile ? "column" : "row",
+    gap: isMobile ? 12 : 0,
+    boxShadow: "0 2px 12px rgba(15,23,42,0.08)",
+    borderBottom: "1px solid rgba(15,23,42,0.06)",
+    position: "sticky" as const,
+    top: 0,
+    zIndex: 10,
+    backdropFilter: "blur(8px)",
+    height: isMobile ? "auto" : 64,
+    lineHeight: isMobile ? "normal" : "64px",
   };
 
   const contentStyle = {
-    margin: "24px 16px",
-    padding: 24,
+    margin: 0,
+    padding: "24px 20px 32px",
     height: "auto",
-    background: "#fff",
-    borderRadius: 8,
-    boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
+    background: "transparent",
   };
 
   const menu = (
@@ -71,7 +95,7 @@ export default function UserLayout({
         key="logout"
         icon={<LogoutOutlined />}
         onClick={() => {
-          alert("Logout clicked! (Ganti dengan logic logout aslimu)");
+          signOut({ callbackUrl: "/login" });
         }}
       >
         Logout
@@ -134,105 +158,219 @@ export default function UserLayout({
     }
   };
 
-  return (
-    <Layout style={{ minHeight: "100vh" }}>
-      {showSider && <SiderUser />}
-      <Layout>
-        {showHeaderHome && <MainHeader />}
-        {showHeaderDashboard && (
-          <Header style={headerStyle}>
-            <div style={{ padding: 24 }}>
-              <MainBreadcrumb />
-            </div>
+  const navButtons = navItems
+    .filter(Boolean)
+    .map((item) => item as MenuProps["items"][number])
+    .map((item) => {
+      const navItem = item as {
+        key?: string;
+        label?: React.ReactNode;
+        icon?: React.ReactNode;
+        onClick?: () => void;
+      };
+      if (!navItem.key) return null;
+      const isActive = activeNavKey === navItem.key;
+      const handleClick = () => {
+        if (navItem.onClick) {
+          navItem.onClick();
+          return;
+        }
+        router.push(String(navItem.key));
+      };
+
+      return (
+        <Button
+          key={navItem.key}
+          type="text"
+          onClick={handleClick}
+          style={{
+            borderRadius: 12,
+            paddingInline: isMobile ? 12 : 16,
+            height: isMobile ? 36 : 40,
+            background: isActive ? "#edf3ff" : "transparent",
+            color: isActive ? "#1d4ed8" : "#475569",
+            fontWeight: 600,
+            whiteSpace: "nowrap",
+          }}
+        >
+          <span
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 8,
+            }}
+          >
+            {navItem.icon}
+            {navItem.label}
+          </span>
+        </Button>
+      );
+    });
+
+  const brandNode = (
+    <div style={{ lineHeight: 1.1 }}>
+      <Typography.Text strong style={{ fontSize: 16 }}>
+        OSS Recruitment
+      </Typography.Text>
+    </div>
+  );
+
+  const navNode = (
+    <div
+      style={{
+        display: "flex",
+        alignItems: "center",
+        gap: 6,
+        justifyContent: isMobile ? "flex-start" : "center",
+        flex: 1,
+        flexWrap: isMobile ? "nowrap" : "wrap",
+        width: isMobile ? "100%" : "auto",
+        overflowX: isMobile ? "auto" : "visible",
+        paddingBottom: isMobile ? 4 : 0,
+        paddingTop: isMobile ? 8 : 0,
+        borderTop: isMobile ? "1px solid rgba(15,23,42,0.08)" : "none",
+        WebkitOverflowScrolling: "touch",
+      }}
+    >
+      {navButtons}
+    </div>
+  );
+
+  const actionsNode = (
+    <div
+      style={{
+        display: "flex",
+        alignItems: "center",
+        gap: isMobile ? 10 : 14,
+        minWidth: isMobile ? 0 : 240,
+        justifyContent: isMobile ? "flex-end" : "flex-end",
+      }}
+    >
+      <Dropdown
+        trigger={["click"]}
+        placement="bottomRight"
+        menu={{
+          items: notificationItems,
+          onClick: handleNotificationClick,
+        }}
+      >
+        <Badge
+          count={unreadCount}
+          overflowCount={99}
+          style={{ backgroundColor: "#ff4d4f" }}
+          offset={[-2, 6]}
+          showZero={false}
+        >
+          <Button
+            type="text"
+            loading={isFetching && unreadCount === 0}
+            icon={<FontAwesomeIcon icon={faBell} />}
+          />
+        </Badge>
+      </Dropdown>
+      <Dropdown overlay={menu} placement="bottomRight" trigger={["click"]}>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: isMobile ? 8 : 12,
+            cursor: "pointer",
+            userSelect: "none",
+          }}
+        >
+          <Avatar
+            size={isMobile ? 40 : 46}
+            src={userProfilePic || undefined}
+            style={{
+              border: "2px solid #1890ff",
+              background: "#e6f7ff",
+              color: "#1890ff",
+              fontWeight: 700,
+              fontSize: 20,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
+            {!userProfilePic && getInitials(username)}
+          </Avatar>
+          {!isMobile && (
             <div
               style={{
                 display: "flex",
-                alignItems: "center",
-                gap: 14,
-                minWidth: 240,
-                justifyContent: "flex-end",
+                flexDirection: "column",
+                alignItems: "flex-start",
+                marginRight: 10,
               }}
             >
-              <Dropdown
-                trigger={["click"]}
-                placement="bottomRight"
-                menu={{
-                  items: notificationItems,
-                  onClick: handleNotificationClick,
-                }}
+              <Typography.Text strong style={{ fontSize: 15 }}>
+                {username}
+              </Typography.Text>
+              <Typography.Text
+                type="secondary"
+                style={{ fontSize: 12, marginTop: 0 }}
               >
-                <Badge
-                  count={unreadCount}
-                  overflowCount={99}
-                  style={{ backgroundColor: "#ff4d4f" }}
-                  offset={[-2, 6]}
-                  showZero={false}
-                >
-                  <Button
-                    type="text"
-                    loading={isFetching && unreadCount === 0}
-                    icon={<FontAwesomeIcon icon={faBell} />}
-                  />
-                </Badge>
-              </Dropdown>
-              <Dropdown
-                overlay={menu}
-                placement="bottomRight"
-                trigger={["click"]}
+                Candidate
+              </Typography.Text>
+            </div>
+          )}
+        </div>
+      </Dropdown>
+    </div>
+  );
+
+  return (
+    <Layout style={{ minHeight: "100vh", background: "#f5f7fb" }}>
+      {showHeaderHome && <MainHeader />}
+      {showHeaderDashboard && (
+        <Header style={headerStyle}>
+          {isMobile ? (
+            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  gap: 12,
+                  width: "100%",
+                }}
               >
                 <div
                   style={{
                     display: "flex",
                     alignItems: "center",
                     gap: 12,
-                    cursor: "pointer",
-                    userSelect: "none",
                   }}
                 >
-                  <Avatar
-                    size={50}
-                    src={userProfilePic || undefined} // undefined kalau kosong, biar pakai fallback
-                    style={{
-                      border: "2px solid #1890ff",
-                      background: "#e6f7ff",
-                      color: "#1890ff",
-                      fontWeight: 700,
-                      fontSize: 22,
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                    }}
-                  >
-                    {!userProfilePic && getInitials(username)}
-                  </Avatar>
-                  <div
-                    style={{
-                      display: "flex",
-                      flexDirection: "column",
-                      alignItems: "flex-start",
-                      marginRight: 15,
-                    }}
-                  >
-                    <Typography.Text strong style={{ fontSize: 15 }}>
-                      {username}
-                    </Typography.Text>
-                    <Typography.Text
-                      type="secondary"
-                      style={{ fontSize: 14, marginTop: 0 }}
-                    >
-                      Candidate
-                    </Typography.Text>
-                  </div>
+                  {brandNode}
                 </div>
-              </Dropdown>
+                {actionsNode}
+              </div>
+              {navNode}
             </div>
-          </Header>
-        )}
-        <Content style={contentStyle}>{children}</Content>
-        <Footer style={{ textAlign: "center", background: "#fff" }}>
-          {/* Tambahkan isi footer di sini jika perlu */}
-        </Footer>
-      </Layout>
+          ) : (
+            <>
+              <div style={{ minWidth: 220 }}>{brandNode}</div>
+              {navNode}
+              {actionsNode}
+            </>
+          )}
+        </Header>
+      )}
+      <Content style={contentStyle}>
+        <div style={{ maxWidth: 1200, margin: "0 auto", width: "100%" }}>
+          {children}
+        </div>
+      </Content>
+      <Footer
+        style={{
+          textAlign: "center",
+          background: "transparent",
+          color: "rgba(0,0,0,0.45)",
+        }}
+      >
+        {new Date().getFullYear()} · OSS Recruitment
+      </Footer>
     </Layout>
   );
 }

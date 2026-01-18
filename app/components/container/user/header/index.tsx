@@ -26,16 +26,11 @@ import { useAuth } from "@/app/utils/useAuth";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faBell } from "@fortawesome/free-solid-svg-icons";
 import { useChatUnread } from "@/app/hooks/chat";
+import getInitials from "@/app/utils/initials-username";
 
 const { Header } = Layout;
 const { useBreakpoint } = Grid;
 
-// const BASE_NAV = [
-//   { key: "home", label: "Home", href: "/" },
-//   { key: "about", label: "About", href: "/about" },
-//   { key: "jobseeker", label: "Job Seeker", href: "/job-seeker" },
-//   { key: "contact", label: "Contact", href: "/contact" },
-// ];
 
 export default function MainHeader({
   backLabel = "Back to Jobs",
@@ -188,13 +183,6 @@ export default function MainHeader({
       },
     ];
 
-    const initials = (user_name ?? "?")
-      .split(" ")
-      .map((p) => p[0])
-      .join("")
-      .slice(0, 2)
-      .toUpperCase();
-
     return (
       <Space size={12} align="center">
         <Dropdown
@@ -222,7 +210,7 @@ export default function MainHeader({
         <Dropdown menu={{ items: menuItems }} trigger={["click"]}>
           <Space style={{ cursor: "pointer" }}>
             <Avatar style={{ backgroundColor: "#2467e7" }}>
-              {initials || <UserOutlined />}
+              {getInitials(user_name || "?") || <UserOutlined />}
             </Avatar>
             <span style={{ fontWeight: 500, color: "#222" }}>
               {user_name ?? "User"}

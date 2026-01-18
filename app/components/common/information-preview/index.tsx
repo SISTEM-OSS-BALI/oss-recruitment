@@ -8,18 +8,21 @@ import {
   CalendarOutlined,
 } from "@ant-design/icons";
 import { formatDate } from "@/app/utils/date-helper";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faAddressCard, faMars } from "@fortawesome/free-solid-svg-icons";
 
 const { Title, Text } = Typography;
 
 type LeftPanelProps = {
   email?: string | null;
   phone?: string | null;
+  address?: string | null;
+  gender?: string | null;
   dateOfBirth?: string | Date | null;
   cvUrl?: string | null;
   portfolioUrl?: string | null;
   interests?: string[];
 };
-
 
 function RowItem({
   icon,
@@ -65,6 +68,8 @@ function SectionTitle({ children }: { children: React.ReactNode }) {
 export default function CandidatePreview({
   email,
   phone,
+  address,
+  gender,
   dateOfBirth,
   interests = [],
 }: LeftPanelProps) {
@@ -99,12 +104,26 @@ export default function CandidatePreview({
         <SectionTitle>Personal Details</SectionTitle>
       </div>
       <Divider style={{ margin: "10px 0 0" }} />
-      <div style={{ padding: "16px 20px 8px" }}>
+      <div style={{ padding: "20px 20px 8px" }}>
         <Space direction="vertical" size={18} style={{ width: "100%" }}>
           <RowItem
             icon={<CalendarOutlined />}
             primary={<span>{formatDate(dateOfBirth)}</span>}
             secondary="Date of Birth"
+          />
+        </Space>
+        <Space direction="vertical" size={18} style={{ width: "100%", }}>
+          <RowItem
+            icon={<FontAwesomeIcon icon={faAddressCard} />}
+            primary={<span>{address || "-"}</span>}
+            secondary="Address"
+          />
+        </Space>
+        <Space direction="vertical" size={18} style={{ width: "100%" }}>
+          <RowItem
+            icon={<FontAwesomeIcon icon={faMars} />}
+            primary={<span>{gender || "-"}</span>}
+            secondary="Gender"
           />
         </Space>
       </div>
@@ -130,14 +149,6 @@ export default function CandidatePreview({
           </div>
         </>
       )}
-
-      {/* Application Details */}
-      {/* <div style={{ padding: "20px 20px 8px" }}>
-        <SectionTitle>Application Details</SectionTitle>
-      </div>
-      <Divider style={{ margin: "10px 0 0" }} />
-      <div style={{ padding: "16px 20px 20px" }}>
-      </div> */}
     </Card>
   );
 }

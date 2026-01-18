@@ -61,7 +61,7 @@ export default function EmployeeSetupPage() {
     return <Empty description="No application found" />;
 
   return (
-    <div style={{ padding: 16, maxWidth: 960, margin: "0 auto" }}>
+    <div style={{ padding: 16, maxWidth: 1200, margin: "0 auto" }}>
       <Space direction="vertical" size={16} style={{ width: "100%" }}>
         <Card>
           <Title level={4} style={{ marginBottom: 4 }}>

@@ -19,9 +19,8 @@ import { faBell } from "@fortawesome/free-solid-svg-icons";
 import { useChatUnread } from "@/app/hooks/chat";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/app/utils/useAuth";
-import { normalize } from "path";
 import { normalizedRole } from "@/app/utils/normalized";
-
+import { signOut } from "next-auth/react";
 
 const { Header, Content, Footer } = Layout;
 
@@ -54,7 +53,7 @@ const menu = (
       key="logout"
       icon={<LogoutOutlined />}
       onClick={() => {
-        alert("Logout clicked! (Ganti dengan logic logout aslimu)");
+        signOut({ callbackUrl: "/login" });
       }}
     >
       Logout

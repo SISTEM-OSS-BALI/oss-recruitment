@@ -44,7 +44,6 @@ import {
 import dayjs from "dayjs";
 import { ApplicantDataModel } from "@/app/models/applicant";
 import ResultMBTIComponent from "./ResultMBTIComponent";
-import KTPWizard from "./UploadIdentityComponent";
 import { useUser } from "@/app/hooks/user";
 import { useOfferingContractByApplicantId } from "@/app/hooks/offering-contract";
 import Link from "next/link";
@@ -61,6 +60,7 @@ import { useScheduleHiredsByApplicantId } from "@/app/hooks/schedule-hired";
 import { formatDateTime } from "@/app/utils/date-helper";
 import { useProcedureDocuments } from "@/app/hooks/procedure-document";
 import LoadingSplash from "@/app/components/common/custom-loading";
+import UploadIdentityComponentManual from "./UploadIdentityComponentManual";
 
 const { Title, Text } = Typography;
 const { TextArea } = Input;
@@ -1306,9 +1306,9 @@ export default function CandidateProgress({ applicant, meta }: Props) {
             open={isDecisionModalOpen}
             onCancel={handleCloseDecisionModal}
             title="Offer Decision"
-            width={720}
+            width={900}
             footer={null}
-            bodyStyle={{ padding: 16, paddingTop: 12 }}
+            bodyStyle={{ padding: 20, paddingTop: 16, background: "#f6f8fb" }}
             style={{ top: 24 }}
           >
             <Space
@@ -1316,20 +1316,33 @@ export default function CandidateProgress({ applicant, meta }: Props) {
               size={16}
               style={{ display: "block", width: "100%" }}
             >
-              <Space align="center" size={8} style={{ marginTop: 4 }}>
-                <Tag
-                  color={decisionMeta.color}
-                  style={{ marginRight: 0, fontSize: 16, marginBottom: 12 }}
-                >
-                  {decisionMeta.label}
-                </Tag>
-                {decisionStatus !== "PENDING" && decisionAtDisplay && (
-                  <Text type="secondary">Submitted {decisionAtDisplay}</Text>
-                )}
-              </Space>
+              <Card
+                bordered
+                style={{ borderRadius: 16, marginBottom: 16 }}
+                bodyStyle={{ padding: 16 }}
+              >
+                <Space align="center" size={12} style={{ marginBottom: 8 }}>
+                  <Tag
+                    color={decisionMeta.color}
+                    style={{
+                      margin: 0,
+                      fontSize: 14,
+                      borderRadius: 999,
+                      padding: "2px 10px",
+                    }}
+                  >
+                    {decisionMeta.label}
+                  </Tag>
+                  {decisionStatus !== "PENDING" && decisionAtDisplay && (
+                    <Text type="secondary">Submitted {decisionAtDisplay}</Text>
+                  )}
+                </Space>
+                <Text type="secondary">{decisionMeta.helper}</Text>
+              </Card>
 
               {isDecisionLocked && (
                 <Alert
+                  style={{ marginBottom: 16 }}
                   type="success"
                   showIcon
                   message={
@@ -1341,46 +1354,98 @@ export default function CandidateProgress({ applicant, meta }: Props) {
                 />
               )}
 
-              <Text>{decisionMeta.helper}</Text>
-
-              <Space size={12} style={{ margin: "8px 0 12px" }}>
-                <Button
-                  type={decisionMode === "ACCEPT" ? "primary" : "default"}
-                  onClick={() => handleSelectDecision("ACCEPT")}
-                  disabled={isDecisionLocked}
-                >
-                  Accept Offer
-                </Button>
-                <Button
-                  type={decisionMode === "DECLINE" ? "primary" : "default"}
-                  danger
-                  onClick={() => handleSelectDecision("DECLINE")}
-                  disabled={isDecisionLocked}
-                >
-                  Decline Offer
-                </Button>
-              </Space>
-
-              {decisionMode === "ACCEPT" && (
+              <Card
+                bordered
+                style={{ borderRadius: 16, marginBottom: 16 }}
+                bodyStyle={{ padding: 16 }}
+              >
                 <Space
                   direction="vertical"
-                  size={16}
-                  style={{
-                    display: "block",
-                    background: "#fafafa",
-                    padding: 16,
-                    borderRadius: 12,
-                    border: "1px solid #f0f0f0",
-                  }}
+                  size={10}
+                  style={{ display: "block" }}
                 >
-                  <div>
-                    <Text strong>Review the contract</Text>
-                    <Text type="secondary" style={{ display: "block" }}>
-                      Read the contract before signing. Click the button below
-                      to open the contract preview.
-                    </Text>
-                    <Space wrap style={{ marginTop: 8 }}>
+                  <Text strong>Choose your decision</Text>
+                  <Text type="secondary">
+                    Please review the offer before confirming your choice.
+                  </Text>
+                  <Row gutter={[12, 12]}>
+                    <Col xs={24} sm={12}>
                       <Button
+                        block
+                        type={decisionMode === "ACCEPT" ? "primary" : "default"}
+                        onClick={() => handleSelectDecision("ACCEPT")}
+                        disabled={isDecisionLocked}
+                      >
+                        Accept Offer
+                      </Button>
+                    </Col>
+                    <Col xs={24} sm={12}>
+                      <Button
+                        block
+                        type={
+                          decisionMode === "DECLINE" ? "primary" : "default"
+                        }
+                        danger
+                        onClick={() => handleSelectDecision("DECLINE")}
+                        disabled={isDecisionLocked}
+                      >
+                        Decline Offer
+                      </Button>
+                    </Col>
+                  </Row>
+                </Space>
+              </Card>
+
+              {decisionMode === "ACCEPT" && (
+                <Card
+                  bordered
+                  style={{ borderRadius: 16 }}
+                  bodyStyle={{ padding: 16 }}
+                >
+                  <Space direction="vertical" size={12} style={{ display: "block" }}>
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        gap: 16,
+                        flexWrap: "wrap",
+                      }}
+                    >
+                      <Space align="center" size={12}>
+                        <div
+                          style={{
+                            width: 36,
+                            height: 36,
+                            borderRadius: 10,
+                            background: "#eef2ff",
+                            color: "#4f46e5",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                          }}
+                        >
+                          <FileTextOutlined />
+                        </div>
+                        <div>
+                          <Text strong>Review the contract</Text>
+                          <Text type="secondary" style={{ display: "block" }}>
+                            Read the contract before signing. Open the preview or
+                            download the file.
+                          </Text>
+                        </div>
+                      </Space>
+                      {contractUrl ? (
+                        <Tag color={isContractPdf ? "blue" : "purple"}>
+                          {isContractPdf ? "PDF Contract" : "DOCX Contract"}
+                        </Tag>
+                      ) : (
+                        <Tag>Pending</Tag>
+                      )}
+                    </div>
+                    <Space wrap>
+                      <Button
+                        type="primary"
                         icon={<FileTextOutlined />}
                         onClick={() => {
                           setActiveSigBox("preview");
@@ -1403,7 +1468,33 @@ export default function CandidateProgress({ applicant, meta }: Props) {
                         <Tag>Contract not available yet</Tag>
                       )}
                     </Space>
-                  </div>
+                  </Space>
+
+                  <Divider style={{ margin: "12px 0" }} />
+
+                  <Space align="center" size={12} style={{ marginBottom: 8 }}>
+                    <div
+                      style={{
+                        width: 32,
+                        height: 32,
+                        borderRadius: 10,
+                        background: "#f0f7ff",
+                        color: "#1677ff",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                      }}
+                    >
+                      <FileDoneOutlined />
+                    </div>
+                    <div>
+                      <Text strong>Signature placement</Text>
+                      <Text type="secondary" style={{ display: "block" }}>
+                        Drag your signature into the correct field. PNG/JPG up
+                        to 5MB.
+                      </Text>
+                    </div>
+                  </Space>
 
                   <Row gutter={[16, 16]}>
                     {applicant.job.type_job?.toString().toUpperCase() ===
@@ -1417,7 +1508,7 @@ export default function CandidateProgress({ applicant, meta }: Props) {
                             height: "100%",
                           }}
                         >
-                          <Text strong>Pihak Pertama</Text>
+                          <Text strong>First Party</Text>
                           <div style={{ marginTop: 12 }}>
                             <Text>{firstPartyRepresentative}</Text>
                           </div>
@@ -1427,8 +1518,8 @@ export default function CandidateProgress({ applicant, meta }: Props) {
                             type="secondary"
                             style={{ display: "block", marginTop: 16 }}
                           >
-                            Tanda tangan pihak pertama akan dibubuhkan setelah
-                            proses verifikasi internal.
+                            The first-party signature will be applied after
+                            internal verification.
                           </Text>
                         </div>
                       </Col>
@@ -1442,36 +1533,51 @@ export default function CandidateProgress({ applicant, meta }: Props) {
                         {applicant.job.type_job?.toString().toUpperCase() ===
                           "REFERRAL" && (
                           <Text strong>
-                            Pihak Kedua — {applicant.user?.name || "Candidate"}
+                            Second Party —{" "}
+                            {applicant.user?.name || "Candidate"}
                           </Text>
                         )}
-                        <Text type="secondary">
-                          Pratinjau dokumen di bawah, lalu tarik tanda tangan ke
-                          posisi kolom yang sesuai. PNG/JPG hingga 5MB.
-                        </Text>
-                        <div
-                          ref={sigBoxDecisionRef}
-                          style={{
-                            position: "relative",
-                            width: "100%",
-                            minHeight: 320,
-                            border: "1px dashed #d9d9d9",
-                            borderRadius: 12,
-                            background: "#fff",
-                            overflow: "hidden",
-                          }}
-                        >
-                          {contractUrl ? (
-                            isContractPdf ? (
-                              <iframe
-                                src={`${contractUrl}#toolbar=0`}
-                                title="Contract preview"
-                                style={{
-                                  width: "100%",
-                                  height: 320,
-                                  border: "none",
-                                }}
-                              />
+                        <Space direction="vertical" size={8} style={{ width: "100%" }}>
+                          <Text type="secondary">Contract preview</Text>
+                          <div
+                            ref={sigBoxDecisionRef}
+                            style={{
+                              position: "relative",
+                              width: "100%",
+                              minHeight: 320,
+                              border: "1px solid #e6e9f2",
+                              borderRadius: 14,
+                              background: "#fff",
+                              overflow: "hidden",
+                              boxShadow: "0 6px 16px rgba(15,23,42,0.08)",
+                            }}
+                          >
+                            {contractUrl ? (
+                              isContractPdf ? (
+                                <iframe
+                                  src={`${contractUrl}#toolbar=0`}
+                                  title="Contract preview"
+                                  style={{
+                                    width: "100%",
+                                    height: 320,
+                                    border: "none",
+                                  }}
+                                />
+                              ) : (
+                                <div
+                                  style={{
+                                    height: 320,
+                                    display: "grid",
+                                    placeItems: "center",
+                                    padding: 24,
+                                  }}
+                                >
+                                  <Text type="secondary">
+                                    This contract is not a PDF. Download it to
+                                    view the full content.
+                                  </Text>
+                                </div>
+                              )
                             ) : (
                               <div
                                 style={{
@@ -1482,68 +1588,54 @@ export default function CandidateProgress({ applicant, meta }: Props) {
                                 }}
                               >
                                 <Text type="secondary">
-                                  Kontrak bukan PDF. Unduh untuk melihat isi
-                                  lengkap.
+                                  Contract is not available yet.
                                 </Text>
                               </div>
-                            )
-                          ) : (
-                            <div
-                              style={{
-                                height: 320,
-                                display: "grid",
-                                placeItems: "center",
-                                padding: 24,
-                              }}
-                            >
-                              <Text type="secondary">
-                                Kontrak belum tersedia.
-                              </Text>
-                            </div>
-                          )}
+                            )}
 
-                          {signatureUrl ? (
-                            <div
-                              onMouseDown={(e) => {
-                                const box = sigBoxDecisionRef.current;
-                                if (!box) return;
-                                e.preventDefault();
-                                setIsDraggingSig(true);
-                                setActiveSigBox("decision");
-                                const rect = box.getBoundingClientRect();
-                                dragOffset.current = {
-                                  x: e.clientX - rect.left - sigPos.x,
-                                  y: e.clientY - rect.top - sigPos.y,
-                                };
-                              }}
-                              style={{
-                                position: "absolute",
-                                left: sigPos.x,
-                                top: sigPos.y,
-                                cursor: "grab",
-                                width: 180,
-                                zIndex: 5,
-                                pointerEvents: "auto",
-                                userSelect: "none",
-                                borderRadius: 0,
-                                border: "1px solid rgba(0,0,0,0.05)",
-                                background: "transparent",
-                              }}
-                            >
-                              <Image
-                                src={signatureUrl}
-                                alt="Candidate signature"
-                                preview={false}
+                            {signatureUrl ? (
+                              <div
+                                onMouseDown={(e) => {
+                                  const box = sigBoxDecisionRef.current;
+                                  if (!box) return;
+                                  e.preventDefault();
+                                  setIsDraggingSig(true);
+                                  setActiveSigBox("decision");
+                                  const rect = box.getBoundingClientRect();
+                                  dragOffset.current = {
+                                    x: e.clientX - rect.left - sigPos.x,
+                                    y: e.clientY - rect.top - sigPos.y,
+                                  };
+                                }}
                                 style={{
-                                  width: "100%",
-                                  display: "block",
+                                  position: "absolute",
+                                  left: sigPos.x,
+                                  top: sigPos.y,
+                                  cursor: "grab",
+                                  width: 180,
+                                  zIndex: 5,
+                                  pointerEvents: "auto",
+                                  userSelect: "none",
                                   borderRadius: 0,
+                                  border: "1px solid rgba(0,0,0,0.05)",
                                   background: "transparent",
                                 }}
-                              />
-                            </div>
-                          ) : null}
-                        </div>
+                              >
+                                <Image
+                                  src={signatureUrl}
+                                  alt="Candidate signature"
+                                  preview={false}
+                                  style={{
+                                    width: "100%",
+                                    display: "block",
+                                    borderRadius: 0,
+                                    background: "transparent",
+                                  }}
+                                />
+                              </div>
+                            ) : null}
+                          </div>
+                        </Space>
                         <SignaturePadUploader
                           bucket="web-oss-recruitment"
                           folder={`candidate-signatures/${applicant.id}`}
@@ -1582,7 +1674,7 @@ export default function CandidateProgress({ applicant, meta }: Props) {
                               type="secondary"
                               style={{ display: "block", marginBottom: 8 }}
                             >
-                              Pratinjau tanda tangan
+                              Signature preview
                             </Text>
                             <Image
                               src={signatureUrl}
@@ -1596,48 +1688,64 @@ export default function CandidateProgress({ applicant, meta }: Props) {
                     </Col>
                   </Row>
 
-                  <Button
-                    type="primary"
-                    style={{ marginTop: 12, marginBottom: 12 }}
-                    icon={<FileDoneOutlined />}
-                    onClick={handleSubmitAcceptance}
-                    loading={onSubmitDecisionLoading}
-                    disabled={!signatureUrl || isDecisionLocked}
+                  <Divider style={{ margin: "12px 0" }} />
+
+                  <Space
+                    style={{ display: "flex", justifyContent: "flex-end" }}
                   >
-                    Submit Acceptance
-                  </Button>
-                </Space>
+                    <Button
+                      type="primary"
+                      icon={<FileDoneOutlined />}
+                      onClick={handleSubmitAcceptance}
+                      loading={onSubmitDecisionLoading}
+                      disabled={!signatureUrl || isDecisionLocked}
+                    >
+                      Submit Acceptance
+                    </Button>
+                  </Space>
+                </Card>
               )}
 
               {decisionMode === "DECLINE" && (
-                <Space
-                  direction="vertical"
-                  size={12}
-                  style={{ display: "block" }}
+                <Card
+                  bordered
+                  style={{ borderRadius: 16 }}
+                  bodyStyle={{ padding: 16 }}
                 >
-                  <Text strong>Optional note</Text>
-                  <Text type="secondary">
-                    Let us know why you are declining. This helps us improve the
-                    process.
-                  </Text>
-                  <TextArea
-                    placeholder="Share your reason (optional)"
-                    rows={4}
-                    value={rejectionReason}
-                    disabled={isDecisionLocked}
-                    onChange={(event) => setRejectionReason(event.target.value)}
-                  />
-                  <Button
-                    danger
-                    type="primary"
-                    style={{ marginTop: 12 }}
-                    onClick={handleSubmitDecline}
-                    loading={onSubmitDecisionLoading}
-                    disabled={isDecisionLocked}
+                  <Space
+                    direction="vertical"
+                    size={12}
+                    style={{ display: "block" }}
                   >
-                    Submit Decline
-                  </Button>
-                </Space>
+                    <Text strong>Optional note</Text>
+                    <Text type="secondary">
+                      Let us know why you are declining. This helps us improve
+                      the process.
+                    </Text>
+                    <TextArea
+                      placeholder="Share your reason (optional)"
+                      rows={4}
+                      value={rejectionReason}
+                      disabled={isDecisionLocked}
+                      onChange={(event) =>
+                        setRejectionReason(event.target.value)
+                      }
+                    />
+                    <Space
+                      style={{ display: "flex", justifyContent: "flex-end" }}
+                    >
+                      <Button
+                        danger
+                        type="primary"
+                        onClick={handleSubmitDecline}
+                        loading={onSubmitDecisionLoading}
+                        disabled={isDecisionLocked}
+                      >
+                        Submit Decline
+                      </Button>
+                    </Space>
+                  </Space>
+                </Card>
               )}
 
               {!decisionMode && (
@@ -1650,6 +1758,7 @@ export default function CandidateProgress({ applicant, meta }: Props) {
 
               {decisionStatus === "ACCEPTED" && signatureUrlFromServer && (
                 <Alert
+                  style={{ marginTop: 16 }}
                   type="info"
                   showIcon
                   message="Signature on file"
@@ -1675,7 +1784,11 @@ export default function CandidateProgress({ applicant, meta }: Props) {
             width={1000}
             footer={null}
           >
-            <KTPWizard onPatchDocument={handlePatchDocument} />
+            {/* <KTPWizard onPatchDocument={handlePatchDocument} /> */}
+            <UploadIdentityComponentManual
+              onSubmit={handlePatchDocument}
+              onClose={handleCancelModal}
+            />
           </Modal>
 
           <Modal

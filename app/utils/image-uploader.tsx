@@ -19,7 +19,7 @@ interface SupaImageUploaderProps {
   onDelete?: (path: string) => void;
   value?: string | null;
   onChange?: (value: string | null) => void;
-  variant?: Variant; 
+  variant?: Variant;
   maxSizeMB?: number;
   accept?: string;
   wrapperStyle?: CSSProperties;
@@ -96,7 +96,7 @@ export default function SupaImageUploader({
       setPreviewImage({ url: publicUrl, path: filePath });
       onUpload?.(filePath, publicUrl);
       onChange?.(publicUrl);
-      message.success("Upload berhasil!");
+      message.success("Upload Success!");
       onSuccess?.(filePath as string);
     } catch (e) {
       const err = e instanceof Error ? e : new Error("Unknown error");

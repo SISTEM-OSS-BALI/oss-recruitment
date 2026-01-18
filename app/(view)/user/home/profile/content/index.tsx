@@ -8,7 +8,7 @@ export default function Content() {
   return (
     <div
       style={{
-        padding: isMobile ? "16px" : "32px",
+        padding: isMobile ? "6px" : "32px",
       }}
     >
       <TabLayout />

@@ -4,13 +4,14 @@ import { useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import Sider from "antd/es/layout/Sider";
-import { Divider, Image, Menu, Typography, theme } from "antd";
+import { Divider, Menu, Typography, theme } from "antd";
 import type { MenuProps } from "antd";
 import { SidebarMenuMainAdmin } from "@/app/data/admin/main/sidebar-data";
 import {
   SidebarMenuSettingAdmin,
   type AdminRole,
 } from "@/app/data/admin/setting/sidebar-data";
+import Image from "next/image";
 
 const { Text } = Typography;
 
@@ -99,10 +100,11 @@ export const SiderAdmin = () => {
         <Image
           src="/assets/images/icon.png"
           alt="OSS"
-          preview={false}
           width={32}
           height={32}
           style={{ objectFit: "contain" }}
+          priority
+          unoptimized
         />
         {!collapsed && (
           <div style={{ lineHeight: 1 }}>

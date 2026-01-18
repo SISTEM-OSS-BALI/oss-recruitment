@@ -186,6 +186,19 @@ model User {
   @@map("user")
 }
 
+model PasswordResetToken {
+  id        String   @id @default(cuid())
+  user_id   String
+  tokenHash String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([user_id])
+  @@map("password_reset_token")
+}
+
 model UserInterestTag {
   user_id  String
   interest String

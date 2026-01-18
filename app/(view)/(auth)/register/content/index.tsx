@@ -97,6 +97,8 @@ export default function RegisterContent() {
                   alt="OSS Recruitment"
                   width={64}
                   height={64}
+                  priority
+                  unoptimized
                 />
               </div>
               <div className={styles.infoCardText}>

@@ -1,12 +1,10 @@
 import { MailOutlined, PhoneOutlined, UserOutlined } from "@ant-design/icons";
 import {
   Button,
-  Card,
   Col,
   DatePicker,
   Divider,
   Form,
-  Grid,
   Input,
   Row,
   Space,
@@ -20,7 +18,6 @@ import { useAuth } from "@/app/utils/useAuth";
 import { useEffect, useMemo } from "react";
 
 const { Title, Text } = Typography;
-const { useBreakpoint } = Grid;
 
 type SubmitProps = {
   loading?: boolean;
@@ -35,7 +32,6 @@ function toFileList(url?: string) {
 export default function PersonalInformationDocuments({ loading }: SubmitProps) {
   const [form] = Form.useForm<UserPayloadUpdateModel>();
   const { user_id } = useAuth();
-  const screens = useBreakpoint();
 
   const { data: detailUserData, onUpdate: onUpdateUser } = useUser({
     id: user_id!,
@@ -66,9 +62,7 @@ export default function PersonalInformationDocuments({ loading }: SubmitProps) {
       (dobValue as { set?: Date | string | null }).set
     ) {
       const setValue = (dobValue as { set?: Date | string | null }).set;
-      payload.date_of_birth = setValue
-        ? dayjs(setValue).toISOString()
-        : null;
+      payload.date_of_birth = setValue ? dayjs(setValue).toISOString() : null;
     } else {
       payload.date_of_birth = null;
     }
@@ -93,9 +87,8 @@ export default function PersonalInformationDocuments({ loading }: SubmitProps) {
       address: detailUserData.address ?? undefined,
       no_identity: detailUserData.no_identity ?? undefined,
       gender: detailUserData.gender ?? undefined,
-      interestTags: detailUserData.interestTags?.map(
-        (tag) => tag.interest
-      ) ?? [],
+      interestTags:
+        detailUserData.interestTags?.map((tag) => tag.interest) ?? [],
     } as unknown as UserPayloadUpdateModel;
   }, [detailUserData]);
 
@@ -107,14 +100,7 @@ export default function PersonalInformationDocuments({ loading }: SubmitProps) {
   // ===== Preview ringkas jika data sudah ada =====
 
   return (
-    <Card
-      bordered={false}
-      style={{
-        borderRadius: 20,
-        boxShadow: "0 18px 45px rgba(15,23,42,0.07)",
-      }}
-      bodyStyle={{ padding: screens.md ? 32 : 20 }}
-    >
+    <div>
       <Space direction="vertical" size={4} style={{ marginBottom: 20 }}>
         <Title level={4} style={{ margin: 0 }}>
           Personal Information
@@ -208,6 +194,35 @@ export default function PersonalInformationDocuments({ loading }: SubmitProps) {
           </Col>
         </Row>
 
+        <Row gutter={[16, 8]}>
+          <Col xs={24} md={8}>
+            <Form.Item
+              label="Gender"
+              name="gender"
+              rules={[{ required: true, message: "Please select your gender" }]}
+            >
+              <Select
+                placeholder="Select gender"
+                options={[
+                  { label: "Male", value: "MALE" },
+                  { label: "Female", value: "FEMALE" },
+                ]}
+              />
+            </Form.Item>
+          </Col>
+          <Col xs={24} md={16}>
+            <Form.Item
+              label="Address"
+              name="address"
+              rules={[
+                { required: true, message: "Please enter your address" },
+              ]}
+            >
+              <Input placeholder="Enter your current address" />
+            </Form.Item>
+          </Col>
+        </Row>
+
         <Divider style={{ margin: "8px 0 16px" }} />
 
         <Space
@@ -220,6 +235,6 @@ export default function PersonalInformationDocuments({ loading }: SubmitProps) {
           </Button>
         </Space>
       </Form>
-    </Card>
+    </div>
   );
 }
