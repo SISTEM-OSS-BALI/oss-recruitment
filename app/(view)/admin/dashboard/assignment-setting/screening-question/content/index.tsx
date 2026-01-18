@@ -287,8 +287,6 @@ export default function BaseScreeningCards(): JSX.Element {
             const id = item.id;
             const name = item.name || "(Untitled)";
             const desc = item.desc || "";
-            const version = item.version ?? 1;
-            const active = item.active ?? true;
             const createdAt = item.createdAt ? dayjs(item.createdAt) : null;
             const updatedAt = item.updatedAt ? dayjs(item.updatedAt) : null;
 
@@ -304,6 +302,7 @@ export default function BaseScreeningCards(): JSX.Element {
                     boxShadow:
                       "0 8px 20px rgba(0,0,0,0.04), 0 3px 8px rgba(0,0,0,0.03)",
                   }}
+                  onClick={() => openDetail(id)}
                   className="screening-card"
                   title={
                     <div
@@ -317,23 +316,10 @@ export default function BaseScreeningCards(): JSX.Element {
                       <Text
                         strong
                         style={{ color: BRAND, fontSize: 16 }}
-                        onClick={() => openDetail(id)}
                         ellipsis
                       >
                         {name}
                       </Text>
-                      <Space size={6}>
-                        <Tag
-                          color={active ? "green" : "red"}
-                          style={{ borderRadius: 999 }}
-                        >
-                          {active ? "Active" : "Inactive"}
-                        </Tag>
-                        <Tag color="purple" style={{ borderRadius: 999 }}>
-                          {JOB_TYPE_LABELS[item.type as TypeJob] || item.type}
-                        </Tag>
-                        <Tag style={{ borderRadius: 999 }}>{`v${version}`}</Tag>
-                      </Space>
                     </div>
                   }
                   actions={[
@@ -365,7 +351,7 @@ export default function BaseScreeningCards(): JSX.Element {
                       >
                         Delete
                       </Button>
-                    </Popconfirm>,
+                    </Popconfirm>
                   ]}
                 >
                   <Space

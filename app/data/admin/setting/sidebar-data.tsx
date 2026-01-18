@@ -103,7 +103,7 @@ export const SidebarMenuSettingAdmin = (
         },
         {
           key: "/admin/dashboard/template/referral-card-template",
-          label: menuLabel("Card Referral Template"),
+          label: menuLabel("Referral Card Template"),
           icon: <FontAwesomeIcon icon={faClipboardList} />,
           onClick: () =>
             router.push("/admin/dashboard/template/referral-card-template"),

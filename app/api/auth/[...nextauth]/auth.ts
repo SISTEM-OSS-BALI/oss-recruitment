@@ -19,7 +19,7 @@ export const authOptions: NextAuthOptions = {
       },
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) {
-          throw new Error("Email dan Password harus diisi");
+          throw new Error("Email and Password must be filled in.");
         }
 
         const user = await prisma.user.findFirst({
@@ -27,11 +27,11 @@ export const authOptions: NextAuthOptions = {
         });
 
         if (!user) {
-          throw new Error("Akun tidak ditemukan");
+          throw new Error("Account not found");
         }
 
         if (!user.password) {
-          throw new Error("Akun ini tidak memiliki password");
+          throw new Error("This account does not have a password");
         }
 
         const isValid = await bcrypt.compare(
@@ -40,7 +40,7 @@ export const authOptions: NextAuthOptions = {
         );
 
         if (!isValid) {
-          throw new Error("Email atau Password salah");
+          throw new Error("Email or Password is incorrect");
         }
 
         return {

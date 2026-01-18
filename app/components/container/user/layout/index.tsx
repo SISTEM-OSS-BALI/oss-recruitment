@@ -49,10 +49,12 @@ export default function UserLayout({
     pathname.startsWith("/user/home") &&
     !pathname.startsWith("/user/home/apply-job/detail/employee-setup");
 
-  const mainNavItems = SidebarMainUser() || [];
-  const settingNavItems = SidebarSettingUser() || [];
-  const navItems = useMemo(
-    () => [...mainNavItems, ...settingNavItems].filter(Boolean),
+  type NavItem = NonNullable<MenuProps["items"]>[number];
+
+  const mainNavItems = (SidebarMainUser() || []) as NavItem[];
+  const settingNavItems = (SidebarSettingUser() || []) as NavItem[];
+  const navItems = useMemo<NavItem[]>(
+    () => [...mainNavItems, ...settingNavItems].filter(Boolean) as NavItem[],
     [mainNavItems, settingNavItems]
   );
 
@@ -64,7 +66,7 @@ export default function UserLayout({
     return match?.key as string | undefined;
   }, [navItems, pathname]);
 
-  const headerStyle = {
+  const headerStyle: React.CSSProperties = {
     background: "rgba(255,255,255,0.96)",
     padding: isMobile ? "12px 16px 8px" : "0 24px",
     display: "flex",
@@ -158,54 +160,51 @@ export default function UserLayout({
     }
   };
 
-  const navButtons = navItems
-    .filter(Boolean)
-    .map((item) => item as MenuProps["items"][number])
-    .map((item) => {
-      const navItem = item as {
-        key?: string;
-        label?: React.ReactNode;
-        icon?: React.ReactNode;
-        onClick?: () => void;
-      };
-      if (!navItem.key) return null;
-      const isActive = activeNavKey === navItem.key;
-      const handleClick = () => {
-        if (navItem.onClick) {
-          navItem.onClick();
-          return;
-        }
-        router.push(String(navItem.key));
-      };
+  const navButtons = navItems.map((item) => {
+    const navItem = item as {
+      key?: string;
+      label?: React.ReactNode;
+      icon?: React.ReactNode;
+      onClick?: () => void;
+    };
+    if (!navItem.key) return null;
+    const isActive = activeNavKey === navItem.key;
+    const handleClick = () => {
+      if (navItem.onClick) {
+        navItem.onClick();
+        return;
+      }
+      router.push(String(navItem.key));
+    };
 
-      return (
-        <Button
-          key={navItem.key}
-          type="text"
-          onClick={handleClick}
+    return (
+      <Button
+        key={navItem.key}
+        type="text"
+        onClick={handleClick}
+        style={{
+          borderRadius: 12,
+          paddingInline: isMobile ? 12 : 16,
+          height: isMobile ? 36 : 40,
+          background: isActive ? "#edf3ff" : "transparent",
+          color: isActive ? "#1d4ed8" : "#475569",
+          fontWeight: 600,
+          whiteSpace: "nowrap",
+        }}
+      >
+        <span
           style={{
-            borderRadius: 12,
-            paddingInline: isMobile ? 12 : 16,
-            height: isMobile ? 36 : 40,
-            background: isActive ? "#edf3ff" : "transparent",
-            color: isActive ? "#1d4ed8" : "#475569",
-            fontWeight: 600,
-            whiteSpace: "nowrap",
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 8,
           }}
         >
-          <span
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              gap: 8,
-            }}
-          >
-            {navItem.icon}
-            {navItem.label}
-          </span>
-        </Button>
-      );
-    });
+          {navItem.icon}
+          {navItem.label}
+        </span>
+      </Button>
+    );
+  });
 
   const brandNode = (
     <div style={{ lineHeight: 1.1 }}>

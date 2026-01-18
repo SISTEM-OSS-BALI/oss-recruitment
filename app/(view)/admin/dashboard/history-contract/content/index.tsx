@@ -32,7 +32,7 @@ import { useOfferingContracts } from "@/app/hooks/offering-contract";
 const { Title, Text } = Typography;
 
 const STAGE_COLOR: Record<RecruitmentStage | "UNKNOWN", string> = {
-  NEW_APLICANT: "default",
+  NEW_APPLICANT: "default",
   SCREENING: "processing",
   INTERVIEW: "geekblue",
   OFFERING: "gold",

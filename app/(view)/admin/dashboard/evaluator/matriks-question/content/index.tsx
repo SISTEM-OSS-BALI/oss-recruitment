@@ -218,10 +218,7 @@ export default function Content() {
           ))}
         </Row>
       ) : filtered.length === 0 ? (
-        <Empty
-          style={{ padding: 24 }}
-          description="Belum ada base matriks. Klik Create Base untuk menambahkan."
-        />
+        <Empty style={{ padding: 24 }} description="No matrix bases found." />
       ) : (
         <Row gutter={[16, 16]}>
           {filtered.map((b) => {
@@ -231,13 +228,10 @@ export default function Content() {
             return (
               <Col key={b.id} xs={24} sm={12} md={8} lg={6} xl={6}>
                 <Card
+                  onClick={() => goToDetail(b.id)}
                   title={
                     <Space direction="vertical" size={4}>
-                      <Text
-                        strong
-                        style={{ color: "#0f172a" }}
-                        onClick={() => goToDetail(b.id)}
-                      >
+                      <Text strong style={{ color: "#0f172a" }}>
                         {b.name}
                       </Text>
                       {b.desc ? (
@@ -266,7 +260,7 @@ export default function Content() {
                     <Popconfirm
                       key="del"
                       title="Delete base?"
-                      description="Tindakan ini tidak dapat diurungkan."
+                      description="Are you sure you want to delete this matrix base? This action cannot be undone."
                       okText="Delete"
                       okButtonProps={{ danger: true, loading: onDeleteLoading }}
                       cancelText="Cancel"

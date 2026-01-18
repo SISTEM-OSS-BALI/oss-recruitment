@@ -13,7 +13,11 @@ type Role = "ADMIN" | "SUPER_ADMIN" | "CANDIDATE";
 const PUBLIC_PATHS = [
   "/login",
   "/register",
+  "/forgot-password",
+  "/reset-password",
   "/api/register",
+  "/api/auth/forgot-password",
+  "/api/auth/reset-password",
   "/api/public",
   "/",
 ];
@@ -100,12 +104,4 @@ export default withAuth(
 );
 
 // Route yang dilewatin middleware
-export const config = {
-  matcher: [
-    // proteksi berdasarkan role
-    "/admin/:path*",
-    "/user/:path*",
-    // tambahkan lain kalau perlu, misalnya:
-    // "/candidate/:path*",
-  ],
-};
+// config ada di root middleware.ts agar matcher terbaca oleh Next.js
