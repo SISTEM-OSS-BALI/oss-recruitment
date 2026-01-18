@@ -6,7 +6,7 @@ import { MoreOutlined, DragOutlined, MessageOutlined } from "@ant-design/icons";
 import { CSSProperties, useRef } from "react";
 import { useDrag, useDrop } from "react-dnd";
 import { DND_ITEM, DragItem } from "./types";
-import getInitials from "./username-helper";
+import getInitials from "./initials-username";
 import { useRouter } from "next/navigation";
 import { openWhatsAppTemplate } from "./whatsaap";
 import { ApplicantDataModel } from "../models/applicant";
