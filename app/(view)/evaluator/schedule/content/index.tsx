@@ -282,10 +282,10 @@ export default function Page() {
             {orgTitle}
           </Title>
 
-          <Space size={8} align="center">
+          {/* <Space size={8} align="center">
             <EnvironmentOutlined />
             <Text>{tz.replace("_", " ")}</Text>
-          </Space>
+          </Space> */}
 
           <Divider style={{ margin: "12px 0" }} />
 
