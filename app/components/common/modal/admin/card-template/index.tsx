@@ -25,7 +25,7 @@ export default function CardTemplateModal({
   return (
     <Modal
       open={open}
-      title={type === "create" ? "Add Location" : "Edit Location"}
+      title={type === "create" ? "Add Card Referral Template" : "Edit Card Refereral Template"}
       footer={null}
       onCancel={onClose}
     >

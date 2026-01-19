@@ -55,7 +55,8 @@ export default function CardTemplateForm({
         />
       </Form.Item>
 
-      <Form.Item label="Photo Template Front" name="image_url_back">
+      <Form.Item label="Photo Template Back
+      " name="image_url_back">
         <SupaImageUploader
           bucket="web-oss-recruitment"
           folder="template"
