@@ -25,5 +25,12 @@ export const GET = async () => {
         { status: error.code }
       );
     }
+    return NextResponse.json(
+      {
+        success: false,
+        message: "Unexpected error.",
+      },
+      { status: 500 }
+    );
   }
 };
