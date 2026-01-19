@@ -55,6 +55,9 @@ export default function GenerateCardTeamMember({ candidate, onClose }: Props) {
   const [position, setPosition] = useState<string>(
     candidate?.job?.job_title || candidate?.job?.job_role || ""
   );
+  const [whatsappNumber, setWhatsappNumber] = useState<string>(
+    candidate?.user?.phone || ""
+  );
   const [cardResult, setCardResult] = useState<GeneratedCard | null>(null);
   const [generating, setGenerating] = useState(false);
 
@@ -70,6 +73,7 @@ export default function GenerateCardTeamMember({ candidate, onClose }: Props) {
 
   useEffect(() => {
     setPosition(candidate?.job?.job_title || candidate?.job?.job_role || "");
+    setWhatsappNumber(candidate?.user?.phone || "");
     setContractDate(null);
     setCardResult((prev) => {
       if (prev?.frontUrl) {
@@ -101,6 +105,7 @@ export default function GenerateCardTeamMember({ candidate, onClose }: Props) {
   }, [contractDate?.valueOf(), dateOfBirth?.valueOf()]);
 
   const missingPhoto = !candidate?.user?.photo_url;
+  const missingWhatsapp = !whatsappNumber.trim();
   const disableGenerate =
     !candidate ||
     !candidate.id ||
@@ -108,6 +113,7 @@ export default function GenerateCardTeamMember({ candidate, onClose }: Props) {
     !contractDate ||
     !dateOfBirth ||
     !position ||
+    missingWhatsapp ||
     missingPhoto ||
     generating;
 
@@ -134,6 +140,10 @@ export default function GenerateCardTeamMember({ candidate, onClose }: Props) {
       message.warning("Position is required.");
       return;
     }
+    if (!whatsappNumber.trim()) {
+      message.warning("WhatsApp number is required.");
+      return;
+    }
 
     try {
       setGenerating(true);
@@ -147,6 +157,7 @@ export default function GenerateCardTeamMember({ candidate, onClose }: Props) {
             templateId: selectedTemplate.id,
             contractDate: contractDate.toISOString(),
             position: position.trim(),
+            whatsappNumber: whatsappNumber.trim(),
           }),
         }
       );
@@ -230,6 +241,15 @@ export default function GenerateCardTeamMember({ candidate, onClose }: Props) {
           />
         )}
 
+        {missingWhatsapp && (
+          <Alert
+            type="warning"
+            showIcon
+            message="WhatsApp number is missing."
+            description="Add a WhatsApp number to generate the QR code on the card."
+          />
+        )}
+
         {!templatesLoading && (templates ?? []).length === 0 && (
           <Alert
             type="info"
@@ -279,6 +299,17 @@ export default function GenerateCardTeamMember({ candidate, onClose }: Props) {
             onChange={(event) => setPosition(event.target.value)}
             placeholder="Enter position"
             size="large"
+          />
+        </Space>
+
+        <Space direction="vertical" style={{ width: "100%" }} size="middle">
+          <Text type="secondary">WhatsApp number</Text>
+          <Input
+            value={whatsappNumber}
+            onChange={(event) => setWhatsappNumber(event.target.value)}
+            placeholder="Example: 628123456789"
+            size="large"
+            inputMode="numeric"
           />
         </Space>
 

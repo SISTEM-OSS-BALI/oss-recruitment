@@ -87,11 +87,13 @@ export const POST = async (req: NextRequest) => {
       templateId,
       contractDate,
       position,
+      whatsappNumber,
     }: {
       applicant_id?: string;
       templateId?: string;
       contractDate?: string;
       position?: string;
+      whatsappNumber?: string;
     } = body;
 
     if (!applicant_id || !templateId || !contractDate || !position) {
@@ -149,6 +151,18 @@ export const POST = async (req: NextRequest) => {
       ? await bufferFromUrl(user.photo_url)
       : undefined;
 
+    const normalizeWhatsApp = (value?: string | null) =>
+      value ? value.replace(/[^\d]/g, "") : "";
+    const normalizedWhatsApp =
+      normalizeWhatsApp(whatsappNumber) || normalizeWhatsApp(user.phone);
+
+    if (!normalizedWhatsApp) {
+      return NextResponse.json(
+        { success: false, message: "WhatsApp number is required" },
+        { status: 400 }
+      );
+    }
+
     const employeeNumber = `OSS BALI/66BEMP - ${formatDateKey(
       contractDateValue
     )} - ${formatDateKey(new Date(user.date_of_birth))}`;
@@ -158,6 +172,7 @@ export const POST = async (req: NextRequest) => {
         name: user.name,
         position,
         employeeNumber,
+        whatsappNumber: normalizedWhatsApp,
       },
       {
         template: templateBuffer,

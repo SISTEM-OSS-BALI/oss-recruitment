@@ -50,6 +50,8 @@ export default function PreviewComponent() {
             dateOfBirth={detailUserData?.date_of_birth}
             cvUrl={detailUserData?.curiculum_vitae_url}
             portfolioUrl={detailUserData?.portfolio_url}
+            address={detailUserData?.address}
+            gender={detailUserData?.gender}
             interests={
               detailUserData?.interestTags?.map((item) => item.interest) ?? []
             }

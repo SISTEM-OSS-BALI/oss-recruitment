@@ -193,6 +193,36 @@ export default function PersonalInformationDocuments({ loading }: SubmitProps) {
             </Form.Item>
           </Col>
         </Row>
+        <Row gutter={[16, 8]}>
+          <Col xs={24} md={8}>
+            <Form.Item
+              label="Phone Number "
+              name="phone"
+              rules={[
+                { required: true, message: "Please enter your phone number" },
+              ]}
+            >
+              <Input
+                prefix={<PhoneOutlined />}
+                placeholder="Enter your active phone number"
+              />
+            </Form.Item>
+          </Col>
+          <Col xs={24} md={16}>
+            <Form.Item
+              label="Date of Birth"
+              name="date_of_birth"
+              rules={[
+                { required: true, message: "Please select your birth date" },
+              ]}
+            >
+              <DatePicker
+                style={{ width: "100%" }}
+                placeholder="Select birth date"
+              />
+            </Form.Item>
+          </Col>
+        </Row>
 
         <Row gutter={[16, 8]}>
           <Col xs={24} md={8}>
@@ -214,9 +244,7 @@ export default function PersonalInformationDocuments({ loading }: SubmitProps) {
             <Form.Item
               label="Address"
               name="address"
-              rules={[
-                { required: true, message: "Please enter your address" },
-              ]}
+              rules={[{ required: true, message: "Please enter your address" }]}
             >
               <Input placeholder="Enter your current address" />
             </Form.Item>

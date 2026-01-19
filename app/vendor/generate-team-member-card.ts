@@ -1,6 +1,7 @@
 "use server";
 
 import sharp from "sharp";
+import { Ecc, QrCode } from "@rc-component/qrcode/lib/libs/qrcodegen";
 
 type TemplateInput = string | Buffer | Uint8Array;
 
@@ -8,19 +9,21 @@ type TemplateInput = string | Buffer | Uint8Array;
  * Layout box pakai rasio (0–1) terhadap width/height image template
  */
 
-// Posisi teks kiri bawah (kira-kira, bisa di-tweak)
-const NAME_BOX = { x: 0.08, y: 0.78, width: 0.6, height: 0.09 };
-const POSITION_BOX = { x: 0.08, y: 0.7, width: 0.6, height: 0.08 };
-const NUMBER_BOX = { x: 0.08, y: 0.9, width: 0.84, height: 0.06 };
+// Layout untuk desain kartu baru (sesuaikan rasio dengan template portrait)
+const NAME_BOX = { x: 0.1, y: 0.56, width: 0.8, height: 0.12 };
+const POSITION_BOX = { x: 0.2, y: 0.69, width: 0.6, height: 0.06 };
+const NUMBER_BOX = { x: 0.08, y: 0.92, width: 0.6, height: 0.04 };
+const QR_BOX = { x: 0.08, y: 0.73, width: 0.17, height: 0.17 };
 
-// Area foto di kanan (persegi panjang)
-const AVATAR_BOX = { x: 0.5, y: 0.18, width: 0.48, height: 0.78 };
-const AVATAR_OPACITY = 0.7; // 0 = transparan, 1 = solid
+// Area foto (portrait di tengah atas)
+const AVATAR_BOX = { x: 0.18, y: 0.12, width: 0.64, height: 0.5 };
+const AVATAR_OPACITY = 1;
 
-// Warna teks (bisa sesuaikan brand)
-const NAME_COLOR = "#FFE17A"; // contoh: NGURAH (kuning)
-const POSITION_COLOR = "#000000"; // contoh: IT / Software Engineer (hitam)
-const NUMBER_COLOR = "#FFFFFF"; // contoh: kode EMP (putih)
+// Warna teks
+const NAME_COLOR = "#F5F7FF";
+const POSITION_COLOR = "#0b1b3b";
+const NUMBER_COLOR = "#FFFFFF";
+const QR_COLOR = "#0b1b3b";
 
 function escapeXml(s: string) {
   return s
@@ -103,6 +106,7 @@ export type GenerateTeamMemberCardPayload = {
   name: string;
   position: string;
   employeeNumber: string;
+  whatsappNumber?: string;
 };
 
 export type GenerateTeamMemberCardOptions = {
@@ -110,6 +114,30 @@ export type GenerateTeamMemberCardOptions = {
   avatar?: TemplateInput; // foto asli (opsional)
   format?: "png" | "jpeg";
   uppercaseName?: boolean;
+};
+
+const buildQrSvg = (value: string, margin = 2) => {
+  const qr = QrCode.encodeText(value, Ecc.MEDIUM);
+  const size = qr.size;
+  const viewSize = size + margin * 2;
+  const ops: string[] = [];
+
+  for (let y = 0; y < size; y += 1) {
+    for (let x = 0; x < size; x += 1) {
+      if (qr.getModule(x, y)) {
+        const px = x + margin;
+        const py = y + margin;
+        ops.push(`M${px} ${py}h1v1H${px}z`);
+      }
+    }
+  }
+
+  return `
+<svg width="${viewSize}" height="${viewSize}" viewBox="0 0 ${viewSize} ${viewSize}" xmlns="http://www.w3.org/2000/svg" shape-rendering="crispEdges">
+  <rect width="100%" height="100%" fill="#ffffff" />
+  <path d="${ops.join("")}" fill="${QR_COLOR}" />
+</svg>
+  `.trim();
 };
 
 export async function generateTeamMemberCard(
@@ -135,7 +163,7 @@ export async function generateTeamMemberCard(
   const name = escapeXml(
     (uppercaseName ? payload.name.toUpperCase() : payload.name).trim() || "-"
   );
-  const position = escapeXml(payload.position.trim() || "-");
+  const position = escapeXml(payload.position.trim().toUpperCase() || "-");
   const number = escapeXml(payload.employeeNumber.trim() || "-");
 
   // Hitung box final dalam pixel
@@ -143,6 +171,7 @@ export async function generateTeamMemberCard(
   const positionBox = buildBox(POSITION_BOX, W, H);
   const numberBox = buildBox(NUMBER_BOX, W, H);
   const avatarBox = buildBox(AVATAR_BOX, W, H);
+  const qrBox = buildBox(QR_BOX, W, H);
 
   // Hitung font size agar muat
   const nameFontSize = fitFontSize(name, nameBox.width, nameBox.height, 0.72);
@@ -165,9 +194,9 @@ export async function generateTeamMemberCard(
   const svgOverlay = `
 <svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg">
   <text
-    x="${nameBox.x}"
+    x="${nameBox.x + nameBox.width / 2}"
     y="${nameBox.y + nameBox.height / 2}"
-    text-anchor="start"
+    text-anchor="middle"
     dominant-baseline="middle"
     font-family="Poppins, Inter, Arial, Helvetica, sans-serif"
     font-weight="700"
@@ -176,9 +205,9 @@ export async function generateTeamMemberCard(
   >${name}</text>
 
   <text
-    x="${positionBox.x}"
+    x="${positionBox.x + positionBox.width / 2}"
     y="${positionBox.y + positionBox.height / 2}"
-    text-anchor="start"
+    text-anchor="middle"
     dominant-baseline="middle"
     font-family="Poppins, Inter, Arial, Helvetica, sans-serif"
     font-weight="600"
@@ -232,12 +261,27 @@ export async function generateTeamMemberCard(
       left: avatarBox.x,
       top: avatarBox.y,
     },
-    {
-      input: Buffer.from(svgOverlay),
-      left: 0,
-      top: 0,
-    },
   ];
+
+  if (payload.whatsappNumber) {
+    const qrValue = `https://wa.me/${payload.whatsappNumber}`;
+    const qrSvg = buildQrSvg(qrValue);
+    const qrBuffer = await sharp(Buffer.from(qrSvg))
+      .resize(qrBox.width, qrBox.height, { fit: "contain" })
+      .png()
+      .toBuffer();
+    overlays.push({
+      input: qrBuffer,
+      left: qrBox.x,
+      top: qrBox.y,
+    });
+  }
+
+  overlays.push({
+    input: Buffer.from(svgOverlay),
+    left: 0,
+    top: 0,
+  });
 
   const composed = base.clone().composite(overlays);
 
