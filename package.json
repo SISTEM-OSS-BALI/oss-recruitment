@@ -8,7 +8,7 @@
     "prisma:migrate": "prisma migrate dev",
     "dev": "tsx watch lib/server.ts",
     "build": "next build",
-    "start": "next start -H 0.0.0.0 -p 3000",
+    "start": "node dist/server.js",
     "postbuild": "tsc -p tsconfig.server.json"
   },
   "dependencies": {

@@ -81,7 +81,7 @@ export default function Content() {
     });
 
     const fallback = [
-      "NEW_APLICANT",
+      "NEW_APPLICANT",
       "SCREENING",
       "INTERVIEW",
       "OFFERING",

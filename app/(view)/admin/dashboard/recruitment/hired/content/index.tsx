@@ -39,7 +39,7 @@ type StageCounts = Record<SummaryStageKey, number> & { all: number };
 
 // Summary key -> Enum stage backend
 const STAGE_MAP: Record<string, RecruitmentStage | undefined> = {
-  new_aplicant: toRecruitmentStage("NEW_APLICANT"),
+  new_aplicant: toRecruitmentStage("NEW_APPLICANT"),
   screening: toRecruitmentStage("SCREENING"),
   interview: toRecruitmentStage("INTERVIEW"),
   offering: toRecruitmentStage("OFFERING"),
@@ -58,7 +58,7 @@ export default function CandidatesPage() {
   const { data: candidatesData = [] } = useCandidates({});
   const { onUpdateStatus: updateStatus } = useCandidate({ id: selectedId! });
 
-  // hanya tampilkan kandidat di stage NEW_APLICANT (halaman Screening)
+  // hanya tampilkan kandidat di stage NEW_APPLICANT (halaman Screening)
   const screening = useMemo(
     () => candidatesData.filter((c) => stageMatches(c.stage, "HIRING")),
     [candidatesData]
@@ -153,7 +153,7 @@ export default function CandidatesPage() {
       if (!targetStage) return; // "all" atau key tak dikenal → no-op
 
       try {
-        // Optimistic: hilangkan dari list lokal (karena bukan NEW_APLICANT lagi)
+        // Optimistic: hilangkan dari list lokal (karena bukan NEW_APPLICANT lagi)
         setList((prev) => prev.filter((c) => c.id !== candidateId));
 
         await updateStatus({ id: candidateId, stage: targetStage });

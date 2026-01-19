@@ -82,6 +82,7 @@ export function prettyType(raw: string) {
 
   export const humanizeStage = (stage: string) => {
     switch (stage) {
+      case "NEW_APPLICANT":
       case "NEW_APLICANT":
         return "New Applicant";
       case "SCREENING":

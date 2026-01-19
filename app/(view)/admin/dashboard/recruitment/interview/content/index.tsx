@@ -36,7 +36,7 @@ type StageCounts = Record<SummaryStageKey, number> & { all: number };
 
 // Summary key -> Enum stage backend
 const STAGE_MAP: Record<string, RecruitmentStage | undefined> = {
-  new_aplicant: toRecruitmentStage("NEW_APLICANT"),
+  new_aplicant: toRecruitmentStage("NEW_APPLICANT"),
   screening: toRecruitmentStage("SCREENING"),
   interview: toRecruitmentStage("INTERVIEW"),
   offering: toRecruitmentStage("OFFERING"),
@@ -61,7 +61,7 @@ export default function CandidatesPage() {
 
   // const { onCreate: createInterview } = useScheduleInterviews();
 
-  // hanya tampilkan kandidat di stage NEW_APLICANT (halaman Screening)
+  // hanya tampilkan kandidat di stage NEW_APPLICANT (halaman Screening)
   const screening = useMemo(
     () => candidatesData.filter((c) => stageMatches(c.stage, "INTERVIEW")),
     [candidatesData]

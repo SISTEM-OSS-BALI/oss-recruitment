@@ -69,7 +69,7 @@ const CHART_STAGE_ORDER = [
 
 const STAGE_FILTER_OPTIONS = [
   { value: "ALL", label: "All" },
-  { value: "NEW_APLICANT", label: getStageLabel("NEW_APLICANT") },
+  { value: "NEW_APPLICANT", label: getStageLabel("NEW_APPLICANT") },
   { value: "SCREENING", label: getStageLabel("SCREENING") },
   { value: "INTERVIEW", label: getStageLabel("INTERVIEW") },
   { value: "OFFERING", label: getStageLabel("OFFERING") },
@@ -246,7 +246,7 @@ export default function Content() {
     chartFiltered.forEach((r: ApplicantDataModel) => {
       const normalizedStage = normalize(r?.stage);
       const bucket =
-        normalizedStage === "NEW_APLICANT"
+        normalizedStage === "NEW_APPLICANT"
           ? "APPLIED"
           : normalizedStage === "HIRED"
           ? "HIRING"
