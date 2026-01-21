@@ -52,6 +52,7 @@ export default function JobCard({ job }: { job: JobDataModel }) {
           <Text style={{ fontSize: 18, fontWeight: 700 }}>
             {job.job_title}
           </Text>
+          <br />
           <Space size="small" wrap style={{ marginTop: 10 }}>
             <Tag color="blue">{workTypeLabel}</Tag>
             <Tag color="geekblue">{employmentLabel}</Tag>
@@ -68,7 +69,7 @@ export default function JobCard({ job }: { job: JobDataModel }) {
         {stripHtml(job.description).slice(0, 120)}...
       </Text>
       <Row justify="end" style={{ marginTop: 22, gap: 12 }}>
-        <Button
+        {/* <Button
           size="large"
           style={{
             borderColor: "#d0d5dd",
@@ -79,7 +80,7 @@ export default function JobCard({ job }: { job: JobDataModel }) {
           }}
         >
           View Detail
-        </Button>
+        </Button> */}
         <Button
           type="primary"
           size="large"

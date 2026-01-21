@@ -88,17 +88,20 @@ function buildPrompt({
         : "professional and inspiring tone";
 
   return `
-You are an HR copywriting assistant. Generate a compelling job description in Indonesian language using the following structure:
+You are an HR copywriting assistant. Write a clean job description in Indonesian using plain text only.
+Do not use Markdown or code fences (no "#", no "```", no "---").
+Use short paragraphs and simple lists with "-" bullets. Keep each list item on one line.
 
-- Company intro (2 paragraphs) based on provided summary.
-- Position overview (1 paragraph).
-- Detailed responsibilities (bullet list).
-- Requirements (bullet list).
-- Skills & competencies section: explain why each provided skill is important for the role. Use bullet list with clear descriptions. If no skills, skip this part.
-- Optional perks/benefits section if provided.
-- Closing paragraph inviting candidates to apply.
+Use this structure and order:
+1) Company intro (2 paragraphs) based on the summary.
+2) Position overview (1 paragraph).
+3) Responsibilities (list).
+4) Requirements (list).
+5) Skills & competencies (list with brief explanations). Skip if no skills.
+6) Perks/benefits (list). Skip if none.
+7) Closing paragraph inviting candidates to apply.
 
-Make it concise, well formatted with markdown headings, and keep the tone ${toneDescription}.
+Keep it concise, tidy, and in a ${toneDescription}.
 
 Company: ${companyName}
 Location: ${location}
@@ -131,24 +134,25 @@ function buildFallbackDescription({
   perks = [],
   skills = [],
 }: JobDescriptionPayload) {
-  return `# ${position} – ${companyName}
+  return `${position} - ${companyName}
 
+Perusahaan:
 ${companySummary}
 
 Lokasi: ${location}
 
-## Gambaran Pekerjaan
+Gambaran Pekerjaan:
 Kami mencari ${position.toLowerCase()} yang siap mendukung pertumbuhan ${companyName}. Kandidat ideal adalah individu yang proaktif, teliti, dan nyaman bekerja dalam lingkungan yang dinamis.
 
-## Tanggung Jawab Utama
+Tanggung Jawab Utama:
 ${responsibilities.map((item) => `- ${item}`).join("\n")}
 
-## Kualifikasi
+Kualifikasi:
 ${requirements.map((item) => `- ${item}`).join("\n")}
 
 ${
   skills.length
-    ? `## Keahlian yang Dibutuhkan\n${skills
+    ? `Keahlian yang Dibutuhkan:\n${skills
         .map(
           (item) =>
             `- ${item}: Kemampuan mendalam pada ${item} untuk mendukung keberhasilan peran.`,
@@ -159,7 +163,7 @@ ${
 
 ${
   perks.length
-    ? `## Fasilitas Tambahan\n${perks.map((item) => `- ${item}`).join("\n")}\n`
+    ? `Fasilitas Tambahan:\n${perks.map((item) => `- ${item}`).join("\n")}\n`
     : ""
 }
 Tertarik untuk berkembang bersama ${companyName}? Kirimkan lamaran Anda sekarang.`;

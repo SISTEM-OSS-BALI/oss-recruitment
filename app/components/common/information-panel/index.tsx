@@ -41,9 +41,20 @@ function RowItem({
 }) {
   return (
     <div style={{ display: "flex", gap: 14 }}>
-      <div style={{ fontSize: 20, color: "#2f66f5" }}>{icon}</div>
-      <div>
-        <div style={{ fontWeight: 600, color: "#0f172a" }}>{primary}</div>
+      <div style={{ fontSize: 20, color: "#2f66f5", flex: "0 0 auto" }}>
+        {icon}
+      </div>
+      <div style={{ minWidth: 0, flex: 1 }}>
+        <div
+          style={{
+            fontWeight: 600,
+            color: "#0f172a",
+            overflowWrap: "anywhere",
+            wordBreak: "break-word",
+          }}
+        >
+          {primary}
+        </div>
         <Text
           type="secondary"
           style={{ marginTop: 2, display: "inline-block" }}

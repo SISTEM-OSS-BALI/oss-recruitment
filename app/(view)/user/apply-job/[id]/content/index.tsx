@@ -98,6 +98,7 @@ export default function ApplyJobContent() {
   const formattedLocation = data?.location
     ? `${toCapitalized(data.location.name)} • ${data.location.address}`
     : undefined;
+
   const metaItems: MetaItem[] = [
     {
       label: "Employment Type",
@@ -347,7 +348,7 @@ function MetaInfoRow({ label, value, href, icon }: MetaItem) {
           {label}
         </Text>
         {href ? (
-          <Typography.Link href={href} target="_blank" rel="noopener noreferrer">
+          <Typography.Link href={href} target="_blank" rel="noopener noreferrer" style={{ display: "block" }}>
             {value}
           </Typography.Link>
         ) : (
@@ -399,7 +400,6 @@ function HeroCard({
   jobName,
   locationLabel,
   closingDate,
-  onApply,
   isMobile,
 }: HeroCardProps) {
   return (
