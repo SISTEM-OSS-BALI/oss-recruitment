@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import dayjs from "dayjs";
 import relativeTime from "dayjs/plugin/relativeTime";
 import {
-  Avatar,
   Button,
   Card,
   Col,
@@ -253,8 +252,6 @@ type ApplicationCardProps = {
 
 function ApplicationCard({
   id,
-  name,
-  initials,
   jobName,
   appliedLabel,
   since,
@@ -262,7 +259,6 @@ function ApplicationCard({
   stageLabelText,
   stageDisplayNumber,
   stageDisplayCount,
-  avatarUrl,
   onDetail,
   isMobile,
 }: ApplicationCardProps) {
@@ -288,7 +284,7 @@ function ApplicationCard({
             align={isMobile ? "start" : "center"}
             size={isMobile ? 14 : 18}
           >
-            <Avatar
+            {/* <Avatar
               size={isMobile ? 56 : 64}
               src={avatarUrl || undefined}
               style={{
@@ -299,12 +295,9 @@ function ApplicationCard({
               }}
             >
               {initials}
-            </Avatar>
+            </Avatar> */}
             <Space direction="vertical" size={2}>
-              <Text style={{ fontSize: 20, fontWeight: 700 }}>{name}</Text>
-              <Text style={{ color: "#2563EB", fontWeight: 600 }}>
-                {jobName}
-              </Text>
+              <Text style={{ fontSize: 20, fontWeight: 700 }}>{jobName}</Text>
               <Space size={6} wrap>
                 <Tag
                   icon={<CalendarOutlined />}

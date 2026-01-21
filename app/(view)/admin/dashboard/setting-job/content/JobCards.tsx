@@ -45,6 +45,20 @@ const WORK_TYPE_LABEL: Record<string, string> = {
   REMOTE: "Remote",
 };
 
+const POSTER_ENDPOINT = "/api/admin/dashboard/job/generate-desain";
+
+const DEFAULT_POSTER_REQUIREMENTS = [
+  "Pendidikan minimal SMA/sederajat",
+  "Menguasai Figma / Illustrator / Photoshop",
+  "Punya portofolio desain",
+  "Mampu kerja dengan deadline",
+];
+
+const DEFAULT_POSTER_THEME = {
+  primary: "#1D4ED8",
+  secondary: "#F4C95D",
+};
+
 function formatCurrency(value?: number | null) {
   if (value === null || value === undefined) return "-";
   const numeric = Number(value);
@@ -69,6 +83,35 @@ function formatSalaryRange(min?: number | null, max?: number | null) {
   return `${formatCurrency(min)} - ${formatCurrency(max)}`;
 }
 
+function buildPosterPayload(job: JobDataModel) {
+  return {
+    badgeLeft: "Pekerjaan untuk",
+    badgeRight: "OSS Bali",
+    headline: "Lowongan Pekerjaan!",
+    role: job.job_title || "Desain Grafis",
+    requirements: DEFAULT_POSTER_REQUIREMENTS,
+    ctaTitle: "Kirimkan CV dan Portofolio",
+    contact: "hr@onestepsolutionbali.com",
+    theme: DEFAULT_POSTER_THEME,
+  };
+}
+
+async function generateJobPoster(job: JobDataModel) {
+  const res = await fetch(POSTER_ENDPOINT, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(buildPosterPayload(job)),
+  });
+
+  if (!res.ok) {
+    throw new Error("Failed to generate job poster.");
+  }
+
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  return url;
+}
+
 export default function JobCard({
   job,
   onEdit,
@@ -78,6 +121,24 @@ export default function JobCard({
   onShowRecommendations,
 }: Props) {
   const published = Boolean(job.is_published);
+
+  const handleGeneratePoster = async () => {
+    try {
+      const url = await generateJobPoster(job);
+      const safeName = (job.job_title || "job")
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/(^-|-$)/g, "");
+      const filename = `${safeName || "job"}-poster.png`;
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = filename;
+      link.click();
+      setTimeout(() => URL.revokeObjectURL(url), 10000);
+    } catch (error) {
+      console.error("[job-poster] failed to generate poster", error);
+    }
+  };
 
   const menu = {
     items: [
@@ -191,6 +252,9 @@ export default function JobCard({
         </Button>
         <Button onClick={() => onShowRecommendations(job)}>
           Recommended Candidates
+        </Button>
+        <Button onClick={handleGeneratePoster}>
+          Generate Poster
         </Button>
       </Flex>
     </Card>

@@ -1,11 +1,20 @@
-import { Button, Card, Row, Col, Typography } from "antd";
+import { Button, Card, Row, Col, Typography, Tag, Space } from "antd";
 import { ClockCircleOutlined } from "@ant-design/icons";
 import dayjs from "dayjs";
 import stripHtml from "@/app/utils/strip-html";
 import { JobDataModel } from "@/app/models/job";
 import { useRouter } from "next/navigation";
+import { useAuth } from "@/app/utils/useAuth";
 
 const { Text } = Typography;
+
+const formatEnum = (value?: string | null) => {
+  if (!value) return "-";
+  return value
+    .toLowerCase()
+    .replace(/_/g, " ")
+    .replace(/\b\w/g, (letter) => letter.toUpperCase());
+};
 
 export default function JobCard({ job }: { job: JobDataModel }) {
   const hoursLeft = dayjs(job.until_at).diff(dayjs(), "hour");
@@ -17,42 +26,56 @@ export default function JobCard({ job }: { job: JobDataModel }) {
       : `${Math.floor(hoursLeft / 24)} days left`;
 
   const router = useRouter();
+  const { isAuthenticated } = useAuth();
+  const workTypeLabel = formatEnum(job.arrangement);
+  const employmentLabel = formatEnum(job.commitment);
+  const locationLabel = job.location?.name || "Flexible";
+  const isClosed = hoursLeft < 0;
   return (
     <Card
-      bodyStyle={{ padding: 28, paddingBottom: 18 }}
+      bodyStyle={{ padding: 24 }}
       style={{
-        borderRadius: 16,
-        boxShadow: "0 2px 16px rgba(55,120,240,0.03)",
-        border: "1px solid #f1f3fa",
+        borderRadius: 20,
+        boxShadow: "0 18px 36px rgba(15,23,42,0.08)",
+        border: "1px solid rgba(148,163,184,0.25)",
+        background:
+          "linear-gradient(135deg, rgba(255,255,255,0.95), rgba(248,250,252,0.9))",
+        backdropFilter: "blur(4px)",
       }}
     >
       <Row
         align="middle"
         justify="space-between"
-        style={{ marginBottom: 12, flexWrap: "wrap" }}
+        style={{ marginBottom: 12, flexWrap: "wrap", gap: 12 }}
       >
         <Col>
-          <Text style={{ fontSize: 16, fontWeight: 700 }}>{job.job_title}</Text>
-          <div
-            style={{ marginTop: 8, display: "flex", gap: 7, flexWrap: "wrap" }}
-          >
-            <ClockCircleOutlined style={{ marginRight: 5 }} />
-            {deadlineStr}
-          </div>
+          <Text style={{ fontSize: 18, fontWeight: 700 }}>
+            {job.job_title}
+          </Text>
+          <Space size="small" wrap style={{ marginTop: 10 }}>
+            <Tag color="blue">{workTypeLabel}</Tag>
+            <Tag color="geekblue">{employmentLabel}</Tag>
+            <Tag color="default">{locationLabel}</Tag>
+            <Tag color={isClosed ? "default" : "green"}>
+              <ClockCircleOutlined style={{ marginRight: 6 }} />
+              {deadlineStr}
+            </Tag>
+          </Space>
         </Col>
-        <Col>{/* Kosong untuk responsive */}</Col>
+        <Col />
       </Row>
-      <Text style={{ color: "#5d5d5d", fontSize: 17 }}>
-        {stripHtml(job.description).slice(0, 60)}...
+      <Text style={{ color: "#475569", fontSize: 16, lineHeight: 1.6 }}>
+        {stripHtml(job.description).slice(0, 120)}...
       </Text>
-      <Row justify="end" style={{ marginTop: 24, gap: 12 }}>
+      <Row justify="end" style={{ marginTop: 22, gap: 12 }}>
         <Button
           size="large"
           style={{
-            borderColor: "#2467e7",
-            color: "#2467e7",
-            borderRadius: 9,
-            fontWeight: 500,
+            borderColor: "#d0d5dd",
+            color: "#1f2937",
+            borderRadius: 12,
+            fontWeight: 600,
+            padding: "0 22px",
           }}
         >
           View Detail
@@ -62,11 +85,16 @@ export default function JobCard({ job }: { job: JobDataModel }) {
           size="large"
           style={{
             background: "#2467e7",
-            borderRadius: 9,
-            fontWeight: 500,
+            borderRadius: 12,
+            fontWeight: 600,
             padding: "0 26px",
+            boxShadow: "0 12px 20px rgba(36,103,231,0.25)",
           }}
           onClick={() => {
+            if (!isAuthenticated) {
+              router.push("/login");
+              return;
+            }
             router.push(`/user/apply-job/${job.id}`);
           }}
         >

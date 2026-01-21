@@ -6,6 +6,7 @@ const nextConfig = {
     remotePatterns: [{ protocol: "https", hostname: "**.supabase.co" }],
     unoptimized: !isProd,
   },
+  serverExternalPackages: ["@napi-rs/canvas"],
 
   reactStrictMode: false, // sudah benar: menghindari double render di dev
   productionBrowserSourceMaps: false, // sudah benar
@@ -40,6 +41,7 @@ const nextConfig = {
   // 👉 Optimasi import paket populer (Next mendukung ini secara native)
   experimental: {
     optimizePackageImports: ["date-fns", "lodash-es", "lucide-react"],
+    serverComponentsExternalPackages: ["@napi-rs/canvas"],
   },
 
   // Cache header untuk aset WASM (sudah bagus)

@@ -47,7 +47,7 @@ export default function LoginContent() {
         return;
       }
 
-      router.push("/user");
+      router.push("/user/job");
     } catch (error) {
       notification.error({
         message: "Sign in failed",

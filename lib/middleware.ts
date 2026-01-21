@@ -39,6 +39,7 @@ const roleAccessMap: Record<string, Role[]> = {
 };
 
 function isPublicPath(pathname: string) {
+  if (pathname === "/user/job") return true;
   return PUBLIC_PATHS.some((p) => {
     if (p === "/") return pathname === "/";
     return pathname === p || pathname.startsWith(`${p}/`);
@@ -68,7 +69,7 @@ export default withAuth(
   function middleware(req: NextRequest) {
     const { pathname } = req.nextUrl;
 
-    // @ts-ignore - next-auth inject token ke req
+    // @ts-expect-error - next-auth inject token ke req
     const token = req.nextauth.token as { role?: Role } | null;
 
     const matchedRule = getMatchedRule(pathname);

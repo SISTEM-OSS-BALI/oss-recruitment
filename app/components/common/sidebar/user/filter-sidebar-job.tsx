@@ -37,27 +37,27 @@ export default function FilterSidebar({
           justifyContent: "space-between",
         }}
       >
-        <span style={{ fontWeight: 700, color: "#2262e7", fontSize: 22 }}>
+        <span style={{ fontWeight: 700, color: "#1d4ed8", fontSize: 20 }}>
           <FilterOutlined style={{ marginRight: 8 }} />
           Filter
         </span>
         <Button
-          type="link"
+          type="text"
           danger
           icon={<CloseCircleOutlined />}
           onClick={clearFilters}
-          style={{ fontWeight: 600, fontSize: 17 }}
+          style={{ fontWeight: 600, fontSize: 15 }}
         >
           Clear filter
         </Button>
       </Space>
       <div
         style={{
-          background: "#fff",
-          borderRadius: 18,
-          border: "1.5px solid #e6eeff",
-          boxShadow: "0 2px 8px rgba(34,98,231,0.03)",
-          padding: 22,
+          background: "linear-gradient(180deg, #ffffff 0%, #f8fafc 100%)",
+          borderRadius: 20,
+          border: "1px solid rgba(148,163,184,0.25)",
+          boxShadow: "0 18px 32px rgba(15,23,42,0.08)",
+          padding: 20,
         }}
       >
         <Collapse
@@ -69,7 +69,7 @@ export default function FilterSidebar({
             <Panel
               header={
                 <span
-                  style={{ color: "#2262e7", fontWeight: 600, fontSize: 17 }}
+                  style={{ color: "#1d4ed8", fontWeight: 600, fontSize: 16 }}
                 >
                   <span style={{ marginRight: 10 }}>{section.icon}</span>
                   {section.title}
@@ -88,7 +88,13 @@ export default function FilterSidebar({
         <Button
           type="primary"
           block
-          style={{ marginTop: 16, height: 46, borderRadius: 12 }}
+          style={{
+            marginTop: 18,
+            height: 46,
+            borderRadius: 14,
+            fontWeight: 600,
+            boxShadow: "0 10px 18px rgba(37,99,235,0.25)",
+          }}
           onClick={onApplyFilters}
         >
           Apply Filters

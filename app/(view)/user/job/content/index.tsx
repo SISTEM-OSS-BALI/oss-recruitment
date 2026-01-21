@@ -18,8 +18,19 @@ import {
   EnvironmentOutlined,
 } from "@ant-design/icons";
 import { toCapitalized } from "@/app/utils/capitalized";
+import { Space_Grotesk,} from "next/font/google";
 
 const { Title, Text } = Typography;
+
+const headingFont = Space_Grotesk({
+  subsets: ["latin"],
+  weight: ["500", "600", "700"],
+});
+
+// const bodyFont = Plus_Jakarta_Sans({
+//   subsets: ["latin"],
+//   weight: ["400", "500", "600"],
+// });
 
 export default function JobList() {
   const { data: jobData } = useJobs({ queryString: "status=active" });
@@ -204,122 +215,167 @@ export default function JobList() {
     }) || [];
 
   return (
-    <div style={{ minHeight: "100vh" }}>
-      <div style={{ maxWidth: 1280, margin: "0 auto", padding: "32px 16px" }}>
-      {/* JUDUL & SEARCH */}
+
       <div
         style={{
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          marginBottom: 36,
-          marginTop: 10,
+          maxWidth: 1280,
+          margin: "0 auto",
+          padding: "40px 16px 80px",
+          position: "relative",
+          overflow: "hidden",
         }}
       >
-        <Title
-          level={3}
-          style={{ fontWeight: 700, marginBottom: 0, textAlign: "center" }}
-        >
-          Available Job Positions
-        </Title>
-        <Text
-          type="secondary"
-          style={{ fontSize: 20, textAlign: "center", marginTop: 6 }}
-        >
-          Find jobs and internships <br />
-          that suits your needs
-        </Text>
-        <div
-          style={{
-            marginTop: isMobile ? 20 : 30,
-            width: "100%",
-            maxWidth: isMobile ? "100%" : 620,
-            display: "flex",
-            gap: isMobile ? 12 : 18,
-            flexDirection: isMobile ? "column" : "row",
-          }}
-        >
-          <Input
-            size="large"
-            placeholder="Explore available positions..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            allowClear
-            style={{
-              borderRadius: 12,
-              background: "#f8fafc",
-              fontSize: 17,
-              borderColor: "#e6eeff",
-              flex: 1,
-              minHeight: isMobile ? 48 : undefined,
-            }}
-          />
-          <Button
-            type="primary"
-            size="large"
-            style={{
-              borderRadius: 12,
-              fontWeight: 600,
-              padding: "0 34px",
-              fontSize: 17,
-              height: 48,
-              width: isMobile ? "100%" : "auto",
-            }}
-          >
-            Search
-          </Button>
-        </div>
-      </div>
 
-      {/* KONTEN GRID */}
-      <Row gutter={isMobile ? [24, 32] : 32} align="top">
-        {/* FILTER SIDEBAR */}
-        <Col
-          xs={24}
-          sm={7}
-          md={7}
-          lg={6}
-          xl={5}
-          style={{
-            display: "flex",
-            justifyContent: isMobile ? "flex-start" : "center",
-            marginBottom: isMobile ? 20 : 0,
-          }}
-        >
-          <div style={{ width: "100%", maxWidth: 360 }}>
-            <FilterSidebar
-              sections={filterSections}
-              clearFilters={clearFilters}
-              onApplyFilters={applyFilters}
-            />
-          </div>
-        </Col>
-        {/* JOB LIST */}
-        <Col xs={24} sm={17} md={17} lg={18} xl={19}>
+        <div style={{ position: "relative", zIndex: 1 }}>
+          {/* JUDUL & SEARCH */}
           <div
             style={{
               display: "flex",
               flexDirection: "column",
-              gap: isMobile ? 16 : 28,
+              alignItems: "center",
+              marginBottom: 40,
+              marginTop: 8,
+              textAlign: "center",
+              gap: 12,
             }}
           >
-            {filteredJobs.length === 0 ? (
-              <Card
+            <span
+              style={{
+                padding: "6px 14px",
+                borderRadius: 999,
+                background: "rgba(37,99,235,0.12)",
+                color: "#1d4ed8",
+                fontWeight: 600,
+                letterSpacing: 0.2,
+                fontSize: 13,
+              }}
+            >
+              Opportunity Hub
+            </span>
+            <Title
+              level={2}
+              className={headingFont.className}
+              style={{
+                marginBottom: 0,
+                fontWeight: 700,
+                fontSize: isMobile ? 30 : 38,
+              }}
+            >
+              Available Job Positions
+            </Title>
+            <Text
+              type="secondary"
+              style={{
+                fontSize: isMobile ? 16 : 19,
+                lineHeight: 1.5,
+                maxWidth: 640,
+              }}
+            >
+              Find curated opportunities and internships that match your goals,
+              preferred schedule, and location.
+            </Text>
+
+            <div
+              style={{
+                marginTop: 8,
+                width: "100%",
+                maxWidth: isMobile ? "100%" : 740,
+                display: "flex",
+                gap: isMobile ? 12 : 16,
+                flexDirection: isMobile ? "column" : "row",
+                background: "rgba(255,255,255,0.8)",
+                border: "1px solid rgba(148,163,184,0.35)",
+                borderRadius: 18,
+                padding: 8,
+                boxShadow: "0 18px 40px rgba(15,23,42,0.08)",
+                backdropFilter: "blur(6px)",
+              }}
+            >
+              <Input
+                size="large"
+                placeholder="Search roles, skills, or keywords..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                allowClear
                 style={{
-                  borderRadius: 16,
-                  borderColor: "#e2e8f0",
-                  textAlign: "center",
+                  borderRadius: 14,
+                  background: "transparent",
+                  fontSize: 16,
+                  borderColor: "transparent",
+                  boxShadow: "none",
+                  flex: 1,
+                  minHeight: isMobile ? 48 : undefined,
+                }}
+              />
+              <Button
+                type="primary"
+                size="large"
+                style={{
+                  borderRadius: 14,
+                  fontWeight: 600,
+                  padding: "0 30px",
+                  fontSize: 16,
+                  height: 48,
+                  width: isMobile ? "100%" : "auto",
+                  boxShadow: "0 10px 20px rgba(37,99,235,0.25)",
                 }}
               >
-                <Empty description="No jobs match your criteria" />
-              </Card>
-            ) : (
-              filteredJobs.map((job) => <JobCard key={job.id} job={job} />)
-            )}
+                Search
+              </Button>
+            </div>
           </div>
-        </Col>
-      </Row>
+
+          {/* KONTEN GRID */}
+          <Row gutter={isMobile ? [20, 28] : 28} align="top">
+            {/* FILTER SIDEBAR */}
+            <Col
+              xs={24}
+              sm={8}
+              md={7}
+              lg={6}
+              xl={5}
+              style={{
+                display: "flex",
+                justifyContent: isMobile ? "flex-start" : "center",
+                marginBottom: isMobile ? 20 : 0,
+              }}
+            >
+              <div style={{ width: "100%", maxWidth: 360 }}>
+                <FilterSidebar
+                  sections={filterSections}
+                  clearFilters={clearFilters}
+                  onApplyFilters={applyFilters}
+                />
+              </div>
+            </Col>
+            {/* JOB LIST */}
+            <Col xs={24} sm={16} md={17} lg={18} xl={19}>
+              <div
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: isMobile ? 16 : 24,
+                }}
+              >
+                {filteredJobs.length === 0 ? (
+                  <Card
+                    style={{
+                      borderRadius: 18,
+                      borderColor: "#e2e8f0",
+                      textAlign: "center",
+                      background: "rgba(255,255,255,0.9)",
+                      boxShadow: "0 12px 26px rgba(15,23,42,0.06)",
+                    }}
+                  >
+                    <Empty description="No jobs match your criteria" />
+                  </Card>
+                ) : (
+                  filteredJobs.map((job) => <JobCard key={job.id} job={job} />)
+                )}
+              </div>
+            </Col>
+          </Row>
+        </div>
       </div>
-    </div>
   );
 }
