@@ -22,11 +22,11 @@ export async function POST(req: Request) {
     illustrationUrl: body.illustrationUrl,
   });
 
-  const bytes = Buffer.isBuffer(png)
-    ? new Uint8Array(png.buffer, png.byteOffset, png.byteLength)
-    : png;
+  const bytes = Buffer.isBuffer(png) ? png : Buffer.from(png);
+  const arrayBuffer = new ArrayBuffer(bytes.byteLength);
+  new Uint8Array(arrayBuffer).set(bytes);
 
-  return new NextResponse(bytes, {
+  return new NextResponse(arrayBuffer, {
     status: 200,
     headers: {
       "Content-Type": "image/png",
