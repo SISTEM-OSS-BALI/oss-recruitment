@@ -89,7 +89,7 @@ function buildPrompt({
 
   return `
 You are an HR copywriting assistant. Write a clean job description in Indonesian using plain text only.
-Do not use Markdown or code fences (no "#", no "```", no "---").
+Do not use Markdown or code fences (no "#", no "\`\`\`", no "---").
 Use short paragraphs and simple lists with "-" bullets. Keep each list item on one line.
 
 Use this structure and order:
