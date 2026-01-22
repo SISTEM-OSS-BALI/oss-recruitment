@@ -1,6 +1,7 @@
 import db from "@/lib/prisma";
 import { UserPayloadCreateModel, UserPayloadUpdateModel } from "../models/user";
 import bcrypt from "bcrypt";
+import { GeneralError } from "@/app/utils/general-error";
 
 function normalizeDateInput(input: unknown): Date | null | undefined {
   if (input === undefined) return undefined;
@@ -229,4 +230,41 @@ export const UPDATE_TEAM_MEMBER_CARD = async (
     },
   });
   return result;
+};
+
+export const CHANGE_USER_PASSWORD = async (
+  user_id: string,
+  currentPassword: string,
+  newPassword: string
+) => {
+  const user = await db.user.findUnique({
+    where: { id: user_id },
+    select: { id: true, password: true },
+  });
+
+  if (!user?.password) {
+    throw new GeneralError({
+      code: 404,
+      details: "User not found",
+      error: "User not found",
+      error_code: "USER_NOT_FOUND",
+    });
+  }
+
+  const isValid = await bcrypt.compare(currentPassword, user.password);
+  if (!isValid) {
+    throw new GeneralError({
+      code: 400,
+      details: "Current password is incorrect",
+      error: "Current password is incorrect",
+      error_code: "INVALID_PASSWORD",
+    });
+  }
+
+  const hashedPassword = await bcrypt.hash(newPassword, 10);
+  await db.user.update({
+    where: { id: user_id },
+    data: { password: hashedPassword },
+    select: { id: true },
+  });
 };

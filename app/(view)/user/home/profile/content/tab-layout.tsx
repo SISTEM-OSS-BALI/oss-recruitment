@@ -21,6 +21,7 @@ import { useMemo } from "react";
 import PersonalInformationDocuments from "./PersonalInformationComponent";
 import DocumentsComponent from "./DocumentComponent";
 import PreviewComponent from "./PreviewComponent";
+import SecurityComponent from "./SecurityComponent";
 import { useAuth } from "@/app/utils/useAuth";
 import { useUser } from "@/app/hooks/user";
 import { UserDataModel } from "@/app/models/user";
@@ -99,6 +100,11 @@ export default function TabLayout() {
       key: "3",
       label: "Documents",
       children: <DocumentsComponent />,
+    },
+    {
+      key: "4",
+      label: "Security",
+      children: <SecurityComponent />,
     },
   ];
 
