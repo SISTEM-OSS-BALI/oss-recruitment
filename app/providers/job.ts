@@ -71,6 +71,11 @@ export const GET_JOBS = async (
       Applicant: {
         select: selectApplicantsForStats,
       },
+      referralLinks: {
+        where: { is_active: true },
+        orderBy: { createdAt: "desc" },
+        take: 1,
+      },
     },
     orderBy: { createdAt: "desc" },
   });
@@ -93,6 +98,11 @@ export const GET_JOB = async (id: string) => {
       location: true,
       Applicant: {
         select: selectApplicantsForStats,
+      },
+      referralLinks: {
+        where: { is_active: true },
+        orderBy: { createdAt: "desc" },
+        take: 1,
       },
     },
   });
@@ -151,13 +161,54 @@ export const UPDATE_JOB = async (
   id: string,
   payload: JobPayloadUpdateModel
 ) => {
-  const result = await db.job.update({
-    where: {
-      id,
-    },
-    data: payload,
-    include: { location: true },
+  const result = await db.$transaction(async (tx) => {
+    const job = await tx.job.update({
+      where: {
+        id,
+      },
+      data: payload,
+      include: { location: true },
+    });
+
+    if (job.type_job === "REFFERAL") {
+      const existing = await tx.referralLink.findFirst({
+        where: { job_id: job.id, is_active: true },
+        select: { id: true },
+      });
+      if (!existing) {
+        const MAX_RETRIES = 5;
+        let created = false;
+        for (let attempt = 0; attempt < MAX_RETRIES; attempt += 1) {
+          const code = generateCodeUnique(job.job_title, 8);
+          try {
+            await tx.referralLink.create({
+              data: {
+                job_id: job.id,
+                code,
+                source: "auto",
+              },
+            });
+            created = true;
+            break;
+          } catch (error) {
+            if (
+              error instanceof Prisma.PrismaClientKnownRequestError &&
+              error.code === "P2002"
+            ) {
+              continue;
+            }
+            throw error;
+          }
+        }
+        if (!created) {
+          throw new Error("Failed to generate referral link");
+        }
+      }
+    }
+
+    return job;
   });
+
   return result;
 };
 
