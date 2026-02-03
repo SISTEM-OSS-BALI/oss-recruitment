@@ -43,6 +43,8 @@ function isPublicPath(pathname: string) {
   if (pathname.startsWith("/user/apply-job/")) {
     return !pathname.includes("/question-screening");
   }
+  if (pathname.startsWith("/apply/ref/")) return true;
+  if (pathname.startsWith("/ref/")) return true;
   
   return PUBLIC_PATHS.some((p) => {
     if (p === "/") return pathname === "/";
@@ -75,6 +77,11 @@ export default withAuth(
 
     // @ts-expect-error - next-auth inject token ke req
     const token = req.nextauth.token as { role?: Role } | null;
+
+    const isPublic = isPublicPath(pathname);
+    if (isPublic) {
+      return NextResponse.next();
+    }
 
     const matchedRule = getMatchedRule(pathname);
 
