@@ -4,7 +4,6 @@ import dayjs from "dayjs";
 import stripHtml from "@/app/utils/strip-html";
 import { JobDataModel } from "@/app/models/job";
 import { useRouter } from "next/navigation";
-import { useAuth } from "@/app/utils/useAuth";
 
 const { Text } = Typography;
 
@@ -26,7 +25,6 @@ export default function JobCard({ job }: { job: JobDataModel }) {
       : `${Math.floor(hoursLeft / 24)} days left`;
 
   const router = useRouter();
-  const { isAuthenticated } = useAuth();
   const workTypeLabel = formatEnum(job.arrangement);
   const employmentLabel = formatEnum(job.commitment);
   const locationLabel = job.location?.name || "Flexible";
@@ -92,10 +90,6 @@ export default function JobCard({ job }: { job: JobDataModel }) {
             boxShadow: "0 12px 20px rgba(36,103,231,0.25)",
           }}
           onClick={() => {
-            if (!isAuthenticated) {
-              router.push("/login");
-              return;
-            }
             router.push(`/user/apply-job/${job.id}`);
           }}
         >

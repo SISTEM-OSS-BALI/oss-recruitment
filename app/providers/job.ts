@@ -1,6 +1,7 @@
 import { Prisma, RecruitmentStage } from "@prisma/client";
 
 import { db } from "@/lib/prisma";
+import generateCodeUnique from "@/app/utils/generate_code_unique";
 import {
   JobDataModel,
   JobPayloadCreateModel,
@@ -104,9 +105,43 @@ export const GET_JOB = async (id: string) => {
   };
 };
 export const CREATE_JOB = async (payload: JobPayloadCreateModel) => {
-  const result = await db.job.create({
-    data: payload,
-    include: { location: true },
+  const result = await db.$transaction(async (tx) => {
+    const job = await tx.job.create({
+      data: payload,
+      include: { location: true },
+    });
+
+    if (payload.type_job === "REFFERAL") {
+      const MAX_RETRIES = 5;
+      let created = false;
+      for (let attempt = 0; attempt < MAX_RETRIES; attempt += 1) {
+        const code = generateCodeUnique(job.job_title, 8);
+        try {
+          await tx.referralLink.create({
+            data: {
+              job_id: job.id,
+              code,
+              source: "auto",
+            },
+          });
+          created = true;
+          break;
+        } catch (error) {
+          if (
+            error instanceof Prisma.PrismaClientKnownRequestError &&
+            error.code === "P2002"
+          ) {
+            continue;
+          }
+          throw error;
+        }
+      }
+      if (!created) {
+        throw new Error("Failed to generate referral link");
+      }
+    }
+
+    return job;
   });
 
   return result;

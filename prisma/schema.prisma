@@ -125,8 +125,23 @@ model Job {
   location    Location?   @relation(fields: [location_id], references: [id], onDelete: Cascade, onUpdate: Cascade)
   candidate   User[]      @relation("CandidateJobs")
   Applicant   Applicant[]
+  referralLinks ReferralLink[]
 
   @@map("job")
+}
+
+model ReferralLink {
+  id        String   @id @default(cuid())
+  code      String   @unique
+  source    String?
+  job_id    String
+  job       Job      @relation(fields: [job_id], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  is_active Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([job_id])
+  @@map("referral_link")
 }
 
 model Location {

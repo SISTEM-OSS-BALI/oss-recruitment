@@ -6,6 +6,7 @@ import {
   Button,
   Card,
   Col,
+  Empty,
   Row,
   Skeleton,
   Space,
@@ -17,15 +18,15 @@ import {
   EnvironmentOutlined,
   FileTextOutlined,
   TeamOutlined,
-  ThunderboltOutlined,
+  // ThunderboltOutlined,
 } from "@ant-design/icons";
 import dayjs from "dayjs";
 
-import { useJob } from "@/app/hooks/job";
+import { useJob, useReferralJob } from "@/app/hooks/job";
 import { useMobile } from "@/app/hooks/use-mobile";
 import { sanitizeHtml } from "@/app/utils/sanitize-html";
 import { toCapitalized } from "@/app/utils/capitalized";
-import PreviewComponent from "../../../home/profile/content/PreviewComponent";
+// import PreviewComponent from "../../../home/profile/content/PreviewComponent";
 import formatSalary from "@/app/utils/format-salary";
 
 const { Title, Text } = Typography;
@@ -44,8 +45,8 @@ function SectionHeader({
       style={{
         display: "flex",
         alignItems: "flex-start",
-        gap: 10,
-        marginBottom: 8,
+        gap: 12,
+        marginBottom: 10,
       }}
     >
       <div
@@ -53,17 +54,18 @@ function SectionHeader({
           width: 36,
           height: 36,
           borderRadius: 10,
-          background: "#F0F5FF",
+          background: "rgba(47, 84, 235, 0.12)",
           display: "grid",
           placeItems: "center",
           color: "#2F54EB",
           flexShrink: 0,
+          boxShadow: "inset 0 0 0 1px rgba(47, 84, 235, 0.15)",
         }}
       >
         {icon}
       </div>
       <div>
-        <Title level={5} style={{ margin: 0 }}>
+        <Title level={5} style={{ margin: 0, fontWeight: 700 }}>
           {title}
         </Title>
         {subtitle && (
@@ -78,44 +80,55 @@ function SectionHeader({
 
 /* ------------------------------- Page ----------------------------------- */
 export default function ApplyJobContent() {
-  const { id } = useParams() as { id: string };
+  const { id, code } = useParams() as { id?: string; code?: string };
   const router = useRouter();
-  const { data, fetchLoading: isLoading } = useJob({ id });
+  const { data, fetchLoading: isJobLoading } = useJob({ id: id ?? "" });
+  const { data: referralData, fetchLoading: isReferralLoading } =
+    useReferralJob({ code: code ?? "" });
   const isMobile = useMobile();
+  const isReferral = Boolean(code && !id);
+  const jobData = isReferral ? referralData?.job : data;
+  const isLoading = isReferral ? isReferralLoading : isJobLoading;
 
   const overviewHTML = useMemo(
-    () => sanitizeHtml(data?.description ?? ""),
-    [data?.description]
+    () => sanitizeHtml(jobData?.description ?? ""),
+    [jobData?.description]
   );
 
-  const goToQuestinScreening = (id: string) => {
-    router.push(`/user/apply-job/${id}/question-screening`);
+  const goToQuestinScreening = () => {
+    if (code) {
+      router.push(`/apply/ref/${code}/question-screening`);
+      return;
+    }
+    if (id) {
+      router.push(`/user/apply-job/${id}/question-screening`);
+    }
   };
 
-  const formattedClosingDate = data?.until_at
-    ? dayjs(data.until_at).format("dddd, DD MMM YYYY")
+  const formattedClosingDate = jobData?.until_at
+    ? dayjs(jobData.until_at).format("dddd, DD MMM YYYY")
     : undefined;
-  const formattedLocation = data?.location
-    ? `${toCapitalized(data.location.name)} • ${data.location.address}`
+  const formattedLocation = jobData?.location
+    ? `${toCapitalized(jobData.location.name)} • ${jobData.location.address}`
     : undefined;
 
   const metaItems: MetaItem[] = [
     {
       label: "Employment Type",
-      value: formatLabel(data?.commitment),
+      value: formatLabel(jobData?.commitment),
     },
     {
       label: "Work Arrangement",
-      value: formatLabel(data?.arrangement),
+      value: formatLabel(jobData?.arrangement),
     },
     {
       label: "Job Category",
-      value: formatLabel(data?.type_job),
+      value: formatLabel(jobData?.type_job),
     },
     {
       label: "Salary Range",
-      value: data?.show_salary
-        ? formatSalary(data?.salary_min, data?.salary_max)
+      value: jobData?.show_salary
+        ? formatSalary(jobData?.salary_min, jobData?.salary_max)
         : "Confidential",
     },
     {
@@ -125,7 +138,7 @@ export default function ApplyJobContent() {
     {
       label: "Location",
       value: formattedLocation,
-      href: data?.location?.maps_url,
+      href: jobData?.location?.maps_url,
       icon: <EnvironmentOutlined />,
     },
   ].filter((item) => Boolean(item.value)) as MetaItem[];
@@ -134,26 +147,41 @@ export default function ApplyJobContent() {
     {
       label: "In Process",
       description: "Candidates still progressing",
-      value: data?.stats?.connected ?? 0,
+      value: jobData?.stats?.connected ?? 0,
     },
     {
       label: "New Chats",
       description: "Recent candidate conversations",
-      value: data?.stats?.chatStarted ?? 0,
+      value: jobData?.stats?.chatStarted ?? 0,
     },
     {
       label: "Not Suitable",
       description: "Filtered out applicants",
-      value: data?.stats?.notSuitable ?? 0,
+      value: jobData?.stats?.notSuitable ?? 0,
     },
   ];
+
+  if (!isLoading && !jobData) {
+    return (
+      <div
+        style={{
+          maxWidth: 1200,
+          margin: "0 auto",
+          padding: isMobile ? "16px 16px 48px" : "28px 24px 72px",
+        }}
+      >
+        <Empty description="Job information is unavailable." />
+      </div>
+    );
+  }
 
   return (
     <div
       style={{
         maxWidth: 1200,
         margin: "0 auto",
-        padding: isMobile ? "16px 16px 48px" : "24px 24px 64px",
+        padding: isMobile ? "16px 16px 48px" : "28px 24px 72px",
+        position: "relative",
       }}
     >
       <Space
@@ -164,103 +192,104 @@ export default function ApplyJobContent() {
         <HeroCard
           isMobile={isMobile}
           isLoading={isLoading}
-          jobName={data?.job_title}
+          jobName={jobData?.job_title}
           locationLabel={formattedLocation}
           closingDate={formattedClosingDate}
-          onApply={() => goToQuestinScreening(id)}
+          onApply={goToQuestinScreening}
         />
 
         <Row gutter={isMobile ? [16, 16] : [24, 24]}>
           <Col xs={24} lg={15}>
-            <Card
-              bordered={false}
-              style={{ borderRadius: 16, boxShadow: "0 12px 32px rgba(15,23,42,0.04)" }}
-              bodyStyle={{ padding: 24 }}
-            >
-              <SectionHeader
-                icon={<FileTextOutlined />}
-                title="Role Overview"
-                subtitle="Understand what the team is looking for"
-              />
-              {isLoading ? (
-                <Skeleton active paragraph={{ rows: 6 }} />
-              ) : (
-                <div
-                  style={{
-                    whiteSpace: "pre-line",
-                    padding: "12px 0",
-                    color: "rgba(0,0,0,0.75)",
-                    lineHeight: 1.65,
-                  }}
-                  dangerouslySetInnerHTML={{
-                    __html: overviewHTML || "<p>No overview provided.</p>",
-                  }}
+            <Space direction="vertical" size={24} style={{ width: "100%" }}>
+              <Card
+                bordered={false}
+                style={{
+                  borderRadius: 18,
+                  boxShadow: "0 18px 40px rgba(15,23,42,0.08)",
+                  border: "1px solid rgba(226,232,240,0.9)",
+                  background:
+                    "linear-gradient(180deg, #ffffff 0%, #f8fafc 100%)",
+                }}
+                bodyStyle={{ padding: 24 }}
+              >
+                <SectionHeader
+                  icon={<FileTextOutlined />}
+                  title="Role Overview"
+                  subtitle="Understand what the team is looking for"
                 />
-              )}
-            </Card>
+                {isLoading ? (
+                  <Skeleton active paragraph={{ rows: 6 }} />
+                ) : (
+                  <div
+                    style={{
+                      whiteSpace: "pre-line",
+                      padding: "12px 0",
+                      color: "rgba(15, 23, 42, 0.85)",
+                      lineHeight: 1.75,
+                      fontSize: 14.5,
+                    }}
+                    dangerouslySetInnerHTML={{
+                      __html: overviewHTML || "<p>No overview provided.</p>",
+                    }}
+                  />
+                )}
+              </Card>
 
-            <Card
-              bordered={false}
-              style={{ marginTop: 24, borderRadius: 16, boxShadow: "0 8px 24px rgba(15,23,42,0.05)" }}
-              bodyStyle={{ padding: 24 }}
-            >
-              <SectionHeader
-                icon={<ThunderboltOutlined />}
-                title="Your Application Snapshot"
-                subtitle="Keep your candidate profile sharp before submitting"
-              />
-              <div style={{ marginTop: 12 }}>
-                <PreviewComponent />
-              </div>
-            </Card>
+              <Card
+                bordered={false}
+                style={{
+                  borderRadius: 18,
+                  background:
+                    "linear-gradient(135deg, rgba(15, 23, 42, 0.98) 0%, rgba(30, 41, 59, 0.98) 100%)",
+                  color: "#E2E8F0",
+                  boxShadow: "0 18px 36px rgba(15,23,42,0.25)",
+                }}
+                bodyStyle={{ padding: 24 }}
+              >
+                <Space direction="vertical" size={16} style={{ width: "100%" }}>
+                  <Space align="center">
+                    <TeamOutlined style={{ color: "#9DB7FF", fontSize: 18 }} />
+                    <div>
+                      <Text style={{ color: "#E2E8F0" }}>
+                        Recruitment Pulse
+                      </Text>
+                      <Text style={{ display: "block", color: "#C2CEE8" }}>
+                        Latest pipeline insights
+                      </Text>
+                    </div>
+                  </Space>
+                  <Row gutter={[12, 12]}>
+                    {stats.map((stat) => (
+                      <Col xs={12} key={stat.label}>
+                        <StatCard {...stat} />
+                      </Col>
+                    ))}
+                  </Row>
+                </Space>
+              </Card>
+            </Space>
           </Col>
 
           <Col xs={24} lg={9}>
             <Card
-              title="Key Job Details"
-              bordered={false}
-              style={{ borderRadius: 16, boxShadow: "0 12px 32px rgba(15,23,42,0.05)" }}
-              bodyStyle={{ padding: 0 }}
-            >
-              <Space
-                direction="vertical"
-                style={{ width: "100%", padding: 24 }}
-                size={20}
-              >
-                {metaItems.map((item) => (
-                  <MetaInfoRow key={item.label} {...item} />
-                ))}
-              </Space>
-            </Card>
-
-            <Card
               bordered={false}
               style={{
-                marginTop: 24,
-                borderRadius: 16,
-                background:
-                  "linear-gradient(135deg, #182235 0%, #101828 100%)",
-                color: "#E2E8F0",
+                borderRadius: 18,
+                boxShadow: "0 18px 40px rgba(15,23,42,0.08)",
+                border: "1px solid rgba(226,232,240,0.9)",
+                background: "linear-gradient(180deg, #ffffff 0%, #f8fafc 100%)",
               }}
               bodyStyle={{ padding: 24 }}
             >
-              <Space direction="vertical" size={16} style={{ width: "100%" }}>
-                <Space align="center">
-                  <TeamOutlined style={{ color: "#9DB7FF", fontSize: 18 }} />
-                  <div>
-                    <Text style={{ color: "#E2E8F0" }}>Recruitment Pulse</Text>
-                    <Text style={{ display: "block", color: "#C2CEE8" }}>
-                      Latest pipeline insights
-                    </Text>
-                  </div>
-                </Space>
-                <Row gutter={[12, 12]}>
-                  {stats.map((stat) => (
-                    <Col xs={12} key={stat.label}>
-                      <StatCard {...stat} />
-                    </Col>
-                  ))}
-                </Row>
+              <SectionHeader
+                icon={<CalendarOutlined />}
+                title="Key Job Details"
+                subtitle="Quick facts to help you decide"
+              />
+              <Space direction="vertical" style={{ width: "100%" }} size={16}>
+                {metaItems.map((item) => (
+                  <MetaInfoRow key={item.label} {...item} />
+                ))}
               </Space>
             </Card>
           </Col>
@@ -303,9 +332,11 @@ export default function ApplyJobContent() {
                   background:
                     "linear-gradient(135deg, #1f4ed8 0%, #5a67f2 100%)",
                 }}
-                onClick={() => goToQuestinScreening(id)}
+                onClick={goToQuestinScreening}
               >
-                Continue to Screening
+                {jobData?.type_job === "REFFERAL"
+                  ? "Continue to Form"
+                  : "Submit Application"}
               </Button>
             </Col>
           </Row>
@@ -327,8 +358,12 @@ function MetaInfoRow({ label, value, href, icon }: MetaItem) {
     <div
       style={{
         display: "flex",
-        gap: 12,
+        gap: 14,
         alignItems: "center",
+        padding: "10px 12px",
+        borderRadius: 14,
+        background: "rgba(248, 250, 252, 0.9)",
+        border: "1px solid rgba(226, 232, 240, 0.9)",
       }}
     >
       <div
@@ -336,7 +371,7 @@ function MetaInfoRow({ label, value, href, icon }: MetaItem) {
           width: 40,
           height: 40,
           borderRadius: 12,
-          background: "#F4F6FB",
+          background: "#EEF2FF",
           display: "grid",
           placeItems: "center",
         }}
@@ -348,7 +383,12 @@ function MetaInfoRow({ label, value, href, icon }: MetaItem) {
           {label}
         </Text>
         {href ? (
-          <Typography.Link href={href} target="_blank" rel="noopener noreferrer" style={{ display: "block" }}>
+          <Typography.Link
+            href={href}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{ display: "block", fontWeight: 600 }}
+          >
             {value}
           </Typography.Link>
         ) : (
@@ -370,18 +410,22 @@ function StatCard({ label, value, description }: StatItem) {
     <Card
       bordered={false}
       style={{
-        background: "rgba(255,255,255,0.12)",
-        borderRadius: 12,
+        background: "rgba(255,255,255,0.14)",
+        borderRadius: 14,
         color: "#E2E8F0",
-        border: "1px solid rgba(148, 163, 184, 0.2)",
+        border: "1px solid rgba(148, 163, 184, 0.25)",
       }}
       bodyStyle={{ padding: 16 }}
     >
       <Text style={{ fontSize: 28, fontWeight: 700, display: "block" }}>
         {value}
       </Text>
-      <Text style={{ display: "block", color: "#F8FAFC" }}>{label}</Text>
-      <Text style={{ color: "#CBD5F5", fontSize: 12 }}>{description}</Text>
+      <Text style={{ display: "block", color: "#F8FAFC", fontWeight: 600 }}>
+        {label}
+      </Text>
+      <Text style={{ color: "#CBD5F5", fontSize: 12, lineHeight: 1.4 }}>
+        {description}
+      </Text>
     </Card>
   );
 }
@@ -410,6 +454,8 @@ function HeroCard({
         background:
           "linear-gradient(135deg, #1d2760 0%, #1f4ed8 100%)",
         color: "white",
+        boxShadow: "0 24px 48px rgba(29, 78, 216, 0.25)",
+        border: "1px solid rgba(255, 255, 255, 0.08)",
       }}
       bodyStyle={{ padding: isMobile ? 20 : 32 }}
     >

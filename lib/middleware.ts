@@ -40,6 +40,10 @@ const roleAccessMap: Record<string, Role[]> = {
 
 function isPublicPath(pathname: string) {
   if (pathname === "/user/job") return true;
+  if (pathname.startsWith("/user/apply-job/")) {
+    return !pathname.includes("/question-screening");
+  }
+  
   return PUBLIC_PATHS.some((p) => {
     if (p === "/") return pathname === "/";
     return pathname === p || pathname.startsWith(`${p}/`);
