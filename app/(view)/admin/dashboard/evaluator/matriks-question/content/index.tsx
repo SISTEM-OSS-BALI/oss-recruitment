@@ -228,10 +228,13 @@ export default function Content() {
             return (
               <Col key={b.id} xs={24} sm={12} md={8} lg={6} xl={6}>
                 <Card
-                  onClick={() => goToDetail(b.id)}
                   title={
                     <Space direction="vertical" size={4}>
-                      <Text strong style={{ color: "#0f172a" }}>
+                      <Text
+                        strong
+                        style={{ color: "#0f172a", cursor: "pointer" }}
+                        onClick={() => goToDetail(b.id)}
+                      >
                         {b.name}
                       </Text>
                       {b.desc ? (

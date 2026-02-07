@@ -55,7 +55,7 @@ const JOB_TYPE_LABELS: Record<TypeJob, string> = Object.values(TypeJob).reduce(
     acc[type] = label;
     return acc;
   },
-  {} as Record<TypeJob, string>
+  {} as Record<TypeJob, string>,
 );
 
 const BRAND = "#003A6F";
@@ -302,7 +302,6 @@ export default function BaseScreeningCards(): JSX.Element {
                     boxShadow:
                       "0 8px 20px rgba(0,0,0,0.04), 0 3px 8px rgba(0,0,0,0.03)",
                   }}
-                  onClick={() => openDetail(id)}
                   className="screening-card"
                   title={
                     <div
@@ -317,6 +316,7 @@ export default function BaseScreeningCards(): JSX.Element {
                         strong
                         style={{ color: BRAND, fontSize: 16 }}
                         ellipsis
+                        onClick={() => openDetail(id)}
                       >
                         {name}
                       </Text>
@@ -351,7 +351,7 @@ export default function BaseScreeningCards(): JSX.Element {
                       >
                         Delete
                       </Button>
-                    </Popconfirm>
+                    </Popconfirm>,
                   ]}
                 >
                   <Space
@@ -442,7 +442,7 @@ export default function BaseScreeningCards(): JSX.Element {
                     .split("_")
                     .map(
                       (segment) =>
-                        segment.charAt(0).toUpperCase() + segment.slice(1)
+                        segment.charAt(0).toUpperCase() + segment.slice(1),
                     )
                     .join(" ")}
                 </Select.Option>
@@ -523,7 +523,7 @@ export default function BaseScreeningCards(): JSX.Element {
                     .split("_")
                     .map(
                       (segment) =>
-                        segment.charAt(0).toUpperCase() + segment.slice(1)
+                        segment.charAt(0).toUpperCase() + segment.slice(1),
                     )
                     .join(" ")}
                 </Select.Option>
