@@ -314,7 +314,11 @@ export default function BaseScreeningCards(): JSX.Element {
                     >
                       <Text
                         strong
-                        style={{ color: BRAND, fontSize: 16 }}
+                        style={{
+                          color: BRAND,
+                          fontSize: 16,
+                          cursor: "pointer",
+                        }}
                         ellipsis
                         onClick={() => openDetail(id)}
                       >
