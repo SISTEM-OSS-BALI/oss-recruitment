@@ -191,11 +191,11 @@ model User {
 
   createdAt        DateTime         @default(now())
   updatedAt        DateTime         @updatedAt
-  Applicant        Applicant[]
-  Participant      Participant[]
-  MessageRead      MessageRead[]
-  Message          Message[]        @relation("MessagesByRecipient")
-  messagesSent     Message[]        @relation("MessagesBySender")
+  Applicant        Applicant[]      @relation("UserApplicant", onUpdate: Cascade, onDelete: Cascade)
+  Participant      Participant[]    @relation("UserParticipant", onUpdate: Cascade, onDelete: Cascade)
+  MessageRead      MessageRead[]    @relation("UserMessageRead", onUpdate: Cascade, onDelete: Cascade)
+  Message          Message[]        @relation("MessagesByRecipient", onUpdate: Cascade, onDelete: Cascade)
+  messagesSent     Message[]        @relation("MessagesBySender", onUpdate: Cascade, onDelete: Cascade)
   profileCompanies ProfileCompany[]
   passwordResetTokens PasswordResetToken[]
 
