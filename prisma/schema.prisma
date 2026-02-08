@@ -191,11 +191,11 @@ model User {
 
   createdAt        DateTime         @default(now())
   updatedAt        DateTime         @updatedAt
-  Applicant        Applicant[]      @relation("UserApplicant", onUpdate: Cascade, onDelete: Cascade)
-  Participant      Participant[]    @relation("UserParticipant", onUpdate: Cascade, onDelete: Cascade)
-  MessageRead      MessageRead[]    @relation("UserMessageRead", onUpdate: Cascade, onDelete: Cascade)
-  Message          Message[]        @relation("MessagesByRecipient", onUpdate: Cascade, onDelete: Cascade)
-  messagesSent     Message[]        @relation("MessagesBySender", onUpdate: Cascade, onDelete: Cascade)
+  Applicant        Applicant[]      @relation("UserApplicant")
+  Participant      Participant[]    @relation("UserParticipant")
+  MessageRead      MessageRead[]    @relation("UserMessageRead")
+  Message          Message[]        @relation("MessagesByRecipient")
+  messagesSent     Message[]        @relation("MessagesBySender")
   profileCompanies ProfileCompany[]
   passwordResetTokens PasswordResetToken[]
 
@@ -229,7 +229,7 @@ model UserInterestTag {
 model Applicant {
   id        String            @id @default(cuid())
   user_id   String
-  user      User              @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  user      User              @relation("UserApplicant", fields: [user_id], references: [id], onDelete: Cascade, onUpdate: Cascade)
   job_id    String
   job       Job               @relation(fields: [job_id], references: [id], onDelete: Cascade, onUpdate: Cascade)
   stage     RecruitmentStage? @default(SCREENING)
@@ -719,7 +719,7 @@ model Participant {
   lastReadAt     DateTime?
   unreadCount    Int       @default(0)
 
-  user         User         @relation(fields: [userId], references: [id])
+  user         User         @relation("UserParticipant", fields: [userId], references: [id])
   conversation Conversation @relation(fields: [conversationId], references: [id])
 
   @@id([userId, conversationId])
@@ -769,7 +769,7 @@ model MessageRead {
   readAt    DateTime @default(now())
 
   message Message @relation(fields: [messageId], references: [id])
-  user    User    @relation(fields: [userId], references: [id])
+  user    User    @relation("UserMessageRead", fields: [userId], references: [id])
 
   @@id([messageId, userId])
   @@index([userId, messageId])
