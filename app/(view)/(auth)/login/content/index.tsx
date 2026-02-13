@@ -6,23 +6,33 @@ import { notification } from "antd";
 import Image from "next/image";
 import Link from "next/link";
 import type { Session } from "next-auth";
-import { signIn } from "next-auth/react";
-import { useRouter } from "next/navigation";
+import { getSession, signIn } from "next-auth/react";
+import { useRouter, useSearchParams } from "next/navigation";
 import React, { useState } from "react";
 
 import styles from "../../auth.module.css";
 
 export default function LoginContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [loading, setLoading] = useState(false);
 
   const handleLogin = async (values: UserFormModel) => {
     try {
       setLoading(true);
+      const rawCallbackUrl = searchParams.get("callbackUrl");
+      const safeCallbackUrl =
+        rawCallbackUrl &&
+        rawCallbackUrl.startsWith("/") &&
+        !rawCallbackUrl.startsWith("//")
+          ? rawCallbackUrl
+          : null;
+
       const res = await signIn("credentials", {
         redirect: false,
         email: values.email,
         password: values.password,
+        callbackUrl: safeCallbackUrl ?? undefined,
       });
 
       if (!res?.ok) {
@@ -33,21 +43,20 @@ export default function LoginContent() {
         return;
       }
 
-      const sessionRes = await fetch("/api/auth/session");
-      if (!sessionRes.ok) {
-        throw new Error("Unable to retrieve session information.");
-      }
-
-      const session = (await sessionRes.json()) as Session | null;
+      const session = (await getSession()) as Session | null;
       const role = session?.user?.role;
 
       notification.success({ message: "Signed in successfully" });
+      if (safeCallbackUrl) {
+        router.replace(safeCallbackUrl);
+        return;
+      }
       if (role === "SUPER_ADMIN" || role === "ADMIN") {
-        router.push("/admin/dashboard/home");
+        router.replace("/admin/dashboard/home");
         return;
       }
 
-      router.push("/user/job");
+      router.replace("/user/job");
     } catch (error) {
       notification.error({
         message: "Sign in failed",
