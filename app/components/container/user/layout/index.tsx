@@ -48,6 +48,8 @@ export default function UserLayout({
   const showHeaderDashboard =
     pathname.startsWith("/user/home") &&
     !pathname.startsWith("/user/home/apply-job/detail/employee-setup");
+  const showHeaderApplyJob = pathname.startsWith("/user/apply-job");
+  const showHeaderJob = pathname.startsWith("/user/job");
 
   type NavItem = NonNullable<MenuProps["items"]>[number];
 
@@ -321,6 +323,13 @@ export default function UserLayout({
   return (
     <Layout style={{ minHeight: "100vh", background: "#f5f7fb" }}>
       {showHeaderHome && <MainHeader />}
+      {showHeaderApplyJob && (
+        <MainHeader
+          backLabel="Back to Jobs"
+          backHref="/user/job"
+        />
+      )}
+      {showHeaderJob && <MainHeader />}
       {showHeaderDashboard && (
         <Header style={headerStyle}>
           {isMobile ? (

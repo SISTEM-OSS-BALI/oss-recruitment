@@ -3,12 +3,12 @@
 import { useSession } from "next-auth/react";
 
 export const useAuth = () => {
-  const { data: session } = useSession();
+  const { data: session, status } = useSession();
   return {
     user_id: session?.user?.id,
     user_name: session?.user?.name,
-    isAuthenticated: !!session,
+    isAuthenticated: status === "authenticated",
     role: session?.user?.role,
-    loading: !session,
+    loading: status === "loading",
   };
 };
