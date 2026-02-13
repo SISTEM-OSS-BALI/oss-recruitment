@@ -92,7 +92,7 @@ export default function ActionTable({
                 actions: action.confirm.okText ?? "OK",
                 onOk: () => action.onClick?.(id),
               });
-            } else {
+            } else {   
               action.onClick?.(id);
             }
           };

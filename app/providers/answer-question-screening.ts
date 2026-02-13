@@ -1,7 +1,7 @@
 import db from "@/lib/prisma";
 import { GeneralError } from "@/app/utils/general-error";
 import { AnswerQuestionScreeningPayloadCreateModel } from "../models/answer-question-screening";
-import { RecruitmentStage } from "@prisma/client";
+import { RecruitmentStage, TypeJob } from "@prisma/client";
 
 export const CREATE_ANSWER_SCREENING_QUESTION = async (
   payload: AnswerQuestionScreeningPayloadCreateModel
@@ -29,6 +29,51 @@ export const CREATE_ANSWER_SCREENING_QUESTION = async (
   const submissionTime = new Date();
 
   const result = await db.$transaction(async (tx) => {
+    const job = await tx.job.findUnique({
+      where: { id: job_id },
+      select: { id: true, type_job: true },
+    });
+
+    if (!job) {
+      throw new GeneralError({
+        code: 404,
+        error: "Job tidak ditemukan.",
+        error_code: "JOB_NOT_FOUND",
+        details: "Job tidak ditemukan.",
+      });
+    }
+
+    if (job.type_job === TypeJob.TEAM_MEMBER) {
+      const user = await tx.user.findUnique({
+        where: { id: user_id },
+        select: { id: true, curiculum_vitae_url: true, photo_url: true },
+      });
+
+      if (!user) {
+        throw new GeneralError({
+          code: 404,
+          error: "User tidak ditemukan.",
+          error_code: "USER_NOT_FOUND",
+          details: "User tidak ditemukan.",
+        });
+      }
+
+      const missing: string[] = [];
+      if (!user.curiculum_vitae_url) missing.push("CV");
+      if (!user.photo_url) missing.push("foto");
+
+      if (missing.length > 0) {
+        throw new GeneralError({
+          code: 400,
+          error: `Silakan upload ${missing.join(
+            " dan "
+          )} terlebih dahulu sebelum mengisi screening.`,
+          error_code: "MISSING_REQUIRED_DOCUMENTS",
+          details: "Dokumen wajib belum lengkap.",
+        });
+      }
+    }
+
     const base = await tx.questionBaseScreening.findUnique({
       where: { id: base_id },
       select: { id: true },
